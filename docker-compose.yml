@@ -53,21 +53,18 @@ services:
   # Frontend
   frontend:
     build:
-      context: ./frontend
+      context: ./frontend-next
       dockerfile: Dockerfile
     container_name: quickflip-frontend
     ports:
       - "3000:3000"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
     environment:
-      - VITE_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
     depends_on:
       - backend
     networks:
       - quickflip-network
-    command: npm run dev
+    command: npm run start
 
   # Celery worker for background tasks
   celery-worker:
