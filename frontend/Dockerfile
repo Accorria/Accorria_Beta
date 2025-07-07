@@ -1,29 +1,27 @@
-FROM node:18-alpine
-
-# Set working directory
+# Install dependencies only when needed
+FROM node:18-alpine AS deps
 WORKDIR /app
+COPY package.json package-lock.json* ./
+RUN npm ci
 
-# Copy package files
-COPY package*.json ./
-
-# Install dependencies
-RUN npm ci --only=production
-
-# Copy source code
+# Rebuild the source code only when needed
+FROM node:18-alpine AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-
-# Build the application
 RUN npm run build
 
-# Install serve to run the built app
-RUN npm install -g serve
+# Production image, copy all the files and run next
+FROM node:18-alpine AS runner
+WORKDIR /app
 
-# Expose port
+ENV NODE_ENV production
+
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./package.json
+
 EXPOSE 3000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:3000 || exit 1
-
-# Start the application
-CMD ["serve", "-s", "dist", "-l", "3000"] 
+CMD ["npm", "start"]
