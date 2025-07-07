@@ -1,0 +1,116 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15
+    container_name: quickflip-postgres
+    environment:
+      POSTGRES_DB: quickflip
+      POSTGRES_USER: quickflip_user
+      POSTGRES_PASSWORD: quickflip_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - quickflip-network
+
+  # Redis for caching and sessions
+  redis:
+    image: redis:7-alpine
+    container_name: quickflip-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - quickflip-network
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: quickflip-backend
+    environment:
+      - DATABASE_URL=postgresql://quickflip_user:quickflip_password@postgres:5432/quickflip
+      - REDIS_URL=redis://redis:6379
+      - SECRET_KEY=your-secret-key-here-change-in-production
+      - DEBUG=true
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./backend:/app
+      - /app/venv
+    networks:
+      - quickflip-network
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: quickflip-frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    depends_on:
+      - backend
+    networks:
+      - quickflip-network
+    command: npm run dev
+
+  # Celery worker for background tasks
+  celery-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: quickflip-celery-worker
+    environment:
+      - DATABASE_URL=postgresql://quickflip_user:quickflip_password@postgres:5432/quickflip
+      - REDIS_URL=redis://redis:6379
+      - SECRET_KEY=your-secret-key-here-change-in-production
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./backend:/app
+    networks:
+      - quickflip-network
+    command: celery -A app.celery worker --loglevel=info
+
+  # Celery beat for scheduled tasks
+  celery-beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: quickflip-celery-beat
+    environment:
+      - DATABASE_URL=postgresql://quickflip_user:quickflip_password@postgres:5432/quickflip
+      - REDIS_URL=redis://redis:6379
+      - SECRET_KEY=your-secret-key-here-change-in-production
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./backend:/app
+    networks:
+      - quickflip-network
+    command: celery -A app.celery beat --loglevel=info
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  quickflip-network:
+    driver: bridge 
