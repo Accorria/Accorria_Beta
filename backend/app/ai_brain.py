@@ -249,43 +249,41 @@ class AIBrainOrchestrator:
             "negotiation", "customer_service", "marketing"
         ]
         
-        if task_type in left_brain_tasks:
+        if any(task in task_type for task in left_brain_tasks):
             return BrainType.LEFT
-        elif task_type in right_brain_tasks:
+        elif any(task in task_type for task in right_brain_tasks):
             return BrainType.RIGHT
         else:
-            # Default to right brain for general tasks
-            return BrainType.RIGHT
+            # Default to left brain for general tasks
+            return BrainType.LEFT
     
     async def dual_think(self, prompt: str, context: Optional[Dict] = None) -> Dict[str, AIResponse]:
         """
-        Get responses from both brains and compare them
-        Useful for important decisions or when you want multiple perspectives
+        Get responses from both brains for comparison or important decisions
         """
         responses = {}
         
         if self.left_brain.is_available():
             try:
-                responses["left"] = await self.left_brain.generate_response(prompt, context)
+                responses["left_brain"] = await self.left_brain.generate_response(prompt, context)
             except Exception as e:
                 logger.error(f"Left brain failed in dual think: {e}")
         
         if self.right_brain.is_available():
             try:
-                responses["right"] = await self.right_brain.generate_response(prompt, context)
+                responses["right_brain"] = await self.right_brain.generate_response(prompt, context)
             except Exception as e:
                 logger.error(f"Right brain failed in dual think: {e}")
         
         return responses
     
     def get_brain_status(self) -> Dict[str, bool]:
-        """Get status of both brains"""
+        """Get availability status of both brains"""
         return {
             "left_brain_available": self.left_brain.is_available(),
             "right_brain_available": self.right_brain.is_available()
         }
 
-# Usage example and configuration
 def create_ai_brain(openai_key: str, google_key: str) -> AIBrainOrchestrator:
-    """Factory function to create the AI brain orchestrator"""
+    """Factory function to create AI brain orchestrator"""
     return AIBrainOrchestrator(openai_key, google_key) 

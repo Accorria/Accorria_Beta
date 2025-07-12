@@ -5,8 +5,9 @@ from contextlib import asynccontextmanager
 
 from app.core.config import settings
 from app.core.database import engine, Base
-from app.api.v1 import listings, messages, replies, scheduler, auth
-from app.services.message_monitor import start_message_monitor
+from app.api.v1 import listings
+# from app.api.v1 import messages, replies, scheduler, auth
+# from app.services.message_monitor import start_message_monitor
 
 
 @asynccontextmanager
@@ -20,7 +21,7 @@ async def lifespan(app: FastAPI):
         await conn.run_sync(Base.metadata.create_all)
     
     # Start background services
-    start_message_monitor()
+    # start_message_monitor()
     
     yield
     
@@ -48,11 +49,11 @@ app.add_middleware(
 security = HTTPBearer()
 
 # Include routers
-app.include_router(auth.router, prefix="/api/v1/auth", tags=["Authentication"])
+# app.include_router(auth.router, prefix="/api/v1/auth", tags=["Authentication"])
 app.include_router(listings.router, prefix="/api/v1/listings", tags=["Listings"])
-app.include_router(messages.router, prefix="/api/v1/messages", tags=["Messages"])
-app.include_router(replies.router, prefix="/api/v1/replies", tags=["Replies"])
-app.include_router(scheduler.router, prefix="/api/v1/scheduler", tags=["Scheduler"])
+# app.include_router(messages.router, prefix="/api/v1/messages", tags=["Messages"])
+# app.include_router(replies.router, prefix="/api/v1/replies", tags=["Replies"])
+# app.include_router(scheduler.router, prefix="/api/v1/scheduler", tags=["Scheduler"])
 
 
 @app.get("/")

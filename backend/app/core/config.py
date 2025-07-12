@@ -30,6 +30,9 @@ class Settings(BaseSettings):
     # OpenAI
     OPENAI_API_KEY: Optional[str] = None
     
+    # Google API
+    GOOGLE_API_KEY: Optional[str] = None
+    
     # Google Cloud
     GOOGLE_CLOUD_PROJECT: Optional[str] = None
     GOOGLE_CLOUD_STORAGE_BUCKET: Optional[str] = None
@@ -42,6 +45,14 @@ class Settings(BaseSettings):
     # SendGrid (Email)
     SENDGRID_API_KEY: Optional[str] = None
     SENDGRID_FROM_EMAIL: Optional[str] = None
+    
+    # Google Cloud Storage
+    GOOGLE_CLOUD_CREDENTIALS_PATH: Optional[str] = None
+    
+    # Platform API Keys
+    FACEBOOK_ACCESS_TOKEN: Optional[str] = None
+    OFFERUP_API_KEY: Optional[str] = None
+    CARGURUS_API_KEY: Optional[str] = None
     
     # Browser Automation
     PLAYWRIGHT_HEADLESS: bool = True
