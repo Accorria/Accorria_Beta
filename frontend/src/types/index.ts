@@ -1,22 +1,31 @@
-// User types
+// API Response Types
+export interface ApiResponse<T = any> {
+  data?: T;
+  message?: string;
+  error?: string;
+}
+
+// User Types
 export interface User {
   id: string;
   email: string;
   name: string;
-  phone?: string;
   created_at: string;
-  updated_at: string;
 }
 
-// Listing types
+// Listing Types
 export interface Listing {
   id: string;
   user_id: string;
   title: string;
   description: string;
   price: number;
+  mileage: number;
+  make: string;
+  model: string;
+  year: number;
   images: string[];
-  platform: 'facebook' | 'craigslist' | 'offerup';
+  platform: string;
   status: 'draft' | 'active' | 'sold' | 'expired';
   created_at: string;
   updated_at: string;
@@ -26,181 +35,95 @@ export interface CreateListingRequest {
   title: string;
   description: string;
   price: number;
-  images: File[];
-  platform: 'facebook' | 'craigslist' | 'offerup';
+  mileage: number;
+  make: string;
+  model: string;
+  year: number;
+  images?: string[];
 }
 
-export interface UpdateListingRequest {
-  title?: string;
-  description?: string;
-  price?: number;
-  images?: File[];
-  status?: 'draft' | 'active' | 'sold' | 'expired';
-}
-
-// Message types
+// Message Types
 export interface Message {
   id: string;
   listing_id: string;
   buyer_name: string;
   content: string;
-  message_type: 'question' | 'offer' | 'appointment' | 'general';
-  platform: 'facebook' | 'craigslist' | 'offerup';
+  message_type: string;
+  platform: string;
   is_read: boolean;
   created_at: string;
 }
 
-export interface MessageClassification {
-  type: 'question' | 'offer' | 'appointment' | 'general';
-  confidence: number;
-  suggested_reply?: string;
-  urgency: 'low' | 'medium' | 'high';
+// AI Reply Types
+export interface AIReplyRequest {
+  message: string;
+  listing_context?: Record<string, any>;
+  task_type?: string;
 }
 
-// Reply types
-export interface Reply {
-  id: string;
-  message_id: string;
-  content: string;
-  status: 'draft' | 'approved' | 'sent';
-  ai_generated: boolean;
-  delay_minutes: number;
-  created_at: string;
-  sent_at?: string;
+export interface AIReplyResponse {
+  reply: string;
+  brain_used: string;
+  confidence?: number;
+  suggested_delay_minutes: number;
 }
 
-export interface GenerateReplyRequest {
-  message_id: string;
-  use_ai: boolean;
-  custom_prompt?: string;
-}
-
-// Appointment types
+// Appointment Types
 export interface Appointment {
   id: string;
   listing_id: string;
   buyer_name: string;
   buyer_phone?: string;
-  proposed_time: string;
-  status: 'pending' | 'confirmed' | 'cancelled';
+  buyer_email?: string;
+  appointment_date: string;
+  location: string;
   notes?: string;
+  status: 'scheduled' | 'completed' | 'cancelled';
   created_at: string;
-  confirmed_at?: string;
 }
 
 export interface CreateAppointmentRequest {
   listing_id: string;
   buyer_name: string;
   buyer_phone?: string;
-  proposed_time: string;
+  buyer_email?: string;
+  appointment_date: string;
+  location: string;
   notes?: string;
 }
 
-// Sale types
-export interface Sale {
-  id: string;
-  listing_id: string;
-  buyer_name: string;
-  final_price: number;
-  sale_date: string;
-  notes?: string;
-  created_at: string;
-}
-
-export interface CreateSaleRequest {
-  listing_id: string;
-  buyer_name: string;
-  final_price: number;
-  sale_date: string;
-  notes?: string;
-}
-
-// Analytics types
-export interface SalesAnalytics {
-  total_sales: number;
-  total_revenue: number;
-  average_price: number;
-  conversion_rate: number;
-  sales_by_month: Array<{
-    month: string;
-    sales: number;
-    revenue: number;
-  }>;
-}
-
-export interface MessageAnalytics {
-  total_messages: number;
-  response_rate: number;
-  average_response_time: number;
-  messages_by_type: Array<{
-    type: string;
-    count: number;
-  }>;
-}
-
-// API Response types
-export interface ApiResponse<T> {
-  data: T;
-  message?: string;
-  success: boolean;
-}
-
-export interface PaginatedResponse<T> {
-  data: T[];
-  total: number;
-  page: number;
-  per_page: number;
-  total_pages: number;
-}
-
-// Form types
-export interface LoginForm {
+// Auth Types
+export interface LoginRequest {
   email: string;
   password: string;
 }
 
-export interface RegisterForm {
+export interface RegisterRequest {
+  email: string;
+  password: string;
   name: string;
-  email: string;
-  password: string;
-  confirm_password: string;
 }
 
-// Notification types
-export interface Notification {
-  id: string;
-  user_id: string;
-  type: 'message' | 'appointment' | 'sale' | 'system';
-  title: string;
-  message: string;
-  is_read: boolean;
-  created_at: string;
+export interface AuthResponse {
+  access_token: string;
+  token_type: string;
+  expires_in: number;
 }
 
-// Platform configuration types
-export interface PlatformConfig {
-  platform: 'facebook' | 'craigslist' | 'offerup';
-  is_connected: boolean;
-  username?: string;
-  last_sync?: string;
-  session_valid: boolean;
+// Component Props Types
+export interface ListingCardProps {
+  listing: Listing;
+  onEdit?: (listing: Listing) => void;
+  onDelete?: (id: string) => void;
 }
 
-// Settings types
-export interface UserSettings {
-  notifications: {
-    email: boolean;
-    sms: boolean;
-    push: boolean;
-  };
-  ai_replies: {
-    enabled: boolean;
-    min_delay: number;
-    max_delay: number;
-    auto_approve: boolean;
-  };
-  message_monitoring: {
-    enabled: boolean;
-    poll_interval: number;
-  };
+export interface MessageCardProps {
+  message: Message;
+  onReply?: (message: Message) => void;
+  onMarkRead?: (id: string) => void;
+}
+
+export interface AppointmentCardProps {
+  appointment: Appointment;
+  onUpdateStatus?: (id: string, status: string) => void;
 } 
