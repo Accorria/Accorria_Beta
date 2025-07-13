@@ -53,7 +53,7 @@ services:
   # Frontend
   frontend:
     build:
-      context: ./frontend-next
+      context: ./frontend
       dockerfile: Dockerfile
     container_name: quickflip-frontend
     ports:

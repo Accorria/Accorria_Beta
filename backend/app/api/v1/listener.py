@@ -19,7 +19,7 @@ async def upload_listener(
         raise HTTPException(status_code=400, detail="Maximum 15 images allowed.")
     image_bytes = [await img.read() for img in images]
     agent = ListenerAgent(db)
-    car_data = agent.process_images_and_details(
+    car_data = await agent.process_images_and_details(
         images=image_bytes, vin=vin, make=make, model=model, year=year, user_id=user_id
     )
     # For now, just return the processed data (saving comes later)

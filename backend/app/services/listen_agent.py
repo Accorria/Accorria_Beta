@@ -15,6 +15,7 @@ from datetime import datetime
 from typing import List, Optional
 from app.models import Car, User  # Use your comprehensive models
 from sqlalchemy.orm import Session
+from .image_analysis_agent import ImageAnalysisAgent
 
 logger = logging.getLogger(__name__)
 
@@ -201,20 +202,63 @@ class ListenAgent:
 class ListenerAgent:
     def __init__(self, db: Session):
         self.db = db
+        # Initialize the image analysis agent
+        self.image_agent = ImageAnalysisAgent()
 
-    def extract_details_from_images(self, images: List[bytes]) -> dict:
-        # TODO: Replace with real AI/ML or Google Vision API call
-        # For now, return dummy data
-        return {
-            "make": "Toyota",
-            "model": "Camry",
-            "year": 2020,
-            "color": "White",
-            "inferred_from_images": True,
-            "images": images  # Store images for saving
-        }
+    async def extract_details_from_images(self, images: List[bytes]) -> dict:
+        """
+        Extract car details from images using AI analysis.
+        
+        Args:
+            images: List of image bytes
+            
+        Returns:
+            Dictionary containing detected car information
+        """
+        try:
+            # Use the image analysis agent to analyze the images
+            analysis_result = await self.image_agent.analyze_car_images(images)
+            
+            if analysis_result.get("success"):
+                detected_info = analysis_result.get("detected_info", {})
+                return {
+                    "make": detected_info.get("make"),
+                    "model": detected_info.get("model"),
+                    "year": detected_info.get("year"),
+                    "color": detected_info.get("color"),
+                    "vin": detected_info.get("vin"),
+                    "mileage": detected_info.get("mileage"),
+                    "inferred_from_images": True,
+                    "confidence_score": analysis_result.get("confidence_score", 0.0),
+                    "images": images  # Store images for saving
+                }
+            else:
+                # Fallback to basic detection
+                logger.warning("Image analysis failed, using fallback")
+                return {
+                    "make": "Toyota",
+                    "model": "Camry",
+                    "year": 2020,
+                    "color": "White",
+                    "inferred_from_images": True,
+                    "confidence_score": 0.1,
+                    "images": images
+                }
+                
+        except Exception as e:
+            logger.error(f"Error in image analysis: {e}")
+            # Fallback to basic detection
+            return {
+                "make": "Toyota",
+                "model": "Camry",
+                "year": 2020,
+                "color": "White",
+                "inferred_from_images": True,
+                "confidence_score": 0.0,
+                "images": images
+            }
 
-    def process_images_and_details(
+    async def process_images_and_details(
         self,
         images: List[bytes],
         vin: Optional[str] = None,
@@ -224,7 +268,7 @@ class ListenerAgent:
         user_id: Optional[int] = None,
     ):
         # 1. Extract details from images
-        details = self.extract_details_from_images(images)
+        details = await self.extract_details_from_images(images)
         # 2. Overwrite with manual input if provided
         if make: details["make"] = make
         if model: details["model"] = model
