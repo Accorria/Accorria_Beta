@@ -13,6 +13,7 @@ from app.api.v1.replies import router as replies_router
 from app.api.v1.scheduler import router as scheduler_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.car_analysis import router as car_analysis_router
+from app.api.v1.platform_posting import router as platform_posting_router
 # from app.services.message_monitor import start_message_monitor
 
 
@@ -63,6 +64,7 @@ app.include_router(messages_router, prefix="/api/v1/messages", tags=["Messages"]
 app.include_router(replies_router, prefix="/api/v1/replies", tags=["Replies"])
 app.include_router(scheduler_router, prefix="/api/v1/scheduler", tags=["Scheduler"])
 app.include_router(car_analysis_router, prefix="/api/v1", tags=["Car Analysis"])
+app.include_router(platform_posting_router, prefix="/api/v1", tags=["Platform Posting"])
 
 
 @app.get("/")

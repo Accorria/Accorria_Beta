@@ -1,6 +1,16 @@
+# Use official Python image
 FROM python:3.11-slim
 
-# Set working directory
+# Metadata labels
+LABEL maintainer="Preston <preston@path-suite.com>"
+LABEL version="0.1.0"
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV PORT=8000
+
+# Set work directory
 WORKDIR /app
 
 # Install system dependencies
@@ -26,9 +36,6 @@ RUN apt-get update && apt-get install -y \
     libx11-xcb1 \
     libxcb-dri3-0 \
     libxcb1 \
-    libxss1 \
-    libxrandr2 \
-    libasound2 \
     libpangocairo-1.0-0 \
     libatk1.0-0 \
     libgtk-3-0 \
@@ -47,16 +54,20 @@ RUN playwright install --with-deps chromium
 # Copy application code
 COPY . .
 
+# Copy entrypoint script and make it executable
+COPY start.sh /start.sh
+RUN chmod +x /start.sh
+
 # Create non-root user
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
 USER appuser
 
 # Expose port
-EXPOSE 8000
+EXPOSE $PORT
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
+    CMD curl -f http://localhost:$PORT/health || exit 1
 
 # Default command
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"] 
+CMD ["/start.sh"] 

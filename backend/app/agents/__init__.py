@@ -7,6 +7,7 @@ This module contains all AI agents for the car flipping platform.
 from datetime import datetime
 from .base_agent import BaseAgent, AgentOutput
 from .market_intelligence_agent import MarketIntelligenceAgent
+from .listening_agent import ListeningAgent
 
 # Placeholder agent classes for the multi-agent system
 class ScoutAgent(BaseAgent):
@@ -126,6 +127,7 @@ class LearningAgent(BaseAgent):
 __all__ = [
     "BaseAgent",
     "MarketIntelligenceAgent",
+    "ListeningAgent",
     "ScoutAgent",
     "ValuationAgent", 
     "InspectionAgent",

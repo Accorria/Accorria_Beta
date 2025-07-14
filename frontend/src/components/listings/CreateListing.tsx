@@ -15,6 +15,7 @@ interface CarDetails {
   year: string;
   mileage: string;
   price: string;
+  lowestPrice: string; // NEW FIELD
   description: string;
 }
 
@@ -26,6 +27,7 @@ export default function CreateListing({ onClose }: CreateListingProps) {
     year: '',
     mileage: '',
     price: '',
+    lowestPrice: '', // NEW FIELD
     description: ''
   });
   const [isUploading, setIsUploading] = useState(false);
@@ -35,6 +37,10 @@ export default function CreateListing({ onClose }: CreateListingProps) {
   const [analysisResult, setAnalysisResult] = useState<any>(null);
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [isSearchingMarket, setIsSearchingMarket] = useState(false);
+  const [descriptionSuggestions, setDescriptionSuggestions] = useState<string[]>([]);
+  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>(["facebook_marketplace"]);
+  const [isPosting, setIsPosting] = useState(false);
+  const [postingResults, setPostingResults] = useState<any>(null);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     setFiles(prev => [...prev, ...acceptedFiles].slice(0, 15)); // Max 15 images
@@ -61,43 +67,63 @@ export default function CreateListing({ onClose }: CreateListingProps) {
     setIsAnalyzing(true);
     try {
       const formData = new FormData();
-      files.forEach((file, index) => {
+      files.forEach((file) => {
         formData.append(`images`, file);
       });
       formData.append('location', 'United States');
-      formData.append('target_profit', '2000');
-
+      formData.append('target_profit', carDetails.lowestPrice || '2000');
       const response = await fetch('/api/v1/car-analysis/analyze-images', {
         method: 'POST',
         body: formData,
       });
-
+      let result = null;
       if (response.ok) {
-        const result = await response.json();
+        result = await response.json();
         setAnalysisResult(result);
         setShowAnalysis(true);
-        
         // Auto-populate fields with detected information
         if (result.image_analysis) {
           const detected = result.image_analysis;
-          if (detected.make) {
-            setCarDetails(prev => ({ ...prev, make: detected.make }));
-          }
-          if (detected.model) {
-            setCarDetails(prev => ({ ...prev, model: detected.model }));
-          }
-          if (detected.year) {
-            setCarDetails(prev => ({ ...prev, year: detected.year.toString() }));
-          }
-          if (detected.mileage) {
-            setCarDetails(prev => ({ ...prev, mileage: detected.mileage.toString() }));
-          }
+          setCarDetails(prev => ({
+            ...prev,
+            make: detected.make || prev.make,
+            model: detected.model || prev.model,
+            year: detected.year ? detected.year.toString() : prev.year,
+            mileage: detected.mileage ? detected.mileage.toString() : prev.mileage,
+          }));
         }
-        
-        console.log('AI Analysis complete:', result);
       } else {
         throw new Error('Image analysis failed');
       }
+      // Run market analysis in background
+      if (carDetails.make && carDetails.model) {
+        fetch('/api/v1/market-intelligence/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            make: carDetails.make,
+            model: carDetails.model,
+            year: carDetails.year ? parseInt(carDetails.year) : undefined,
+            mileage: carDetails.mileage ? parseInt(carDetails.mileage) : undefined,
+            location: 'United States',
+            analysis_type: 'comprehensive',
+          }),
+        })
+          .then(res => res.ok ? res.json() : null)
+          .then(marketResult => {
+            if (marketResult && result) {
+              setAnalysisResult((prev: any) => ({ ...prev, market_intelligence: marketResult.data }));
+            }
+          });
+      }
+      // 6. Generate 2-3 AI description suggestions (mock for now)
+      setTimeout(() => {
+        setDescriptionSuggestions([
+          `${carDetails.year} ${carDetails.make} ${carDetails.model} - Clean, well-maintained, ${carDetails.mileage} miles. Ready to drive!`,
+          `Excellent ${carDetails.year} ${carDetails.make} ${carDetails.model}, clean title, only ${carDetails.mileage} miles.`,
+          `For sale: ${carDetails.year} ${carDetails.make} ${carDetails.model}, ${carDetails.mileage} miles, great condition!`,
+        ]);
+      }, 500);
     } catch (error) {
       console.error('Error analyzing images:', error);
       alert('Failed to analyze images. Please try again.');
@@ -113,7 +139,7 @@ export default function CreateListing({ onClose }: CreateListingProps) {
       return;
     }
 
-    setIsUploading(true);
+    setIsPosting(true);
     
     try {
       const formData = new FormData();
@@ -127,28 +153,49 @@ export default function CreateListing({ onClose }: CreateListingProps) {
         make: carDetails.make === 'Other' ? customMake : carDetails.make,
         model: carDetails.model === 'Other' ? customModel : carDetails.model,
       };
-      Object.entries(detailsToSend).forEach(([key, value]) => {
-        formData.append(key, value);
+      
+      // Add platform selection
+      selectedPlatforms.forEach(platform => {
+        formData.append(`platforms`, platform);
       });
+      
+      // Add user ID (you'll need to get this from auth context)
+      formData.append('user_id', '1'); // TODO: Get from auth context
+      
+      // Add custom price if available
+      if (carDetails.price) {
+        formData.append('custom_price', carDetails.price);
+      }
+      
+      // Add custom description if available
+      if (carDetails.description) {
+        formData.append('custom_description', carDetails.description);
+      }
 
-      const response = await fetch('/api/v1/listener/upload', {
+      const response = await fetch('/api/v1/platform-posting/analyze-and-post', {
         method: 'POST',
         body: formData,
       });
 
       if (response.ok) {
         const result = await response.json();
-        console.log('Listing created:', result);
+        console.log('Listing posted:', result);
+        setPostingResults(result);
+        
+        // Show success message
+        const successCount = result.successful_postings || 0;
+        const totalCount = result.total_platforms || 0;
+        alert(`Successfully posted to ${successCount}/${totalCount} platforms!`);
+        
         onClose();
-        // You might want to refresh the listings or show a success message
       } else {
-        throw new Error('Failed to create listing');
+        throw new Error('Failed to post listing');
       }
     } catch (error) {
-      console.error('Error creating listing:', error);
-      alert('Failed to create listing. Please try again.');
+      console.error('Error posting listing:', error);
+      alert('Failed to post listing. Please try again.');
     } finally {
-      setIsUploading(false);
+      setIsPosting(false);
     }
   };
 
@@ -273,17 +320,17 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                     type="button"
                     onClick={analyzeImages}
                     disabled={isAnalyzing}
-                    className="w-full px-4 py-3 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:from-purple-600 hover:to-blue-600 transition-all duration-200 flex items-center justify-center space-x-2"
+                    className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg font-bold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700 transition-all duration-200 flex items-center justify-center space-x-2"
                   >
                     {isAnalyzing ? (
                       <>
                         <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                        <span>Analyzing Images...</span>
+                        <span>Running Quick Script...</span>
                       </>
                     ) : (
                       <>
-                        <span>🤖</span>
-                        <span>AI Analyze Images</span>
+                        <span>⚡</span>
+                        <span>Quick Script</span>
                       </>
                     )}
                   </button>
@@ -390,36 +437,28 @@ export default function CreateListing({ onClose }: CreateListingProps) {
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Price
               </label>
-              <div className="flex space-x-2">
-                <input
-                  type="number"
-                  value={carDetails.price}
-                  onChange={(e) => setCarDetails(prev => ({ ...prev, price: e.target.value }))}
-                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="15000"
-                  min="0"
-                  step="100"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={searchMarket}
-                  disabled={isSearchingMarket || !carDetails.make || !carDetails.model}
-                  className="px-4 py-2 bg-green-500 text-white rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-green-600 transition-colors flex items-center space-x-1"
-                >
-                  {isSearchingMarket ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      <span>Searching...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>🔍</span>
-                      <span>Search Market</span>
-                    </>
-                  )}
-                </button>
-              </div>
+              <input
+                type="number"
+                value={carDetails.price}
+                onChange={(e) => setCarDetails(prev => ({ ...prev, price: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-bold focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="15000"
+                min="0"
+                step="100"
+                required
+              />
+              <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mt-2">
+                Lowest I'll Take
+              </label>
+              <input
+                type="number"
+                value={carDetails.lowestPrice}
+                onChange={(e) => setCarDetails(prev => ({ ...prev, lowestPrice: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-bold focus:ring-2 focus:ring-blue-500 focus:border-transparent mt-1"
+                placeholder="12000"
+                min="0"
+                step="100"
+              />
             </div>
 
             <div>
@@ -433,6 +472,38 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                 rows={3}
                 placeholder="Describe the car's condition, features, and any relevant details..."
               />
+            </div>
+
+            {/* Platform Selection */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Post to Platforms
+              </label>
+              <div className="space-y-2">
+                {[
+                  { id: 'facebook_marketplace', name: 'Facebook Marketplace', icon: '📘' },
+                  { id: 'craigslist', name: 'Craigslist', icon: '📋' },
+                  { id: 'offerup', name: 'OfferUp', icon: '📱' }
+                ].map((platform) => (
+                  <label key={platform.id} className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      checked={selectedPlatforms.includes(platform.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedPlatforms([...selectedPlatforms, platform.id]);
+                        } else {
+                          setSelectedPlatforms(selectedPlatforms.filter(p => p !== platform.id));
+                        }
+                      }}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-700 dark:text-gray-300">
+                      {platform.icon} {platform.name}
+                    </span>
+                  </label>
+                ))}
+              </div>
             </div>
 
             {/* AI Analysis Results */}
@@ -519,6 +590,24 @@ export default function CreateListing({ onClose }: CreateListingProps) {
               </div>
             )}
 
+            {descriptionSuggestions.length > 0 && (
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">AI Description Suggestions</label>
+                <div className="space-y-2">
+                  {descriptionSuggestions.map((desc, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      className="w-full text-left px-3 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700 hover:bg-blue-100 dark:hover:bg-blue-800 transition-colors"
+                      onClick={() => setCarDetails(prev => ({ ...prev, description: desc }))}
+                    >
+                      {desc}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Submit Button */}
             <div className="flex space-x-3">
               <button
@@ -530,10 +619,10 @@ export default function CreateListing({ onClose }: CreateListingProps) {
               </button>
               <button
                 type="submit"
-                disabled={isUploading || files.length === 0}
+                disabled={isPosting || files.length === 0}
                 className="flex-1 px-4 py-3 bg-blue-500 text-white rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-600 transition-colors"
               >
-                {isUploading ? 'Creating...' : 'Create Listing'}
+                {isPosting ? `Posting to ${selectedPlatforms.length} Platform${selectedPlatforms.length > 1 ? 's' : ''}...` : `Post to ${selectedPlatforms.length} Platform${selectedPlatforms.length > 1 ? 's' : ''}`}
               </button>
             </div>
           </form>
@@ -554,6 +643,19 @@ export default function CreateListing({ onClose }: CreateListingProps) {
         @keyframes slideUp {
           from { opacity: 0; transform: translateY(20px); }
           to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
+      {/* 1. Add a style block to hide number input spinners */}
+      <style jsx global>{`
+        /* Hide number input spinners for Chrome, Safari, Edge, Opera */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+        }
+        /* Hide number input spinners for Firefox */
+        input[type=number] {
+          -moz-appearance: textfield;
         }
       `}</style>
     </div>

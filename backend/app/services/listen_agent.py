@@ -301,6 +301,64 @@ class ListenerAgent:
         self.db.refresh(car)
         return car
 
+    async def post_listing_to_platforms(self, car_data: dict, platforms: List[str] = None) -> List[Dict[str, Any]]:
+        """
+        Post listing to selected platforms
+        
+        Args:
+            car_data: Car data from image analysis
+            platforms: List of platforms to post to (default: ["facebook_marketplace"])
+            
+        Returns:
+            List of posting results
+        """
+        if platforms is None:
+            platforms = ["facebook_marketplace"]
+        
+        try:
+            # Import platform poster
+            from .platform_poster import ListingData, post_listing_to_platforms
+            
+            # Create listing data
+            listing_data = ListingData(
+                title=f"{car_data.get('year', '')} {car_data.get('make', '')} {car_data.get('model', '')}",
+                description=car_data.get("description", "Auto-generated listing with AI analysis."),
+                price=car_data.get("price", 0.0),
+                make=car_data.get("make", ""),
+                model=car_data.get("model", ""),
+                year=car_data.get("year", 0),
+                mileage=car_data.get("mileage", 0),
+                images=car_data.get("images", []),
+                location=car_data.get("location", "United States"),
+                condition=car_data.get("condition", "good"),
+                features=car_data.get("features", [])
+            )
+            
+            # Post to platforms
+            results = await post_listing_to_platforms(listing_data, platforms)
+            
+            # Convert results to dict format
+            posting_results = []
+            for result in results:
+                posting_results.append({
+                    "platform": result.platform,
+                    "success": result.success,
+                    "listing_id": result.listing_id,
+                    "url": result.url,
+                    "error_message": result.error_message,
+                    "posted_at": result.posted_at.isoformat() if result.posted_at else None
+                })
+            
+            return posting_results
+            
+        except Exception as e:
+            logger.error(f"Error posting to platforms: {str(e)}")
+            return [{
+                "platform": platform,
+                "success": False,
+                "error_message": str(e)
+            } for platform in platforms]
+
 # Global instance
 listen_agent = ListenAgent()
 
