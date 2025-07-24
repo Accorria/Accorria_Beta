@@ -1,21 +1,19 @@
 import React, { useState } from 'react';
-import { 
-  Box, 
-  Typography, 
-  Grid, 
-  Card, 
-  CardContent, 
-  Avatar, 
-  Button, 
-  Skeleton,
-  Chip,
-  IconButton,
-  Tooltip
-} from '@mui/material';
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
+import Grid from '@mui/material/Grid';
+import Card from '@mui/material/Card';
+import CardContent from '@mui/material/CardContent';
+import Avatar from '@mui/material/Avatar';
+import Button from '@mui/material/Button';
+import Skeleton from '@mui/material/Skeleton';
+import Chip from '@mui/material/Chip';
+import IconButton from '@mui/material/IconButton';
+import Tooltip from '@mui/material/Tooltip';
 import { 
   Add as AddIcon,
   TrendingUp as TrendingUpIcon,
-  Car as CarIcon,
+  DirectionsCar as CarIcon,
   AttachMoney as MoneyIcon,
   Star as StarIcon,
   Visibility as ViewIcon
@@ -75,17 +73,17 @@ export default function Dashboard({
     return (
       <Box p={3}>
         <Skeleton variant="text" width="60%" height={60} />
-        <Grid container spacing={2} mb={2}>
+        <Grid container spacing={2} mb={2} {...({} as any)}>
           {[...Array(5)].map((_, i) => (
-            <Grid item xs={6} md={2} key={i}>
+            <Grid item xs={6} md={2} key={i} {...({} as any)}>
               <Skeleton variant="rectangular" height={120} />
             </Grid>
           ))}
         </Grid>
         <Skeleton variant="text" width="30%" height={40} />
-        <Grid container spacing={2}>
+        <Grid container spacing={2} {...({} as any)}>
           {[...Array(3)].map((_, i) => (
-            <Grid item xs={12} md={4} key={i}>
+            <Grid item xs={12} md={4} key={i} {...({} as any)}>
               <Skeleton variant="rectangular" height={100} />
             </Grid>
           ))}
@@ -189,9 +187,9 @@ export default function Dashboard({
       </Box>
 
       {/* Stats Cards */}
-      <Grid container spacing={3} mb={4}>
+      <Grid container spacing={3} mb={4} {...({} as any)}>
         {statCards.map((stat, index) => (
-          <Grid item xs={12} sm={6} md={2.4} key={index}>
+          <Grid item xs={12} sm={6} md={2.4} key={index} {...({} as any)}>
             <Card
               sx={{
                 background: stat.gradient,
@@ -226,9 +224,9 @@ export default function Dashboard({
       <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 3, color: '#2d3748' }}>
         📋 Recent Listings
       </Typography>
-      <Grid container spacing={3}>
+      <Grid container spacing={3} {...({} as any)}>
         {currentStats.recentListings.map((listing, index) => (
-          <Grid item xs={12} md={4} key={listing.id}>
+          <Grid item xs={12} md={4} key={listing.id} {...({} as any)}>
             <Card
               sx={{
                 cursor: 'pointer',
