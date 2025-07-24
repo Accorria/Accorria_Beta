@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     
     # Database
-    DATABASE_URL: str = "postgresql://user:password@localhost/quickflip"
+    DATABASE_URL: str = "postgresql://quickflip_user:QuickData@localhost:5432/quickflip_db"
     
     # Redis
     REDIS_URL: str = "redis://localhost:6379"
@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     # CORS
     ALLOWED_ORIGINS: List[str] = [
         "http://localhost:3000",
+        "http://localhost:3001",
         "http://localhost:5173",
         "https://quickflip-ai.vercel.app"
     ]
@@ -70,6 +71,7 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         case_sensitive = True
+        extra = "ignore"  # Allow extra fields from environment
 
 
 # Create settings instance

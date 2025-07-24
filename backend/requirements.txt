@@ -52,3 +52,7 @@ aiofiles
 black==23.11.0
 isort==5.12.0
 flake8==6.1.0 
+
+# Web scraping and HTTP
+aiohttp>=3.8.0
+beautifulsoup4>=4.11.0 
