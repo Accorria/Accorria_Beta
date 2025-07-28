@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Request, Depends, status
 from fastapi.responses import JSONResponse
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime
 
 from ...core.database import get_db
@@ -9,7 +9,7 @@ from ...models import Event
 router = APIRouter(prefix="/user", tags=["user"])
 
 @router.post("/log_action", status_code=status.HTTP_201_CREATED)
-async def log_action(request: Request, db: Session = Depends(get_db)):
+async def log_action(request: Request, db: AsyncSession = Depends(get_db)):
     data = await request.json()
     event_type = data.get("action")
     event_detail = data.get("detail", "")
@@ -34,6 +34,6 @@ async def log_action(request: Request, db: Session = Depends(get_db)):
         referrer=referrer,
     )
     db.add(event)
-    db.commit()
-    db.refresh(event)
+    await db.commit()
+    await db.refresh(event)
     return JSONResponse(status_code=201, content={"message": "Action logged", "event_id": event.event_id}) 

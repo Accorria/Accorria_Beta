@@ -1,65 +1,69 @@
-# Use official Python image
+# Multi-stage build for production
+FROM python:3.11-slim as builder
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set work directory
+WORKDIR /app
+
+# Copy requirements and install Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir --user -r requirements.txt
+
+# Production stage
 FROM python:3.11-slim
 
 # Metadata labels
 LABEL maintainer="Preston <preston@path-suite.com>"
-LABEL version="0.1.0"
+LABEL version="1.0.0"
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV PORT=8000
+ENV PYTHONPATH=/app
+
+# Install minimal runtime dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user
+RUN useradd -m -u 1000 appuser
 
 # Set work directory
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    wget \
-    gnupg \
-    ca-certificates \
-    procps \
-    libxss1 \
-    libnss3 \
-    libnspr4 \
-    libatk-bridge2.0-0 \
-    libdrm2 \
-    libxkbcommon0 \
-    libxcomposite1 \
-    libxdamage1 \
-    libxrandr2 \
-    libgbm1 \
-    libasound2 \
-    libpango-1.0-0 \
-    libcairo2 \
-    libatspi2.0-0 \
-    libx11-xcb1 \
-    libxcb-dri3-0 \
-    libxcb1 \
-    libpangocairo-1.0-0 \
-    libatk1.0-0 \
-    libgtk-3-0 \
-    libgdk-pixbuf2.0-0 \
-    && rm -rf /var/lib/apt/lists/*
+# Copy Python packages from builder stage
+COPY --from=builder /root/.local /home/appuser/.local
 
-# Copy requirements first for better caching
-COPY requirements.txt .
+# Make sure scripts in .local are usable:
+ENV PATH=/home/appuser/.local/bin:$PATH
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Install Playwright browsers
-RUN playwright install --with-deps chromium
+# Playwright installation removed - not needed for OpenAI API
 
 # Copy application code
 COPY . .
 
-# Copy entrypoint script and make it executable
-COPY start.sh /start.sh
-RUN chmod +x /start.sh
+# Create production start script
+RUN echo '#!/bin/bash\n\
+set -e\n\
+echo "🚀 Starting QuickFlip AI in production mode..."\n\
+exec uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 1 --loop uvloop --http httptools' > /start-production.sh
+RUN chmod +x /start-production.sh
 
-# Create non-root user
-RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
+# Change ownership to appuser
+RUN chown -R appuser:appuser /app /home/appuser
+
+# Switch to non-root user
 USER appuser
 
 # Expose port
@@ -69,5 +73,5 @@ EXPOSE $PORT
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:$PORT/health || exit 1
 
-# Default command
-CMD ["/start.sh"] 
+# Production command
+CMD ["/start-production.sh"] 

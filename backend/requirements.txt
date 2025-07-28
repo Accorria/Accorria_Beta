@@ -15,8 +15,7 @@ python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 python-dotenv==1.0.0
 
-# Browser automation
-playwright==1.40.0
+# Browser automation removed for simplified deployment
 
 # AI and ML
 openai==1.3.7

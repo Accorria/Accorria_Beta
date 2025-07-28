@@ -15,6 +15,7 @@ from app.api.v1.auth import router as auth_router
 from app.api.v1.car_analysis import router as car_analysis_router
 from app.api.v1.platform_posting import router as platform_posting_router
 from app.api.v1 import auth, listings, messages, replies, scheduler, platform_posting, deals
+from app.api.v1 import vision_test
 # from app.services.message_monitor import start_message_monitor
 
 
@@ -24,9 +25,13 @@ async def lifespan(app: FastAPI):
     # Startup
     print("🚀 Starting QuickFlip AI...")
     
-    # Create database tables
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    # Create database tables (optional for cloud deployment)
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        print("✅ Database connection established")
+    except Exception as e:
+        print(f"⚠️ Database connection failed: {e}. Running without database.")
     
     # Start background services
     # start_message_monitor()
@@ -67,6 +72,7 @@ app.include_router(scheduler.router, prefix="/api/v1", tags=["Scheduler"])
 app.include_router(car_analysis_router, prefix="/api/v1", tags=["Car Analysis"])
 app.include_router(platform_posting.router, prefix="/api/v1", tags=["Platform Posting"])
 app.include_router(deals.router, prefix="/api/v1", tags=["Deals"])
+app.include_router(vision_test.router, prefix="/api/v1", tags=["Vision API Testing"])
 
 
 @app.get("/")
@@ -84,12 +90,7 @@ async def health_check():
     """Detailed health check"""
     return {
         "status": "healthy",
-        "database": "connected",
-        "services": {
-            "message_monitor": "running",
-            "ai_reply_generator": "ready",
-            "browser_automation": "ready"
-        }
+        "service": "quickflip-ai"
     }
 
 
