@@ -117,12 +117,12 @@ const AIListingGenerator: React.FC = () => {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.detail || 'Failed to generate listing');
+        throw new Error((data as any).detail || 'Failed to generate listing');
       }
 
       setResult(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+    } catch (err: any) {
+      setError(err?.message || 'An error occurred');
     } finally {
       setIsGenerating(false);
     }
