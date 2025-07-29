@@ -204,6 +204,15 @@ async def _generate_price_recommendations(
     mileage = car_details.get("mileage", 50000)
     mileage_adjustment = 1.0
     
+    # Ensure mileage is a valid number
+    if mileage is None:
+        mileage = 50000
+    elif not isinstance(mileage, (int, float)):
+        try:
+            mileage = int(mileage)
+        except (ValueError, TypeError):
+            mileage = 50000
+    
     if mileage < 30000:
         mileage_adjustment = 1.15  # Low mileage premium
     elif mileage < 60000:

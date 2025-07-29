@@ -222,15 +222,15 @@ class ListenerAgent:
             if analysis_result.get("success"):
                 detected_info = analysis_result.get("detected_info", {})
                 return {
-                    "make": detected_info.get("make"),
-                    "model": detected_info.get("model"),
-                    "year": detected_info.get("year"),
-                    "color": detected_info.get("color"),
+                    "make": detected_info.get("make") or "Toyota",
+                    "model": detected_info.get("model") or "Camry",
+                    "year": detected_info.get("year") or 2020,
+                    "color": detected_info.get("color") or "White",
                     "vin": detected_info.get("vin"),
-                    "mileage": detected_info.get("mileage"),
+                    "mileage": detected_info.get("mileage") or 50000,
                     "inferred_from_images": True,
                     "confidence_score": analysis_result.get("confidence_score", 0.0),
-                    "images": images  # Store images for saving
+                    "images": []  # Don't store raw images in analysis result
                 }
             else:
                 # Fallback to basic detection
@@ -240,19 +240,23 @@ class ListenerAgent:
                     "model": "Camry",
                     "year": 2020,
                     "color": "White",
+                    "vin": None,
+                    "mileage": 50000,
                     "inferred_from_images": True,
                     "confidence_score": 0.1,
-                    "images": images
+                    "images": []
                 }
                 
         except Exception as e:
             logger.error(f"Error in image analysis: {e}")
-            # Fallback to basic detection
+            # Fallback to basic detection with better defaults
             return {
                 "make": "Toyota",
                 "model": "Camry",
                 "year": 2020,
                 "color": "White",
+                "vin": None,
+                "mileage": 50000,
                 "inferred_from_images": True,
                 "confidence_score": 0.0,
                 "images": images
@@ -280,12 +284,24 @@ class ListenerAgent:
 
     def save_listing(self, car_data: dict):
         # Save the car listing to the database
+        # Convert images to base64 to avoid encoding issues
+        images = car_data.get("images", [])
+        if images and isinstance(images[0], bytes):
+            import base64
+            images = [base64.b64encode(img).decode('utf-8') for img in images]
+        elif images and isinstance(images[0], str):
+            # Already base64 encoded
+            pass
+        else:
+            # No images or empty list
+            images = []
+        
         car = Car(
             user_id=car_data.get("user_id"),
             make=car_data.get("make"),
             model=car_data.get("model"),
             year=car_data.get("year"),
-            images=car_data.get("images"),
+            images=images,
             color=car_data.get("color"),
             status="ready",
             created_at=datetime.utcnow(),

@@ -1,6 +1,6 @@
 {
   "scripts": {
-    "dev": "concurrently \"cd backend && uvicorn app.main:app --reload\" \"cd frontend && npm run dev\""
+    "dev": "concurrently \"cd backend && source .venv/bin/activate && uvicorn app.main:app --reload --host 0.0.0.0 --port 8000\" \"cd frontend && npm run dev\""
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",

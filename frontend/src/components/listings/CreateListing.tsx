@@ -92,6 +92,12 @@ export default function CreateListing({ onClose }: CreateListingProps) {
             mileage: detected.mileage ? detected.mileage.toString() : prev.mileage,
           }));
         }
+        
+        // If no image analysis data, still show the analysis result
+        if (result.success) {
+          setAnalysisResult(result);
+          setShowAnalysis(true);
+        }
       } else {
         throw new Error('Image analysis failed');
       }

@@ -14,6 +14,7 @@ from app.api.v1.scheduler import router as scheduler_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.car_analysis import router as car_analysis_router
 from app.api.v1.platform_posting import router as platform_posting_router
+from app.api.v1.car_listing_generator import router as car_listing_generator_router
 from app.api.v1 import auth, listings, messages, replies, scheduler, platform_posting, deals
 from app.api.v1 import vision_test
 # from app.services.message_monitor import start_message_monitor
@@ -71,6 +72,7 @@ app.include_router(replies.router, prefix="/api/v1", tags=["AI Replies"])
 app.include_router(scheduler.router, prefix="/api/v1", tags=["Scheduler"])
 app.include_router(car_analysis_router, prefix="/api/v1", tags=["Car Analysis"])
 app.include_router(platform_posting.router, prefix="/api/v1", tags=["Platform Posting"])
+app.include_router(car_listing_generator_router, prefix="/api/v1", tags=["Car Listing Generator"])
 app.include_router(deals.router, prefix="/api/v1", tags=["Deals"])
 app.include_router(vision_test.router, prefix="/api/v1", tags=["Vision API Testing"])
 

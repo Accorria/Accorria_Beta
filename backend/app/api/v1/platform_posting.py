@@ -168,6 +168,71 @@ async def analyze_and_post_listing(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Analyze and post failed: {str(e)}")
 
+@router.post("/platform-posting/post-listing-simple", response_model=PlatformPostingResponse)
+async def post_listing_simple(
+    request: PlatformPostingRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Simple posting endpoint for testing (JSON only, no file uploads)
+    
+    This endpoint:
+    1. Creates structured listing data
+    2. Posts to selected platforms
+    3. Returns posting results for each platform
+    """
+    try:
+        # Create listing data
+        listing_data = ListingData(
+            title=request.title or f"{request.year} {request.make} {request.model}",
+            description=request.description or f"Clean {request.year} {request.make} {request.model} with {request.mileage:,} miles. Well-maintained and ready to drive!",
+            price=request.price,
+            make=request.make,
+            model=request.model,
+            year=request.year,
+            mileage=request.mileage,
+            images=[],  # No images for simple endpoint
+            location=request.location,
+            condition=request.condition,
+            features=request.features
+        )
+        
+        # Post to platforms
+        results = await post_listing_to_platforms(listing_data, request.platforms)
+        
+        # Convert results to dict format
+        posting_results = []
+        successful_count = 0
+        failed_count = 0
+        
+        for result in results:
+            posting_result = {
+                "platform": result.platform,
+                "success": result.success,
+                "listing_id": result.listing_id,
+                "url": result.url,
+                "error_message": result.error_message,
+                "posted_at": result.posted_at.isoformat() if result.posted_at else None
+            }
+            posting_results.append(posting_result)
+            
+            if result.success:
+                successful_count += 1
+            else:
+                failed_count += 1
+        
+        return PlatformPostingResponse(
+            success=successful_count > 0,
+            timestamp=datetime.utcnow().isoformat(),
+            posting_results=posting_results,
+            total_platforms=len(request.platforms),
+            successful_postings=successful_count,
+            failed_postings=failed_count
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Platform posting failed: {str(e)}")
+
 @router.get("/platform-posting/supported-platforms")
 async def get_supported_platforms():
     """Get list of supported platforms"""
