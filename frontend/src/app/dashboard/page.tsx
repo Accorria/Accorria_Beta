@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import CreateListing from '../components/listings/CreateListing';
-import MessagesView from '../components/MessagesView';
-import MarketIntelligence from '../components/MarketIntelligence';
-import AIListingGenerator from '../components/AIListingGenerator';
-import Header from '../components/Header';
+import CreateListing from '../../components/listings/CreateListing';
+import MessagesView from '../../components/MessagesView';
+import MarketIntelligence from '../../components/MarketIntelligence';
+import AIListingGenerator from '../../components/AIListingGenerator';
+import Header from '../../components/Header';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState('dashboard');
