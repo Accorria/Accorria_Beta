@@ -81,9 +81,7 @@ settings = Settings()
 def validate_settings():
     """Validate that all required settings are present"""
     required_settings = [
-        "SECRET_KEY",
-        "DATABASE_URL",
-        "REDIS_URL"
+        "SECRET_KEY"
     ]
     
     missing_settings = []

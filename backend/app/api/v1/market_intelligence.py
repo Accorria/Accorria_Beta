@@ -16,6 +16,7 @@ from datetime import datetime
 from app.agents import MarketIntelligenceAgent
 from app.core.database import get_db
 from sqlalchemy.orm import Session
+from app.api.v1.auth import get_current_user
 
 router = APIRouter()
 
@@ -44,6 +45,7 @@ class MarketIntelligenceResponse(BaseModel):
 @router.post("/market-intelligence/analyze", response_model=MarketIntelligenceResponse)
 async def analyze_market_intelligence(
     request: MarketIntelligenceRequest,
+    current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -90,7 +92,7 @@ async def analyze_market_intelligence(
         raise HTTPException(status_code=500, detail=f"Market intelligence analysis failed: {str(e)}")
 
 @router.get("/market-intelligence/makes")
-async def get_popular_makes():
+async def get_popular_makes(current_user: dict = Depends(get_current_user)):
     """
     Get list of popular car makes for analysis.
     
@@ -103,7 +105,10 @@ async def get_popular_makes():
     }
 
 @router.get("/market-intelligence/models/{make}")
-async def get_models_for_make(make: str):
+async def get_models_for_make(
+    make: str,
+    current_user: dict = Depends(get_current_user)
+):
     """
     Get list of models for a specific make.
     
@@ -131,7 +136,8 @@ async def get_models_for_make(make: str):
 async def quick_market_analysis(
     make: str,
     model: str,
-    location: str = "United States"
+    location: str = "United States",
+    current_user: dict = Depends(get_current_user)
 ):
     """
     Quick market analysis for a make/model combination.
@@ -141,35 +147,24 @@ async def quick_market_analysis(
     try:
         agent = MarketIntelligenceAgent()
         
-        # Quick analysis focusing on make/model scoring
         input_data = {
             "make": make,
             "model": model,
             "location": location,
-            "analysis_type": "make_model_analysis"
+            "analysis_type": "quick"
         }
         
         result = await agent.execute(input_data)
         
-        if result.success:
-            analysis = result.data.get("make_model_analysis", {})
-            return {
-                "success": True,
-                "make": make,
-                "model": model,
-                "overall_score": analysis.get("overall_score", 0),
-                "make_score": analysis.get("make_score", 0),
-                "model_score": analysis.get("model_score", 0),
-                "demand_category": analysis.get("demand_analysis", {}).get("demand_category", "unknown"),
-                "profit_potential": analysis.get("profit_potential", {}).get("potential_category", "unknown"),
-                "recommendation": analysis.get("recommendation", "No recommendation available")
-            }
-        else:
-            return {
-                "success": False,
-                "error": result.error_message
-            }
-            
+        return {
+            "success": result.success,
+            "make": make,
+            "model": model,
+            "location": location,
+            "data": result.data,
+            "processing_time": result.processing_time
+        }
+        
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Quick analysis failed: {str(e)}")
 
@@ -178,7 +173,8 @@ async def search_competitors(
     make: str,
     model: str,
     location: str = "United States",
-    radius_miles: int = 50
+    radius_miles: int = 50,
+    current_user: dict = Depends(get_current_user)
 ):
     """
     Search for competitors in the local area.
@@ -224,7 +220,8 @@ async def calculate_profit_thresholds(
     make: str,
     model: str,
     target_profit: float = 2000,
-    risk_tolerance: str = "medium"
+    risk_tolerance: str = "medium",
+    current_user: dict = Depends(get_current_user)
 ):
     """
     Calculate profit thresholds for car flipping.

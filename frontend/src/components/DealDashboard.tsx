@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { api } from '../utils/api';
 
 interface Deal {
   id: string;
@@ -56,8 +57,7 @@ const DealDashboard: React.FC = () => {
   const loadDeals = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/v1/deals/discover?search_term=${encodeURIComponent(searchTerm)}&max_results=20`);
-      const data = await response.json();
+      const data = await api.get(`/api/v1/deals/discover?search_term=${encodeURIComponent(searchTerm)}&max_results=20`);
       if (data.success) {
         setDeals(data.deals);
       }
@@ -78,8 +78,7 @@ const DealDashboard: React.FC = () => {
       if (filters.location) params.append('location', filters.location);
       params.append('limit', '20');
 
-      const response = await fetch(`/api/v1/deals/search?${params.toString()}`);
-      const data = await response.json();
+      const data = await api.get(`/api/v1/deals/search?${params.toString()}`);
       if (data.success) {
         setDeals(data.deals);
       }
@@ -91,8 +90,7 @@ const DealDashboard: React.FC = () => {
 
   const loadDealAnalysis = async (dealId: string) => {
     try {
-      const response = await fetch(`/api/v1/deals/${dealId}`);
-      const data = await response.json();
+      const data = await api.get(`/api/v1/deals/${dealId}`);
       if (data.success) {
         setDealAnalysis(data.analysis);
       }

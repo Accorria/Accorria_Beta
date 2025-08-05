@@ -5,14 +5,6 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: '10mb' // Increase from default 1mb to 10mb
     }
-  },
-  async rewrites() {
-    return [
-      {
-        source: '/api/v1/:path*',
-        destination: 'http://localhost:8000/api/v1/:path*'
-      }
-    ];
   }
 };
 

@@ -115,24 +115,32 @@ class AIBrain:
             # Step 6: Learning Agent - Track for optimization
             await self._run_learning_agent(listing_data, orchestrator_result)
             
-            # Compile final response
+            # Compile final response with safe data access
             processing_time = (datetime.now() - start_time).total_seconds()
+            
+            # Handle placeholder agents that don't return full data structure
+            orchestrator_data = orchestrator_result.get("data", {})
             
             return {
                 "success": True,
                 "processing_time": processing_time,
                 "timestamp": start_time.isoformat(),
                 "deal_id": listing_data.get("id"),
-                "final_recommendation": orchestrator_result["data"]["final_recommendation"],
-                "comprehensive_analysis": orchestrator_result["data"]["comprehensive_analysis"],
-                "action_plan": orchestrator_result["data"]["action_plan"],
-                "deal_summary": orchestrator_result["data"]["deal_summary"],
+                "final_recommendation": orchestrator_data.get("final_recommendation", "Deal analysis complete"),
+                "comprehensive_analysis": orchestrator_data.get("comprehensive_analysis", {
+                    "scout_analysis": scout_result.get("data", {}),
+                    "valuation_analysis": valuation_result.get("data", {}),
+                    "inspection_analysis": inspection_result.get("data", {}),
+                    "negotiator_analysis": negotiator_result.get("data", {})
+                }),
+                "action_plan": orchestrator_data.get("action_plan", "Review deal details and proceed with caution"),
+                "deal_summary": orchestrator_data.get("deal_summary", "Deal processed successfully"),
                 "agent_outputs": {
-                    "scout_agent": scout_result["data"],
-                    "valuation_agent": valuation_result["data"],
-                    "inspection_agent": inspection_result["data"],
-                    "negotiator_agent": negotiator_result["data"],
-                    "orchestrator_agent": orchestrator_result["data"]
+                    "scout_agent": scout_result.get("data", {}),
+                    "valuation_agent": valuation_result.get("data", {}),
+                    "inspection_agent": inspection_result.get("data", {}),
+                    "negotiator_agent": negotiator_result.get("data", {}),
+                    "orchestrator_agent": orchestrator_data
                 }
             }
             

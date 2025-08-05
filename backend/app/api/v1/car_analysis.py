@@ -2,31 +2,32 @@
 Car Analysis API endpoints
 
 Provides endpoints for:
-- AI-powered car image analysis
+- Image-based car analysis
 - Market intelligence integration
 - Price recommendations
-- Comprehensive car analysis
+- Comprehensive car evaluation
 """
 
-from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException
+from fastapi import APIRouter, HTTPException, Depends, File, UploadFile, Form
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 from datetime import datetime
-from sqlalchemy.orm import Session
-from app.services.listen_agent import ListenerAgent
-from app.agents import MarketIntelligenceAgent
+from app.agents import ListeningAgent, MarketIntelligenceAgent
 from app.core.database import get_db
+from sqlalchemy.orm import Session
+from app.api.v1.auth import get_current_user
 
 router = APIRouter()
 
 class CarAnalysisRequest(BaseModel):
-    """Request model for car analysis"""
-    make: str = Field(..., description="Car make (e.g., Toyota, Honda)")
-    model: str = Field(..., description="Car model (e.g., Camry, Civic)")
+    """Request model for car analysis with details"""
+    make: str = Field(..., description="Car make")
+    model: str = Field(..., description="Car model")
     year: Optional[int] = Field(None, description="Car year")
     mileage: Optional[int] = Field(None, description="Car mileage")
-    description: Optional[str] = Field(None, description="Car description")
-    location: str = Field("United States", description="Location for market analysis")
+    color: Optional[str] = Field(None, description="Car color")
+    condition: Optional[str] = Field(None, description="Car condition")
+    location: str = Field("United States", description="Location for analysis")
     target_profit: float = Field(2000, description="Target profit amount")
 
 class CarAnalysisResponse(BaseModel):
@@ -45,6 +46,7 @@ async def analyze_car_images(
     images: list[UploadFile] = File(..., description="Up to 15 car images"),
     location: str = Form("United States"),
     target_profit: float = Form(2000),
+    current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -63,9 +65,9 @@ async def analyze_car_images(
         # Read image bytes
         image_bytes = [await img.read() for img in images]
         
-        # Step 1: Analyze images using ListenerAgent
-        listener_agent = ListenerAgent(db)
-        image_analysis_result = await listener_agent.extract_details_from_images(image_bytes)
+        # Step 1: Analyze images using ListeningAgent
+        listening_agent = ListeningAgent(db)
+        image_analysis_result = await listening_agent.extract_details_from_images(image_bytes)
         
         # Step 2: Run market intelligence analysis
         market_agent = MarketIntelligenceAgent()
@@ -107,44 +109,41 @@ async def analyze_car_images(
 async def analyze_car_with_details(
     request: CarAnalysisRequest,
     images: Optional[list[UploadFile]] = File(None, description="Optional car images"),
+    current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
     Analyze car with provided details and optional images.
     
-    This endpoint combines manual car details with optional image analysis
-    to provide comprehensive market intelligence and pricing recommendations.
+    This endpoint combines manual details with AI image analysis for comprehensive evaluation.
     """
     try:
-        # Step 1: Analyze images if provided
-        image_analysis_result = {}
-        if images:
-            if len(images) > 15:
-                raise HTTPException(status_code=400, detail="Maximum 15 images allowed.")
-            
-            image_bytes = [await img.read() for img in images]
-            listener_agent = ListenerAgent(db)
-            image_analysis_result = await listener_agent.extract_details_from_images(image_bytes)
-        
-        # Step 2: Combine manual details with image analysis
+        # Step 1: Combine manual details with image analysis
         combined_details = {
             "make": request.make,
             "model": request.model,
             "year": request.year,
             "mileage": request.mileage,
-            "description": request.description,
-            "confidence_score": image_analysis_result.get("confidence_score", 0.0)
+            "color": request.color,
+            "condition": request.condition
         }
         
-        # Override with image analysis results if available and more confident
-        if image_analysis_result.get("confidence_score", 0.0) > 0.5:
-            if image_analysis_result.get("make"):
-                combined_details["make"] = image_analysis_result["make"]
-            if image_analysis_result.get("model"):
-                combined_details["model"] = image_analysis_result["model"]
-            if image_analysis_result.get("year"):
-                combined_details["year"] = image_analysis_result["year"]
-            if image_analysis_result.get("mileage"):
+        # Step 2: Analyze images if provided
+        if images:
+            if len(images) > 15:
+                raise HTTPException(status_code=400, detail="Maximum 15 images allowed.")
+            
+            image_bytes = [await img.read() for img in images]
+            listening_agent = ListeningAgent(db)
+            image_analysis_result = await listening_agent.extract_details_from_images(image_bytes)
+            
+            # Merge image analysis with manual details
+            for key, value in image_analysis_result.items():
+                if value and key in combined_details and not combined_details[key]:
+                    combined_details[key] = value
+            
+            # Use image analysis for mileage if not provided manually
+            if not combined_details.get("mileage") and image_analysis_result.get("mileage"):
                 combined_details["mileage"] = image_analysis_result["mileage"]
         
         # Step 3: Run market intelligence analysis
@@ -172,7 +171,7 @@ async def analyze_car_with_details(
         return CarAnalysisResponse(
             success=True,
             timestamp=datetime.now().isoformat(),
-            image_analysis=image_analysis_result,
+            image_analysis=combined_details,
             market_intelligence=market_result.data if market_result.success else {},
             price_recommendations=price_recommendations,
             confidence_score=combined_details.get("confidence_score", 0.0),

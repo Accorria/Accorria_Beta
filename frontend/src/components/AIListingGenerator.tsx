@@ -2,6 +2,7 @@
 // @ts-nocheck - Temporary disable for deployment
 
 import React, { useState, useRef } from 'react';
+import { api } from '../utils/api';
 import { 
   Box, 
   Button, 
@@ -109,17 +110,10 @@ const AIListingGenerator: React.FC = () => {
         }
       });
 
-      const response = await fetch('/api/v1/car_listing_generator/generate', {
-        method: 'POST',
-        body: formData,
-      });
+      const data = await api.postFormData('/api/v1/car_listing_generator/generate', formData);
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        const errorMessage = typeof data === 'object' && data && 'detail' in data 
-          ? String(data.detail) 
-          : 'Failed to generate listing';
+      if (!data.success) {
+        const errorMessage = data.error || data.detail || 'Failed to generate listing';
         setError(errorMessage);
         return;
       }
