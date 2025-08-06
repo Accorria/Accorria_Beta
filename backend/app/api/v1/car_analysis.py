@@ -12,7 +12,7 @@ from fastapi import APIRouter, HTTPException, Depends, File, UploadFile, Form
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 from datetime import datetime
-from app.agents import ListeningAgent, MarketIntelligenceAgent
+from app.agents import VisualAgent, MarketIntelligenceAgent
 from app.core.database import get_db
 from sqlalchemy.orm import Session
 from app.api.v1.auth import get_current_user
@@ -65,9 +65,21 @@ async def analyze_car_images(
         # Read image bytes
         image_bytes = [await img.read() for img in images]
         
-        # Step 1: Analyze images using ListeningAgent
-        listening_agent = ListeningAgent(db)
-        image_analysis_result = await listening_agent.extract_details_from_images(image_bytes)
+        # Step 1: Analyze images using VisualAgent
+        visual_agent = VisualAgent()
+        
+        # Process each image
+        image_analysis_results = []
+        for i, image_bytes_data in enumerate(image_bytes):
+            result = await visual_agent.process({
+                "image_data": image_bytes_data,
+                "car_info": {}
+            })
+            if result.success:
+                image_analysis_results.append(result.data)
+        
+        # Combine results from all images
+        image_analysis_result = _combine_image_analysis_results(image_analysis_results)
         
         # Step 2: Run market intelligence analysis
         market_agent = MarketIntelligenceAgent()
@@ -134,8 +146,20 @@ async def analyze_car_with_details(
                 raise HTTPException(status_code=400, detail="Maximum 15 images allowed.")
             
             image_bytes = [await img.read() for img in images]
-            listening_agent = ListeningAgent(db)
-            image_analysis_result = await listening_agent.extract_details_from_images(image_bytes)
+            visual_agent = VisualAgent()
+            
+            # Process each image
+            image_analysis_results = []
+            for i, image_bytes_data in enumerate(image_bytes):
+                result = await visual_agent.process({
+                    "image_data": image_bytes_data,
+                    "car_info": {}
+                })
+                if result.success:
+                    image_analysis_results.append(result.data)
+            
+            # Combine results from all images
+            image_analysis_result = _combine_image_analysis_results(image_analysis_results)
             
             # Merge image analysis with manual details
             for key, value in image_analysis_result.items():
@@ -180,6 +204,50 @@ async def analyze_car_with_details(
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Car analysis failed: {str(e)}")
+
+def _combine_image_analysis_results(results: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Combine results from multiple image analyses"""
+    if not results:
+        return {
+            "make": "Unknown",
+            "model": "Unknown", 
+            "year": None,
+            "mileage": None,
+            "color": "Unknown",
+            "condition": "Unknown",
+            "confidence_score": 0.0
+        }
+    
+    # Combine features from all images
+    all_features = []
+    all_conditions = []
+    confidence_scores = []
+    
+    for result in results:
+        if "features_detected" in result:
+            features = result["features_detected"]
+            if "car_features" in features:
+                all_features.extend(features["car_features"])
+            if "condition_assessment" in features:
+                all_conditions.append(features["condition_assessment"])
+        
+        if "analysis_confidence" in result:
+            confidence_scores.append(result["analysis_confidence"])
+    
+    # Extract most common car details
+    combined_result = {
+        "make": "Unknown",
+        "model": "Unknown",
+        "year": None,
+        "mileage": None,
+        "color": "Unknown",
+        "condition": "Unknown",
+        "confidence_score": sum(confidence_scores) / len(confidence_scores) if confidence_scores else 0.0,
+        "detected_features": all_features,
+        "condition_assessment": all_conditions[0] if all_conditions else {}
+    }
+    
+    return combined_result
 
 async def _generate_price_recommendations(
     car_details: Dict[str, Any], 
