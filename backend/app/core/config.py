@@ -9,10 +9,15 @@ class Settings(BaseSettings):
     VERSION: str = "1.0.0"
     DEBUG: bool = False
     
-    # Database
-    DATABASE_URL: str = "postgresql://quickflip_user:QuickData@localhost:5432/quickflip_db"
+    # Supabase Configuration
+    SUPABASE_URL: str = ""
+    SUPABASE_ANON_KEY: str = ""
+    SUPABASE_SERVICE_ROLE_KEY: str = ""
     
-    # Redis
+    # Database (fallback for local development)
+    DATABASE_URL: str = "sqlite:///./quickflip.db"
+    
+    # Redis (optional for caching)
     REDIS_URL: str = "redis://localhost:6379"
     
     # Security
@@ -25,7 +30,8 @@ class Settings(BaseSettings):
         "http://localhost:3000",
         "http://localhost:3001",
         "http://localhost:5173",
-        "https://quickflip-ai.vercel.app"
+        "https://quickflip-ai.vercel.app",
+        "https://quickflip-ai-git-main-prestoneaton.vercel.app"
     ]
     
     # OpenAI
@@ -34,34 +40,10 @@ class Settings(BaseSettings):
     # Google API
     GOOGLE_API_KEY: Optional[str] = None
     
-    # Google Cloud
-    GOOGLE_CLOUD_PROJECT: Optional[str] = None
-    GOOGLE_CLOUD_STORAGE_BUCKET: Optional[str] = None
-    
-    # Twilio (SMS)
-    TWILIO_ACCOUNT_SID: Optional[str] = None
-    TWILIO_AUTH_TOKEN: Optional[str] = None
-    TWILIO_PHONE_NUMBER: Optional[str] = None
-    
-    # SendGrid (Email)
-    SENDGRID_API_KEY: Optional[str] = None
-    SENDGRID_FROM_EMAIL: Optional[str] = None
-    
-    # Google Cloud Storage
-    GOOGLE_CLOUD_CREDENTIALS_PATH: Optional[str] = None
-    
-    # Platform API Keys
+    # Platform API Keys (optional for MVP)
     FACEBOOK_ACCESS_TOKEN: Optional[str] = None
     OFFERUP_API_KEY: Optional[str] = None
     CARGURUS_API_KEY: Optional[str] = None
-    
-    # Browser Automation
-    PLAYWRIGHT_HEADLESS: bool = True
-    PLAYWRIGHT_SLOW_MO: int = 1000  # milliseconds
-    
-    # Message Monitoring
-    MESSAGE_POLL_INTERVAL: int = 300  # 5 minutes
-    MAX_MESSAGE_AGE_HOURS: int = 24
     
     # AI Reply Settings
     MIN_REPLY_DELAY_MINUTES: int = 1

@@ -6,9 +6,16 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# Create async engine
+# Create async engine with proper driver handling
+if settings.DATABASE_URL.startswith("sqlite"):
+    # Use aiosqlite for SQLite async support
+    database_url = settings.DATABASE_URL.replace("sqlite:///", "sqlite+aiosqlite:///")
+else:
+    # Use asyncpg for PostgreSQL
+    database_url = settings.DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://")
+
 engine = create_async_engine(
-    settings.DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://"),
+    database_url,
     echo=settings.DEBUG,
     pool_pre_ping=True,
     pool_recycle=300
