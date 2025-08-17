@@ -58,6 +58,80 @@ export default function CreateListing({ onClose }: CreateListingProps) {
     setFiles(prev => prev.filter((_, i) => i !== index));
   };
 
+  const generateAIDescription = (analysisResult: any, carDetails: CarDetails): string => {
+    let description = '';
+    
+    // Start with basic car info
+    const make = carDetails.make || analysisResult.image_analysis?.make || '';
+    const model = carDetails.model || analysisResult.image_analysis?.model || '';
+    const year = carDetails.year || analysisResult.image_analysis?.year || '';
+    const mileage = carDetails.mileage || analysisResult.image_analysis?.mileage || '';
+    const price = carDetails.price || '';
+    const lowestPrice = carDetails.lowestPrice || '';
+    
+    // Build professional description
+    description += `${year} ${make} ${model}`;
+    
+    if (mileage) {
+      description += ` with ${parseInt(mileage).toLocaleString()} miles`;
+    }
+    
+    description += ' - Excellent condition! ';
+    
+    // Add detected features
+    if (analysisResult.image_analysis?.features_detected) {
+      const features = analysisResult.image_analysis.features_detected;
+      const featureList = [];
+      
+      if (features.car_features?.exterior?.length > 0) {
+        featureList.push(...features.car_features.exterior.slice(0, 3));
+      }
+      if (features.car_features?.interior?.length > 0) {
+        featureList.push(...features.car_features.interior.slice(0, 2));
+      }
+      if (features.car_features?.technology?.length > 0) {
+        featureList.push(...features.car_features.technology.slice(0, 2));
+      }
+      
+      if (featureList.length > 0) {
+        description += `Features include: ${featureList.join(', ')}. `;
+      }
+    }
+    
+    // Add condition assessment
+    if (analysisResult.image_analysis?.features_detected?.condition_assessment) {
+      const condition = analysisResult.image_analysis.features_detected.condition_assessment;
+      description += `Vehicle is in ${condition.overall_condition} condition. `;
+    }
+    
+    // Add pricing info
+    if (price) {
+      description += `Asking $${parseInt(price).toLocaleString()}`;
+      if (lowestPrice && lowestPrice !== price) {
+        description += ` (firm on $${parseInt(lowestPrice).toLocaleString()})`;
+      }
+      description += '. ';
+    }
+    
+    // Add market intelligence if available
+    if (analysisResult.market_intelligence) {
+      const market = analysisResult.market_intelligence;
+      if (market.pricing_analysis?.price_trends?.trend) {
+        description += `Market is ${market.pricing_analysis.price_trends.trend}. `;
+      }
+    }
+    
+    // Add user's custom description if provided
+    if (carDetails.description) {
+      description += `\n\n${carDetails.description}`;
+    }
+    
+    // Add standard closing
+    description += '\n\nClean title, no accidents, well maintained. Serious buyers only. Test drive available.';
+    
+    return description;
+  };
+
   const analyzeImages = async () => {
     if (files.length === 0) {
       alert('Please upload at least one image first');
@@ -72,6 +146,16 @@ export default function CreateListing({ onClose }: CreateListingProps) {
       });
       formData.append('location', 'United States');
       formData.append('target_profit', carDetails.lowestPrice || '2000');
+      
+      // Add car details to the analysis request
+      formData.append('make', carDetails.make || '');
+      formData.append('model', carDetails.model || '');
+      formData.append('year', carDetails.year || '');
+      formData.append('mileage', carDetails.mileage || '');
+      formData.append('price', carDetails.price || '');
+      formData.append('lowestPrice', carDetails.lowestPrice || '');
+      formData.append('description', carDetails.description || '');
+      
       const response = await fetch('/api/v1/car-analysis/analyze-images', {
         method: 'POST',
         body: formData,
@@ -81,6 +165,7 @@ export default function CreateListing({ onClose }: CreateListingProps) {
         result = await response.json();
         setAnalysisResult(result);
         setShowAnalysis(true);
+        
         // Auto-populate fields with detected information
         if (result.image_analysis) {
           const detected = result.image_analysis;
@@ -93,10 +178,10 @@ export default function CreateListing({ onClose }: CreateListingProps) {
           }));
         }
         
-        // If no image analysis data, still show the analysis result
+        // Generate AI description based on analysis
         if (result.success) {
-          setAnalysisResult(result);
-          setShowAnalysis(true);
+          const generatedDescription = generateAIDescription(result, carDetails);
+          setCarDetails(prev => ({ ...prev, description: generatedDescription }));
         }
       } else {
         throw new Error('Image analysis failed');
@@ -469,14 +554,14 @@ export default function CreateListing({ onClose }: CreateListingProps) {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Description
+                About the Vehicle
               </label>
               <textarea
                 value={carDetails.description}
                 onChange={(e) => setCarDetails(prev => ({ ...prev, description: e.target.value }))}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 rows={3}
-                placeholder="Describe the car's condition, features, and any relevant details..."
+                placeholder="Tell us about the vehicle's condition, features, history, or any important details..."
               />
             </div>
 
