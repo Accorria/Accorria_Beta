@@ -48,23 +48,14 @@ export default function CreateListing({ onClose }: CreateListingProps) {
   const [postingResults, setPostingResults] = useState<any>(null);
 
   const onDrop = useCallback((acceptedFiles: File[], rejectedFiles: any[]) => {
-    console.log('onDrop called!');
     console.log('Accepted files:', acceptedFiles.length);
     console.log('Rejected files:', rejectedFiles.length);
-    console.log('Accepted file types:', acceptedFiles.map(f => f.type));
-    console.log('Accepted file sizes:', acceptedFiles.map(f => f.size));
     
     if (rejectedFiles.length > 0) {
-      console.log('Rejected files details:', rejectedFiles);
       alert(`Some files were rejected. Please check file size (max 10MB) and format (JPEG, PNG, WebP).`);
     }
     
-    if (acceptedFiles.length > 0) {
-      console.log('Setting files successfully');
-      setFiles(prev => [...prev, ...acceptedFiles].slice(0, 20)); // Max 20 images
-    } else {
-      console.log('No files accepted!');
-    }
+    setFiles(prev => [...prev, ...acceptedFiles].slice(0, 20)); // Max 20 images
   }, []);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -76,8 +67,7 @@ export default function CreateListing({ onClose }: CreateListingProps) {
     maxSize: 10 * 1024 * 1024, // 10MB max file size
     multiple: true,
     noClick: false,
-    noKeyboard: false,
-    noDragEventsBubbling: false
+    noKeyboard: false
   });
 
   const removeFile = (index: number) => {
@@ -206,15 +196,7 @@ export default function CreateListing({ onClose }: CreateListingProps) {
       formData.append('titleStatus', carDetails.titleStatus || '');
       formData.append('aboutVehicle', carDetails.aboutVehicle || '');
       
-      console.log('Sending analysis request with:', {
-        files: files.length,
-        make: carDetails.make,
-        model: carDetails.model,
-        year: carDetails.year
-      });
-      
       const result = await api.postFormData('/api/v1/enhanced-analyze', formData);
-      console.log('Analysis result:', result);
       setAnalysisResult(result);
       setShowAnalysis(true);
       
@@ -255,13 +237,7 @@ export default function CreateListing({ onClose }: CreateListingProps) {
       }, 500);
     } catch (error) {
       console.error('Error analyzing images:', error);
-      console.error('Error details:', {
-        message: error.message,
-        status: error.status,
-        response: error.response,
-        files: files.length
-      });
-      alert(`Failed to analyze images. Error: ${error.message || 'Unknown error'}. Please try again.`);
+      alert('Failed to analyze images. Please try again.');
     } finally {
       setIsAnalyzing(false);
     }
@@ -410,7 +386,6 @@ export default function CreateListing({ onClose }: CreateListingProps) {
               </label>
               <div
                 {...getRootProps()}
-                onClick={() => console.log('Upload area clicked!')}
                 className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors ${
                   isDragActive
                     ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
