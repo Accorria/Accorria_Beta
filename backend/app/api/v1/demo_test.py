@@ -66,10 +66,14 @@ async def demo_analyze():
     try:
         # Mock successful analysis
         analysis_result = {
-            "agent": "VisualAgent",
-            "status": "success",
-            "confidence": 0.92,
-            "data": {
+            "success": True,
+            "timestamp": datetime.now().isoformat(),
+            "image_analysis": {
+                "make": "Honda",
+                "model": "Civic", 
+                "year": "2019",
+                "mileage": "75000",
+                "color": "Silver",
                 "features_detected": {
                     "car_features": {
                         "exterior": ["clean_exterior", "well_maintained", "alloy_wheels"],
@@ -83,19 +87,47 @@ async def demo_analyze():
                         "overall_condition": "excellent"
                     }
                 },
-                "pricing_recommendations": {
-                    "quick_sale": 18500,
-                    "market_price": 21000,
-                    "top_dollar": 23500
-                },
-                "flip_score": 78,
-                "image_analyzed": "/demo/car_photos.jpg",
                 "analysis_confidence": 0.92,
                 "processing_time_seconds": 1.2,
                 "vision_api_used": True
             },
+            "market_intelligence": {
+                "pricing_analysis": {
+                    "price_trends": {
+                        "trend": "stable",
+                        "confidence": 0.8
+                    }
+                },
+                "make_model_analysis": {
+                    "demand_analysis": {
+                        "demand_level": "high",
+                        "market_activity": "active"
+                    }
+                }
+            },
+            "price_recommendations": {
+                "price_recommendations": {
+                    "quick_sale": {
+                        "price": 15000,
+                        "description": "Fast sale price",
+                        "estimated_days_to_sell": 7
+                    },
+                    "market_price": {
+                        "price": 18000,
+                        "description": "Competitive market price",
+                        "estimated_days_to_sell": 14
+                    },
+                    "top_dollar": {
+                        "price": 21000,
+                        "description": "Premium pricing",
+                        "estimated_days_to_sell": 30
+                    }
+                }
+            },
+            "confidence_score": 0.92,
+            "processing_time": 1.2,
+            "error_message": None,
             "demo_mode": True,
-            "timestamp": datetime.now().isoformat(),
             "message": "✅ Demo car analysis and pricing completed successfully"
         }
         
