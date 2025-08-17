@@ -48,14 +48,23 @@ export default function CreateListing({ onClose }: CreateListingProps) {
   const [postingResults, setPostingResults] = useState<any>(null);
 
   const onDrop = useCallback((acceptedFiles: File[], rejectedFiles: any[]) => {
+    console.log('onDrop called!');
     console.log('Accepted files:', acceptedFiles.length);
     console.log('Rejected files:', rejectedFiles.length);
+    console.log('Accepted file types:', acceptedFiles.map(f => f.type));
+    console.log('Accepted file sizes:', acceptedFiles.map(f => f.size));
     
     if (rejectedFiles.length > 0) {
+      console.log('Rejected files details:', rejectedFiles);
       alert(`Some files were rejected. Please check file size (max 10MB) and format (JPEG, PNG, WebP).`);
     }
     
-    setFiles(prev => [...prev, ...acceptedFiles].slice(0, 20)); // Max 20 images
+    if (acceptedFiles.length > 0) {
+      console.log('Setting files successfully');
+      setFiles(prev => [...prev, ...acceptedFiles].slice(0, 20)); // Max 20 images
+    } else {
+      console.log('No files accepted!');
+    }
   }, []);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -400,6 +409,7 @@ export default function CreateListing({ onClose }: CreateListingProps) {
               </label>
               <div
                 {...getRootProps()}
+                onClick={() => console.log('Upload area clicked!')}
                 className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors ${
                   isDragActive
                     ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
