@@ -30,7 +30,8 @@ from app.api.v1 import (
     vision_test,
     supabase_auth,
     demo_test,
-    public_analysis
+    public_analysis,
+    enhanced_analysis
 )
 from app.middleware import rate_limit_middleware, cleanup_rate_limits
 
@@ -115,6 +116,7 @@ app.include_router(deals.router, prefix="/api/v1", tags=["Deals"])
 app.include_router(vision_test.router, prefix="/api/v1", tags=["Vision API Testing"])
 app.include_router(demo_test.router, prefix="/api/v1", tags=["Demo Testing"])
 app.include_router(public_analysis.router, prefix="/api/v1", tags=["Public Analysis"])
+app.include_router(enhanced_analysis.router, prefix="/api/v1", tags=["Enhanced Analysis"])
 
 @app.get("/")
 async def root():
