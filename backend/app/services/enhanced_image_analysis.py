@@ -23,7 +23,13 @@ class EnhancedImageAnalysis:
     """Enhanced image analysis using Google Vision API"""
     
     def __init__(self):
-        self.client = vision.ImageAnnotatorClient()
+        try:
+            # Try to use Application Default Credentials (ADC)
+            self.client = vision.ImageAnnotatorClient()
+            logger.info("✅ Google Vision API client initialized with ADC")
+        except Exception as e:
+            logger.warning(f"⚠️ Vision API initialization failed: {e}")
+            self.client = None
     
     async def analyze_car_images(self, image_files: List[bytes], car_details: Dict[str, Any]) -> Dict[str, Any]:
         """
