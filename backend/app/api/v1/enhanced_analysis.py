@@ -10,7 +10,7 @@ from typing import List, Optional
 import logging
 from datetime import datetime
 
-from app.services.enhanced_image_analysis import enhanced_analyzer
+from app.services.smart_image_analysis import smart_analyzer
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -59,8 +59,8 @@ async def enhanced_analyze_car(
             content = await image.read()
             image_bytes.append(content)
         
-        # Perform enhanced analysis
-        analysis_result = await enhanced_analyzer.analyze_car_images(image_bytes, car_details)
+        # Perform smart analysis (prioritizes key images for token efficiency)
+        analysis_result = await smart_analyzer.analyze_car_images_smart(image_bytes, car_details)
         
         logger.info("Enhanced analysis completed successfully")
         return JSONResponse(content=analysis_result, status_code=200)
