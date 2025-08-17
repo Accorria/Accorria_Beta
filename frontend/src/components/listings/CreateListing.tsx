@@ -167,17 +167,34 @@ export default function CreateListing({ onClose }: CreateListingProps) {
 
     setIsAnalyzing(true);
     try {
-      // Use the working flip-car-test endpoint (confirmed working in logs)
-      const result = await api.get('/api/v1/flip-car-test');
-        setAnalysisResult(result);
-        setShowAnalysis(true);
-        
-        // Generate AI description based on analysis
-        if (result.status === "success") {
-          const generatedDescription = generateAIDescription(result, carDetails);
-          setCarDetails(prev => ({ ...prev, finalDescription: generatedDescription }));
-          setShowAnalysis(false); // Hide the analysis results section
-        }
+      // Use enhanced analysis endpoint for comprehensive image analysis
+      const formData = new FormData();
+      
+      // Add all images
+      files.forEach((file) => {
+        formData.append('images', file);
+      });
+      
+      // Add car details
+      formData.append('make', carDetails.make || '');
+      formData.append('model', carDetails.model || '');
+      formData.append('year', carDetails.year || '');
+      formData.append('mileage', carDetails.mileage || '');
+      formData.append('price', carDetails.price || '');
+      formData.append('lowestPrice', carDetails.lowestPrice || '');
+      formData.append('titleStatus', carDetails.titleStatus || '');
+      formData.append('aboutVehicle', carDetails.aboutVehicle || '');
+      
+      const result = await api.postFormData('/api/v1/enhanced-analyze', formData);
+      setAnalysisResult(result);
+      setShowAnalysis(true);
+      
+      // Generate AI description based on enhanced analysis
+      if (result.success) {
+        const generatedDescription = generateAIDescription(result, carDetails);
+        setCarDetails(prev => ({ ...prev, finalDescription: generatedDescription }));
+        setShowAnalysis(false); // Hide the analysis results section
+      }
       // Run market analysis in background
       if (carDetails.make && carDetails.model) {
         fetch('/api/v1/market-intelligence/analyze', {
