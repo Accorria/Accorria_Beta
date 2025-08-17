@@ -48,15 +48,28 @@ export default function CreateListing({ onClose }: CreateListingProps) {
   const [postingResults, setPostingResults] = useState<any>(null);
 
   const onDrop = useCallback((acceptedFiles: File[], rejectedFiles: any[]) => {
+    console.log('onDrop called!');
     console.log('Accepted files:', acceptedFiles.length);
     console.log('Rejected files:', rejectedFiles.length);
+    console.log('Accepted file names:', acceptedFiles.map(f => f.name));
+    console.log('Accepted file types:', acceptedFiles.map(f => f.type));
+    console.log('Accepted file sizes:', acceptedFiles.map(f => f.size));
     
     if (rejectedFiles.length > 0) {
+      console.log('Rejected files details:', rejectedFiles);
       alert(`Some files were rejected. Please check file size (max 10MB) and format (JPEG, PNG, WebP).`);
     }
     
-    setFiles(prev => [...prev, ...acceptedFiles].slice(0, 20)); // Max 20 images
-  }, []);
+    if (acceptedFiles.length > 0) {
+      console.log('Setting files...');
+      const newFiles = [...files, ...acceptedFiles].slice(0, 20);
+      console.log('New files array length:', newFiles.length);
+      setFiles(newFiles);
+      console.log('Files state updated!');
+    } else {
+      console.log('No files to add!');
+    }
+  }, [files]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
