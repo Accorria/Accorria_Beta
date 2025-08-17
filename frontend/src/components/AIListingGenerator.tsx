@@ -267,7 +267,7 @@ const AIListingGenerator: React.FC = () => {
             label="Description"
             multiline
             rows={3}
-                            value={carDetails.finalDescription || ''}
+                            value={carDetails.description || ''}
             onChange={(e) => handleCarDetailsChange('description', e.target.value)}
             fullWidth
             sx={{ mt: 2 }}
