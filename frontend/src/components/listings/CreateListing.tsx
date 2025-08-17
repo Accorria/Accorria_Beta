@@ -251,8 +251,8 @@ export default function CreateListing({ onClose }: CreateListingProps) {
       }
       
       // Add custom description if available
-      if (carDetails.description) {
-        formData.append('custom_description', carDetails.description);
+      if (carDetails.finalDescription) {
+        formData.append('custom_description', carDetails.finalDescription);
       }
 
       const response = await fetch('/api/v1/platform-posting/analyze-and-post', {
