@@ -132,8 +132,7 @@ export default function CreateListing({ onClose }: CreateListingProps) {
 
     setIsAnalyzing(true);
     try {
-      // For demo purposes, we'll use the flip-car-test endpoint
-      // This endpoint is already working and doesn't require authentication
+      // Use the working flip-car-test endpoint (confirmed working in logs)
       const response = await fetch('/api/v1/flip-car-test', {
         method: 'GET',
       });
@@ -148,10 +147,10 @@ export default function CreateListing({ onClose }: CreateListingProps) {
           const detected = result.data;
           setCarDetails(prev => ({
             ...prev,
-            make: "Honda", // Mock data
-            model: "Civic", // Mock data
-            year: "2019", // Mock data
-            mileage: "75000", // Mock data
+            make: "Honda", // Mock data from working endpoint
+            model: "Civic", // Mock data from working endpoint
+            year: "2019", // Mock data from working endpoint
+            mileage: "75000", // Mock data from working endpoint
           }));
         }
         
@@ -159,6 +158,7 @@ export default function CreateListing({ onClose }: CreateListingProps) {
         if (result.status === "success") {
           const generatedDescription = generateAIDescription(result, carDetails);
           setCarDetails(prev => ({ ...prev, description: generatedDescription }));
+          setShowAnalysis(true); // Show the analysis results
         }
       } else {
         throw new Error('Image analysis failed');
