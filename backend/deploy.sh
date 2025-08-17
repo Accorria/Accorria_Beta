@@ -28,7 +28,7 @@ gcloud run deploy $SERVICE_NAME \
     --timeout 300 \
     --concurrency 80 \
     --max-instances 10 \
-    --set-env-vars "SUPABASE_URL=$SUPABASE_URL,SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY" \
+    --set-env-vars "SUPABASE_URL=$SUPABASE_URL,SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY,OPENAI_API_KEY=$OPENAI_API_KEY,GOOGLE_API_KEY=$GOOGLE_API_KEY" \
     --quiet
 
 echo "✅ Deployment complete!"
