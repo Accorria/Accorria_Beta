@@ -156,7 +156,7 @@ export default function CreateListing({ onClose }: CreateListingProps) {
       formData.append('lowestPrice', carDetails.lowestPrice || '');
       formData.append('description', carDetails.description || '');
       
-      const response = await fetch('/api/v1/car-analysis/analyze-images', {
+      const response = await fetch('/api/v1/public-analyze-images', {
         method: 'POST',
         body: formData,
       });
