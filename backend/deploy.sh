@@ -13,6 +13,10 @@ SERVICE_NAME="quickflip-ai-backend"
 echo "📦 Building and deploying to Google Cloud Run..."
 
 # Deploy to Cloud Run
+echo "🔧 Deploying to project: quickflip-ai"
+echo "🔧 Service: $SERVICE_NAME"
+echo "🔧 Region: $REGION"
+
 gcloud run deploy $SERVICE_NAME \
     --source . \
     --platform managed \
