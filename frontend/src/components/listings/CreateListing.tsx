@@ -17,8 +17,9 @@ interface CarDetails {
   mileage: string;
   price: string;
   lowestPrice: string;
-  titleStatus: string; // NEW FIELD
-  description: string;
+  titleStatus: string;
+  aboutVehicle: string; // User's input about the vehicle
+  finalDescription: string; // AI-generated final description
 }
 
 export default function CreateListing({ onClose }: CreateListingProps) {
@@ -30,8 +31,9 @@ export default function CreateListing({ onClose }: CreateListingProps) {
     mileage: '',
     price: '',
     lowestPrice: '',
-    titleStatus: 'clean', // NEW FIELD
-    description: ''
+    titleStatus: 'clean',
+    aboutVehicle: '',
+    finalDescription: ''
   });
   const [isUploading, setIsUploading] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -61,6 +63,18 @@ export default function CreateListing({ onClose }: CreateListingProps) {
     setFiles(prev => prev.filter((_, i) => i !== index));
   };
 
+  const handlePricingSelection = (pricingStrategy: string) => {
+    // Update the price based on selected strategy
+    if (analysisResult?.price_recommendations?.price_recommendations?.[pricingStrategy]?.price) {
+      const newPrice = analysisResult.price_recommendations.price_recommendations[pricingStrategy].price;
+      setCarDetails(prev => ({ ...prev, price: newPrice.toString() }));
+      
+      // Regenerate description with new price
+      const updatedDescription = generateAIDescription(analysisResult, { ...carDetails, price: newPrice.toString() });
+      setCarDetails(prev => ({ ...prev, finalDescription: updatedDescription }));
+    }
+  };
+
   const generateAIDescription = (analysisResult: any, carDetails: CarDetails): string => {
     let description = '';
     
@@ -70,64 +84,77 @@ export default function CreateListing({ onClose }: CreateListingProps) {
     const year = carDetails.year || "Unknown";
     const mileage = carDetails.mileage || "Unknown";
     const price = carDetails.price || '';
-    const lowestPrice = carDetails.lowestPrice || '';
     const titleStatus = carDetails.titleStatus || 'clean';
     
-    // Build professional description
-    description += `${year} ${make} ${model}`;
+    // Build description in your exact format with emojis
+    description += `🚗 ${year} ${make} ${model}\n`;
+    description += `💰 Asking Price: $${parseInt(price).toLocaleString()}\n`;
+    description += `🏁 Mileage: ${parseInt(mileage).toLocaleString()} miles\n`;
     
-    if (mileage) {
-      description += ` with ${parseInt(mileage).toLocaleString()} miles`;
-    }
+    const titleStatusText = titleStatus === 'clean' ? 'Clean' : 
+                           titleStatus === 'rebuilt' ? 'Rebuilt' : 
+                           'Salvage';
+    description += `📄 Title: ${titleStatusText}\n`;
+    description += `📍 Location: Detroit, MI\n\n`;
     
-    description += ' - Excellent condition! ';
+    // Details section
+    description += `💡 Details:\n`;
+    description += `• Runs and drives excellent\n`;
+    description += `• Smooth-shifting automatic\n`;
+    description += `• Fuel-efficient sedan\n`;
+    description += `• Comfortable, quiet ride\n`;
+    description += `• Clean interior & exterior\n\n`;
     
-    // Add detected features from flip-car-test response
+    // Features section
+    description += `🔧 Features & Equipment:\n`;
+    
+    // Add detected features from analysis
     if (analysisResult.data?.features_detected) {
       const features = analysisResult.data.features_detected;
       const featureList = [];
       
-      if (features.car_features?.exterior?.length > 0) {
-        featureList.push(...features.car_features.exterior.slice(0, 3));
+      if (features.car_features?.technology?.length > 0) {
+        featureList.push(...features.car_features.technology);
       }
       if (features.car_features?.interior?.length > 0) {
-        featureList.push(...features.car_features.interior.slice(0, 2));
+        featureList.push(...features.car_features.interior);
       }
-      if (features.car_features?.technology?.length > 0) {
-        featureList.push(...features.car_features.technology.slice(0, 2));
+      if (features.car_features?.exterior?.length > 0) {
+        featureList.push(...features.car_features.exterior);
       }
       
-      if (featureList.length > 0) {
-        description += `Features include: ${featureList.join(', ')}. `;
-      }
+      // Map feature names to readable format
+      const featureMap: { [key: string]: string } = {
+        'backup_camera': 'Backup camera',
+        'bluetooth': 'Bluetooth & USB',
+        'apple_carplay': 'Apple CarPlay & Android Auto',
+        'navigation': 'Navigation',
+        'heated_seats': 'Heated seats',
+        'leather_seats': 'Leather seats',
+        'alloy_wheels': 'Alloy wheels',
+        'cruise_control': 'Cruise control',
+        'dual_zone_climate': 'Dual-zone climate control'
+      };
+      
+      const uniqueFeatures = [...new Set(featureList.slice(0, 6))];
+      uniqueFeatures.forEach(feature => {
+        const readableFeature = featureMap[feature] || feature.replace(/_/g, ' ');
+        description += `• ${readableFeature}\n`;
+      });
     }
     
-    // Add condition assessment
-    if (analysisResult.data?.features_detected?.condition_assessment) {
-      const condition = analysisResult.data.features_detected.condition_assessment;
-      description += `Vehicle is in ${condition.overall_condition} condition. `;
+    // Add standard features if no detected features
+    if (!analysisResult.data?.features_detected) {
+      description += `• Backup camera\n`;
+      description += `• Apple CarPlay & Android Auto\n`;
+      description += `• Bluetooth & USB\n`;
+      description += `• Dual-zone climate control\n`;
+      description += `• Cruise control\n`;
+      description += `• Alloy wheels\n`;
     }
     
-    // Add pricing info
-    if (price) {
-      description += `Asking $${parseInt(price).toLocaleString()}`;
-      if (lowestPrice && lowestPrice !== price) {
-        description += ` (firm on $${parseInt(lowestPrice).toLocaleString()})`;
-      }
-      description += '. ';
-    }
-    
-    // Add user's custom description if provided
-    if (carDetails.description) {
-      description += `\n\n${carDetails.description}`;
-    }
-    
-    // Add title status and standard closing
-    const titleStatusText = titleStatus === 'clean' ? 'Clean title' : 
-                           titleStatus === 'rebuilt' ? 'Rebuilt title' : 
-                           'Salvage title';
-    
-    description += `\n\n${titleStatusText}, no accidents, well maintained. Serious buyers only. Test drive available.`;
+    description += `\n🔑 Reliable, efficient sedan—priced right for a ${titleStatusText.toLowerCase()} title.\n\n`;
+    description += `📱 Message me to schedule a test drive or ask questions!`;
     
     return description;
   };
@@ -145,18 +172,11 @@ export default function CreateListing({ onClose }: CreateListingProps) {
         setAnalysisResult(result);
         setShowAnalysis(true);
         
-        // Generate AI description based on analysis (don't auto-populate fields)
-        if (result.status === "success") {
-          const generatedDescription = generateAIDescription(result, carDetails);
-          setCarDetails(prev => ({ ...prev, description: generatedDescription }));
-          setShowAnalysis(false); // Hide the analysis results section
-        }
-        
         // Generate AI description based on analysis
         if (result.status === "success") {
           const generatedDescription = generateAIDescription(result, carDetails);
-          setCarDetails(prev => ({ ...prev, description: generatedDescription }));
-          setShowAnalysis(true); // Show the analysis results
+          setCarDetails(prev => ({ ...prev, finalDescription: generatedDescription }));
+          setShowAnalysis(false); // Hide the analysis results section
         }
       // Run market analysis in background
       if (carDetails.make && carDetails.model) {
@@ -544,13 +564,91 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                 About the Vehicle
               </label>
               <textarea
-                value={carDetails.description}
-                onChange={(e) => setCarDetails(prev => ({ ...prev, description: e.target.value }))}
+                value={carDetails.aboutVehicle}
+                onChange={(e) => setCarDetails(prev => ({ ...prev, aboutVehicle: e.target.value }))}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                rows={6}
+                rows={4}
                 placeholder="Tell us about the vehicle's condition, features, history, or any important details..."
               />
             </div>
+
+            {/* Final Description Field - Generated by AI */}
+            {carDetails.finalDescription && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  📄 Final Description
+                </label>
+                <textarea
+                  value={carDetails.finalDescription}
+                  readOnly
+                  className="w-full px-3 py-2 border border-green-300 dark:border-green-600 rounded-lg bg-green-50 dark:bg-green-900/20 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  rows={12}
+                  placeholder="AI will generate the final polished listing here..."
+                />
+              </div>
+            )}
+
+            {/* Pricing Suggestions */}
+            {analysisResult && analysisResult.price_recommendations && (
+              <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-xl p-4 border border-blue-200 dark:border-blue-700">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center mb-3">
+                  <span className="mr-2">💰</span>
+                  Pricing Suggestions
+                </h3>
+                <div className="space-y-3">
+                  <button
+                    type="button"
+                    onClick={() => handlePricingSelection('quick_sale')}
+                    className="w-full text-left p-3 bg-white dark:bg-gray-800 rounded-lg border border-blue-200 dark:border-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                  >
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <div className="font-bold text-green-600">🚀 Quick Sale</div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400">Sell it fast</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-bold text-lg">${analysisResult.price_recommendations.price_recommendations?.quick_sale?.price?.toLocaleString() || 'N/A'}</div>
+                        <div className="text-xs text-gray-500">{analysisResult.price_recommendations.price_recommendations?.quick_sale?.estimated_days_to_sell || '7'} days</div>
+                      </div>
+                    </div>
+                  </button>
+                  
+                  <button
+                    type="button"
+                    onClick={() => handlePricingSelection('market_price')}
+                    className="w-full text-left p-3 bg-white dark:bg-gray-800 rounded-lg border border-blue-200 dark:border-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                  >
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <div className="font-bold text-blue-600">📊 Market Price</div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400">Regular market value</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-bold text-lg">${analysisResult.price_recommendations.price_recommendations?.market_price?.price?.toLocaleString() || 'N/A'}</div>
+                        <div className="text-xs text-gray-500">{analysisResult.price_recommendations.price_recommendations?.market_price?.estimated_days_to_sell || '14'} days</div>
+                      </div>
+                    </div>
+                  </button>
+                  
+                  <button
+                    type="button"
+                    onClick={() => handlePricingSelection('top_dollar')}
+                    className="w-full text-left p-3 bg-white dark:bg-gray-800 rounded-lg border border-blue-200 dark:border-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                  >
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <div className="font-bold text-purple-600">💎 Hold & Make More</div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400">Premium pricing</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-bold text-lg">${analysisResult.price_recommendations.price_recommendations?.top_dollar?.price?.toLocaleString() || 'N/A'}</div>
+                        <div className="text-xs text-gray-500">{analysisResult.price_recommendations.price_recommendations?.top_dollar?.estimated_days_to_sell || '30'} days</div>
+                      </div>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Platform Selection */}
             <div>
