@@ -104,7 +104,7 @@ async def add_security_headers(request: Request, call_next):
 app.include_router(auth_router.router, prefix="/api/v1/auth", tags=["Authentication"])
 app.include_router(supabase_auth.router, prefix="/api/v1/supabase", tags=["Supabase Auth"])
 app.include_router(flip_car_router.router, prefix="/api/v1", tags=["Flip Car"])
-app.include_router(listings.router, prefix="/api/v1", tags=["Listings"])
+app.include_router(listings.router, prefix="/api/v1/listings", tags=["Listings"])
 app.include_router(user_router.router, prefix="/api/v1", tags=["User"])
 app.include_router(market_intelligence_router.router, prefix="/api/v1", tags=["Market Intelligence"])
 app.include_router(messages.router, prefix="/api/v1", tags=["Messages"])
