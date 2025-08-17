@@ -130,9 +130,9 @@ export default function Home() {
             <div className="px-4 mb-6 space-y-3">
               <button
                 className="w-full bg-blue-500 dark:bg-blue-700 text-white py-4 rounded-xl font-semibold shadow-lg hover:bg-blue-600 dark:hover:bg-blue-800 transition-colors duration-200"
-                onClick={() => setActiveTab('ai-listing')}
+                onClick={() => setShowCreateListing(true)}
               >
-                📸 Create New Listing
+                📸 Post New Car
               </button>
               {/* Market Intelligence button hidden for now */}
               {/*
@@ -236,9 +236,9 @@ export default function Home() {
               <h1 className="text-xl font-semibold text-gray-900 dark:text-white">My Listings</h1>
               <button
                 className="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors"
-                onClick={() => setActiveTab('ai-listing')}
+                onClick={() => setShowCreateListing(true)}
               >
-                📸 New Car
+                + New Listing
               </button>
             </div>
             
@@ -441,15 +441,7 @@ export default function Home() {
             <span className="text-xs mt-1">Market Intel</span>
           </button>
           
-          <button
-            className={`flex flex-col items-center py-2 px-3 rounded-lg transition-colors ${
-              activeTab === 'ai-listing' ? 'text-blue-500' : 'text-gray-500 dark:text-gray-400'
-            }`}
-            onClick={() => setActiveTab('ai-listing')}
-          >
-            <span className="text-xl">📸</span>
-            <span className="text-xs mt-1">New Car</span>
-          </button>
+
         </div>
       </nav>
 
