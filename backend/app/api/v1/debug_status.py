@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-@router.get("/debug-status")
+@router.get("/debug/status")
 async def debug_status():
     """
     Check status of all APIs and services
@@ -66,7 +66,7 @@ async def debug_status():
         raise HTTPException(status_code=500, detail=f"Debug failed: {str(e)}")
 
 
-@router.get("/test-vision")
+@router.get("/debug/test-vision")
 async def test_vision():
     """
     Test Google Vision API specifically
@@ -99,7 +99,7 @@ async def test_vision():
         }
 
 
-@router.get("/test-openai")
+@router.get("/debug/test-openai")
 async def test_openai():
     """
     Test OpenAI API specifically
