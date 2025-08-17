@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 
-const MAX_FILES = 15;
+const MAX_FILES = 20;
 
 export default function ListenerUpload() {
   const [files, setFiles] = useState<File[]>([]);

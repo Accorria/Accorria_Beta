@@ -43,12 +43,12 @@ export default function CreateListing({ onClose }: CreateListingProps) {
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [isSearchingMarket, setIsSearchingMarket] = useState(false);
   const [descriptionSuggestions, setDescriptionSuggestions] = useState<string[]>([]);
-  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>(["facebook_marketplace"]);
+  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [isPosting, setIsPosting] = useState(false);
   const [postingResults, setPostingResults] = useState<any>(null);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
-    setFiles(prev => [...prev, ...acceptedFiles].slice(0, 15)); // Max 15 images
+          setFiles(prev => [...prev, ...acceptedFiles].slice(0, 20)); // Max 20 images
   }, []);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -56,7 +56,7 @@ export default function CreateListing({ onClose }: CreateListingProps) {
     accept: {
       'image/*': ['.jpeg', '.jpg', '.png', '.webp']
     },
-    maxFiles: 15
+            maxFiles: 20
   });
 
   const removeFile = (index: number) => {
@@ -371,7 +371,7 @@ export default function CreateListing({ onClose }: CreateListingProps) {
             {/* Image Upload */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Car Photos ({files.length}/15)
+                Car Photos ({files.length}/20)
               </label>
               <div
                 {...getRootProps()}
@@ -389,7 +389,7 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                     : 'Drag & drop images here, or click to select'}
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Up to 15 images (JPEG, PNG, WebP)
+                  Up to 20 images (JPEG, PNG, WebP)
                 </p>
               </div>
 
