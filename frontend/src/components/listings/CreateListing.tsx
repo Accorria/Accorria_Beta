@@ -417,6 +417,24 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                 }`}
               >
                 <input {...getInputProps()} />
+                
+                {/* Mobile-specific file input */}
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  capture="environment"
+                  onChange={(e) => {
+                    console.log('Mobile file input triggered!');
+                    if (e.target.files) {
+                      const fileList = Array.from(e.target.files);
+                      console.log('Mobile files selected:', fileList.length);
+                      onDrop(fileList, []);
+                    }
+                  }}
+                  style={{ display: 'none' }}
+                  id="mobile-file-input"
+                />
                 <div className="text-4xl mb-2">📸</div>
                 <p className="text-sm text-gray-600 dark:text-gray-300">
                   {isDragActive
@@ -429,6 +447,18 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                 <p className="text-xs text-blue-500 mt-2">
                   💡 Tip: Take photos from different angles for better analysis
                 </p>
+                
+                {/* Mobile-specific upload button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    console.log('Mobile upload button clicked!');
+                    document.getElementById('mobile-file-input')?.click();
+                  }}
+                  className="mt-3 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                >
+                  📱 Select Photos
+                </button>
               </div>
 
               {/* Preview Images */}
