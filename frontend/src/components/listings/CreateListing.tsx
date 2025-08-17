@@ -140,25 +140,17 @@ export default function CreateListing({ onClose }: CreateListingProps) {
 
     setIsAnalyzing(true);
     try {
-      const formData = new FormData();
-      files.forEach((file) => {
-        formData.append(`images`, file);
-      });
-      formData.append('location', 'United States');
-      formData.append('target_profit', carDetails.lowestPrice || '2000');
-      
-      // Add car details to the analysis request
-      formData.append('make', carDetails.make || '');
-      formData.append('model', carDetails.model || '');
-      formData.append('year', carDetails.year || '');
-      formData.append('mileage', carDetails.mileage || '');
-      formData.append('price', carDetails.price || '');
-      formData.append('lowestPrice', carDetails.lowestPrice || '');
-      formData.append('description', carDetails.description || '');
-      
-      const response = await fetch('/api/v1/public-analyze-images', {
+      // For demo purposes, we'll use a simple POST request
+      // The demo endpoint doesn't require form data
+      const response = await fetch('/api/v1/demo-analyze', {
         method: 'POST',
-        body: formData,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          images_count: files.length,
+          car_details: carDetails
+        }),
       });
       let result = null;
       if (response.ok) {
