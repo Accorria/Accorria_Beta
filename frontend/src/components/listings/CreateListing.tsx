@@ -3,6 +3,7 @@
 import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import carDataRaw from '../../data/carData.json';
+import { api } from '../../utils/api';
 const carData = carDataRaw as Record<string, string[]>;
 
 interface CreateListingProps {
@@ -133,12 +134,7 @@ export default function CreateListing({ onClose }: CreateListingProps) {
     setIsAnalyzing(true);
     try {
       // Use the working flip-car-test endpoint (confirmed working in logs)
-      const response = await fetch('/api/v1/flip-car-test', {
-        method: 'GET',
-      });
-      let result = null;
-      if (response.ok) {
-        result = await response.json();
+      const result = await api.get('/api/v1/flip-car-test');
         setAnalysisResult(result);
         setShowAnalysis(true);
         
@@ -160,9 +156,6 @@ export default function CreateListing({ onClose }: CreateListingProps) {
           setCarDetails(prev => ({ ...prev, description: generatedDescription }));
           setShowAnalysis(true); // Show the analysis results
         }
-      } else {
-        throw new Error('Image analysis failed');
-      }
       // Run market analysis in background
       if (carDetails.make && carDetails.model) {
         fetch('/api/v1/market-intelligence/analyze', {
