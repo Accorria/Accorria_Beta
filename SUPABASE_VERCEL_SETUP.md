@@ -112,6 +112,10 @@ ALLOWED_ORIGINS=["http://localhost:3000", "https://your-app.vercel.app"]
 OPENAI_API_KEY=your-openai-api-key-here
 GEMINI_API_KEY=your-gemini-api-key-here
 
+# Platform Integration (Content Generation Only)
+# Note: Facebook Marketplace, Craigslist, and OfferUp don't have official APIs
+# We focus on generating optimized content for manual posting
+
 # Debug mode
 DEBUG=true
 ```

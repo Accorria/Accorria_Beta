@@ -27,7 +27,8 @@ from app.api.v1 import (
     platform_posting,
     car_listing_generator as car_listing_generator_router,
     deals,
-    vision_test
+    vision_test,
+    supabase_auth
 )
 from app.middleware import rate_limit_middleware, cleanup_rate_limits
 
@@ -97,6 +98,7 @@ async def add_security_headers(request: Request, call_next):
 
 # Include routers
 app.include_router(auth_router.router, prefix="/api/v1/auth", tags=["Authentication"])
+app.include_router(supabase_auth.router, prefix="/api/v1/supabase", tags=["Supabase Auth"])
 app.include_router(flip_car_router.router, prefix="/api/v1", tags=["Flip Car"])
 app.include_router(listings.router, prefix="/api/v1", tags=["Listings"])
 app.include_router(user_router.router, prefix="/api/v1", tags=["User"])

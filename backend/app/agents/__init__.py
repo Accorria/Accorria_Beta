@@ -11,6 +11,9 @@ from .listening_agent import ListeningAgent
 from .scout_agent import ScoutAgent
 from .visual_agent import VisualAgent
 from .intake_agent import IntakeAgent
+from .data_extraction_agent import DataExtractionAgent
+from .pricing_strategy_agent import PricingStrategyAgent
+from .content_generation_agent import ContentGenerationAgent
 
 class ValuationAgent(BaseAgent):
     """Valuation Agent - Analyzes market value and profit"""
@@ -156,6 +159,9 @@ __all__ = [
     "ScoutAgent",
     "VisualAgent",
     "IntakeAgent",
+    "DataExtractionAgent",
+    "PricingStrategyAgent",
+    "ContentGenerationAgent",
     "ValuationAgent", 
     "InspectionAgent",
     "NegotiatorAgent",
