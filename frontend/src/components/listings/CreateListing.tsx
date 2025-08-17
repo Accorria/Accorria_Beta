@@ -47,8 +47,15 @@ export default function CreateListing({ onClose }: CreateListingProps) {
   const [isPosting, setIsPosting] = useState(false);
   const [postingResults, setPostingResults] = useState<any>(null);
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-          setFiles(prev => [...prev, ...acceptedFiles].slice(0, 20)); // Max 20 images
+  const onDrop = useCallback((acceptedFiles: File[], rejectedFiles: any[]) => {
+    console.log('Accepted files:', acceptedFiles.length);
+    console.log('Rejected files:', rejectedFiles.length);
+    
+    if (rejectedFiles.length > 0) {
+      alert(`Some files were rejected. Please check file size (max 10MB) and format (JPEG, PNG, WebP).`);
+    }
+    
+    setFiles(prev => [...prev, ...acceptedFiles].slice(0, 20)); // Max 20 images
   }, []);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -56,7 +63,11 @@ export default function CreateListing({ onClose }: CreateListingProps) {
     accept: {
       'image/*': ['.jpeg', '.jpg', '.png', '.webp']
     },
-            maxFiles: 20
+    maxFiles: 20,
+    maxSize: 10 * 1024 * 1024, // 10MB max file size
+    multiple: true,
+    noClick: false,
+    noKeyboard: false
   });
 
   const removeFile = (index: number) => {
@@ -386,10 +397,13 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                 <p className="text-sm text-gray-600 dark:text-gray-300">
                   {isDragActive
                     ? 'Drop the files here...'
-                    : 'Drag & drop images here, or click to select'}
+                    : 'Tap to select photos from your camera or gallery'}
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Up to 20 images (JPEG, PNG, WebP)
+                  Up to 20 images (JPEG, PNG, WebP) • Max 10MB each
+                </p>
+                <p className="text-xs text-blue-500 mt-2">
+                  💡 Tip: Take photos from different angles for better analysis
                 </p>
               </div>
 
