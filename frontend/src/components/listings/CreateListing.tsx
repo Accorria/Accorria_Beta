@@ -16,7 +16,8 @@ interface CarDetails {
   year: string;
   mileage: string;
   price: string;
-  lowestPrice: string; // NEW FIELD
+  lowestPrice: string;
+  titleStatus: string; // NEW FIELD
   description: string;
 }
 
@@ -28,7 +29,8 @@ export default function CreateListing({ onClose }: CreateListingProps) {
     year: '',
     mileage: '',
     price: '',
-    lowestPrice: '', // NEW FIELD
+    lowestPrice: '',
+    titleStatus: 'clean', // NEW FIELD
     description: ''
   });
   const [isUploading, setIsUploading] = useState(false);
@@ -62,13 +64,14 @@ export default function CreateListing({ onClose }: CreateListingProps) {
   const generateAIDescription = (analysisResult: any, carDetails: CarDetails): string => {
     let description = '';
     
-    // Start with basic car info
-    const make = carDetails.make || "Honda";
-    const model = carDetails.model || "Civic";
-    const year = carDetails.year || "2019";
-    const mileage = carDetails.mileage || "75000";
+    // Start with basic car info (use actual user input)
+    const make = carDetails.make || "Unknown";
+    const model = carDetails.model || "Unknown";
+    const year = carDetails.year || "Unknown";
+    const mileage = carDetails.mileage || "Unknown";
     const price = carDetails.price || '';
     const lowestPrice = carDetails.lowestPrice || '';
+    const titleStatus = carDetails.titleStatus || 'clean';
     
     // Build professional description
     description += `${year} ${make} ${model}`;
@@ -119,8 +122,12 @@ export default function CreateListing({ onClose }: CreateListingProps) {
       description += `\n\n${carDetails.description}`;
     }
     
-    // Add standard closing
-    description += '\n\nClean title, no accidents, well maintained. Serious buyers only. Test drive available.';
+    // Add title status and standard closing
+    const titleStatusText = titleStatus === 'clean' ? 'Clean title' : 
+                           titleStatus === 'rebuilt' ? 'Rebuilt title' : 
+                           'Salvage title';
+    
+    description += `\n\n${titleStatusText}, no accidents, well maintained. Serious buyers only. Test drive available.`;
     
     return description;
   };
@@ -138,16 +145,11 @@ export default function CreateListing({ onClose }: CreateListingProps) {
         setAnalysisResult(result);
         setShowAnalysis(true);
         
-        // Auto-populate fields with detected information
-        if (result.data) {
-          const detected = result.data;
-          setCarDetails(prev => ({
-            ...prev,
-            make: "Honda", // Mock data from working endpoint
-            model: "Civic", // Mock data from working endpoint
-            year: "2019", // Mock data from working endpoint
-            mileage: "75000", // Mock data from working endpoint
-          }));
+        // Generate AI description based on analysis (don't auto-populate fields)
+        if (result.status === "success") {
+          const generatedDescription = generateAIDescription(result, carDetails);
+          setCarDetails(prev => ({ ...prev, description: generatedDescription }));
+          setShowAnalysis(false); // Hide the analysis results section
         }
         
         // Generate AI description based on analysis
@@ -524,13 +526,28 @@ export default function CreateListing({ onClose }: CreateListingProps) {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Title Status
+              </label>
+              <select
+                value={carDetails.titleStatus}
+                onChange={(e) => setCarDetails(prev => ({ ...prev, titleStatus: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="clean">Clean Title</option>
+                <option value="rebuilt">Rebuilt Title</option>
+                <option value="salvage">Salvage Title</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 About the Vehicle
               </label>
               <textarea
                 value={carDetails.description}
                 onChange={(e) => setCarDetails(prev => ({ ...prev, description: e.target.value }))}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                rows={3}
+                rows={6}
                 placeholder="Tell us about the vehicle's condition, features, history, or any important details..."
               />
             </div>
@@ -567,8 +584,8 @@ export default function CreateListing({ onClose }: CreateListingProps) {
               </div>
             </div>
 
-            {/* AI Analysis Results */}
-            {showAnalysis && analysisResult && (
+            {/* AI Analysis Results - Hidden for cleaner UX */}
+            {false && showAnalysis && analysisResult && (
               <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-xl p-4 border border-blue-200 dark:border-blue-700">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
@@ -651,7 +668,7 @@ export default function CreateListing({ onClose }: CreateListingProps) {
               </div>
             )}
 
-            {descriptionSuggestions.length > 0 && (
+            {false && descriptionSuggestions.length > 0 && (
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">AI Description Suggestions</label>
                 <div className="space-y-2">
