@@ -17,6 +17,7 @@ gcloud run deploy $SERVICE_NAME \
     --source . \
     --platform managed \
     --region $REGION \
+    --project quickflip-ai \
     --allow-unauthenticated \
     --memory 1Gi \
     --cpu 1 \
