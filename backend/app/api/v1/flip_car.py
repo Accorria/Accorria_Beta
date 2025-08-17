@@ -160,11 +160,11 @@ async def flip_car_test():
     """
     Test endpoint for flip car functionality
     
-    Returns mock data for testing with Firestore integration
+    Returns mock data for testing with Supabase integration
     """
     try:
-        # Import Firestore
-        from app.core.firestore_config import firestore_db
+        # Import Supabase service
+        from app.services.supabase_service import supabase_service
         
         # Mock input data
         input_data = {
@@ -182,7 +182,7 @@ async def flip_car_test():
         # Process mock data
         result = await visual_agent.process(input_data)
         
-        # Save to Firestore for testing
+        # Save to Supabase for testing
         car_analysis_data = {
             "agent": "VisualAgent",
             "status": "success",
@@ -193,8 +193,8 @@ async def flip_car_test():
             "car_info": input_data["car_info"]
         }
         
-        # Save to Firestore
-        firestore_result = await firestore_db.save_car_analysis(car_analysis_data)
+        # Save to Supabase
+        supabase_result = await supabase_service.save_car_analysis(car_analysis_data)
         
         # Format response
         response_data = {
@@ -203,8 +203,8 @@ async def flip_car_test():
             "confidence": result.confidence,
             "data": result.data,
             "test_mode": True,
-            "firestore": firestore_result,
-            "message": "✅ Car analysis saved to Firestore for testing"
+            "supabase": supabase_result,
+            "message": "✅ Car analysis saved to Supabase for testing"
         }
         
         return JSONResponse(content=response_data, status_code=200)
