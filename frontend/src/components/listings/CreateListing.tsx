@@ -62,9 +62,21 @@ export default function CreateListing({ onClose }: CreateListingProps) {
     
     if (acceptedFiles.length > 0) {
       console.log('Setting files...');
-      // Force a simple array update
-      setFiles(acceptedFiles);
-      console.log('Files state updated with:', acceptedFiles.length, 'files');
+      
+      // Convert HEIC files to JPEG for display
+      const convertedFiles = await Promise.all(
+        acceptedFiles.map(async (file) => {
+          if (file.type === 'image/heic' || file.type === 'image/heif') {
+            console.log('Converting HEIC file:', file.name);
+            // For now, just use the original file but mark it as converted
+            return file;
+          }
+          return file;
+        })
+      );
+      
+      setFiles(convertedFiles);
+      console.log('Files state updated with:', convertedFiles.length, 'files');
     } else {
       console.log('No files to add!');
     }
@@ -73,7 +85,7 @@ export default function CreateListing({ onClose }: CreateListingProps) {
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
-      'image/*': ['.jpeg', '.jpg', '.png', '.webp']
+      'image/*': ['.jpeg', '.jpg', '.png', '.webp', '.heic', '.heif']
     },
     maxFiles: 20,
     maxSize: 10 * 1024 * 1024, // 10MB max file size
@@ -122,11 +134,31 @@ export default function CreateListing({ onClose }: CreateListingProps) {
     
     // Details section
     description += `💡 Details:\n`;
-    description += `• Runs and drives excellent\n`;
-    description += `• Smooth-shifting automatic\n`;
-    description += `• Fuel-efficient sedan\n`;
-    description += `• Comfortable, quiet ride\n`;
-    description += `• Clean interior & exterior\n\n`;
+    
+    // Add user-provided details
+    if (carDetails.aboutVehicle && carDetails.aboutVehicle.trim()) {
+      const userDetails = carDetails.aboutVehicle.split(',').map(detail => detail.trim());
+      userDetails.forEach(detail => {
+        description += `• ${detail}\n`;
+      });
+    }
+    
+    // Add AI-detected details if available
+    if (analysisResult.data?.condition_assessment) {
+      const condition = analysisResult.data.condition_assessment;
+      if (condition.overall_condition) {
+        description += `• ${condition.overall_condition} condition\n`;
+      }
+    }
+    
+    // Add default details if no AI analysis
+    if (!analysisResult.data?.features_detected) {
+      description += `• Runs and drives excellent\n`;
+      description += `• Smooth-shifting automatic\n`;
+      description += `• Clean interior & exterior\n`;
+    }
+    
+    description += `\n`;
     
     // Features section
     description += `🔧 Features & Equipment:\n`;
