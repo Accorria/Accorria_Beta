@@ -436,16 +436,21 @@ export default function CreateListing({ onClose }: CreateListingProps) {
               </div>
 
               {/* Preview Images */}
+              {console.log('Rendering preview images, files.length:', files.length)}
               {files.length > 0 && (
                 <div className="mt-4 space-y-4">
                   <div className="grid grid-cols-3 gap-2">
-                    {files.map((file, index) => (
-                      <div key={index} className="relative">
-                        <img
-                          src={URL.createObjectURL(file)}
-                          alt={`Preview ${index + 1}`}
-                          className="w-full h-20 object-cover rounded-lg"
-                        />
+                    {files.map((file, index) => {
+                      console.log('Rendering file:', file.name, file.type, file.size);
+                      return (
+                        <div key={index} className="relative">
+                          <img
+                            src={URL.createObjectURL(file)}
+                            alt={`Preview ${index + 1}`}
+                            className="w-full h-20 object-cover rounded-lg"
+                            onError={(e) => console.error('Image failed to load:', file.name)}
+                            onLoad={() => console.log('Image loaded successfully:', file.name)}
+                          />
                         <button
                           type="button"
                           onClick={() => removeFile(index)}
