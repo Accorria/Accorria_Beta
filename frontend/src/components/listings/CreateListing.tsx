@@ -209,7 +209,16 @@ export default function CreateListing({ onClose }: CreateListingProps) {
       formData.append('titleStatus', carDetails.titleStatus || '');
       formData.append('aboutVehicle', carDetails.aboutVehicle || '');
       
+      console.log('Sending analysis request with:', {
+        files: files.length,
+        make: carDetails.make,
+        model: carDetails.model,
+        year: carDetails.year,
+        endpoint: '/api/v1/enhanced-analyze'
+      });
+      
       const result = await api.postFormData('/api/v1/enhanced-analyze', formData);
+      console.log('Analysis result:', result);
       setAnalysisResult(result);
       setShowAnalysis(true);
       
@@ -250,7 +259,13 @@ export default function CreateListing({ onClose }: CreateListingProps) {
       }, 500);
     } catch (error) {
       console.error('Error analyzing images:', error);
-      alert('Failed to analyze images. Please try again.');
+      console.error('Error details:', {
+        message: error.message,
+        status: error.status,
+        response: error.response,
+        files: files.length
+      });
+      alert(`Failed to analyze images. Error: ${error.message || 'Unknown error'}. Please try again.`);
     } finally {
       setIsAnalyzing(false);
     }
