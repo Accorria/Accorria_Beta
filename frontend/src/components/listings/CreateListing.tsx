@@ -62,10 +62,9 @@ export default function CreateListing({ onClose }: CreateListingProps) {
     
     if (acceptedFiles.length > 0) {
       console.log('Setting files...');
-      const newFiles = [...files, ...acceptedFiles].slice(0, 20);
-      console.log('New files array length:', newFiles.length);
-      setFiles(newFiles);
-      console.log('Files state updated!');
+      // Force a simple array update
+      setFiles(acceptedFiles);
+      console.log('Files state updated with:', acceptedFiles.length, 'files');
     } else {
       console.log('No files to add!');
     }
