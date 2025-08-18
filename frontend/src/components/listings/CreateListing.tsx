@@ -451,15 +451,16 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                             onError={(e) => console.error('Image failed to load:', file.name)}
                             onLoad={() => console.log('Image loaded successfully:', file.name)}
                           />
-                        <button
-                          type="button"
-                          onClick={() => removeFile(index)}
-                          className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs flex items-center justify-center hover:bg-red-600 transition-colors"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    ))}
+                          <button
+                            type="button"
+                            onClick={() => removeFile(index)}
+                            className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs flex items-center justify-center hover:bg-red-600 transition-colors"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
                   
                   {/* AI Analysis Button */}
