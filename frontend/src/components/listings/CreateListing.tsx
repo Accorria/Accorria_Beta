@@ -47,7 +47,7 @@ export default function CreateListing({ onClose }: CreateListingProps) {
   const [isPosting, setIsPosting] = useState(false);
   const [postingResults, setPostingResults] = useState<any>(null);
 
-  const onDrop = useCallback((acceptedFiles: File[], rejectedFiles: any[]) => {
+  const onDrop = useCallback(async (acceptedFiles: File[], rejectedFiles: any[]) => {
     console.log('onDrop called!');
     console.log('Accepted files:', acceptedFiles.length);
     console.log('Rejected files:', rejectedFiles.length);
