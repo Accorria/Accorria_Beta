@@ -436,11 +436,11 @@ export default function CreateListing({ onClose }: CreateListingProps) {
               </div>
 
               {/* Preview Images */}
-              {console.log('Rendering preview images, files.length:', files.length)}
               {files.length > 0 && (
                 <div className="mt-4 space-y-4">
                   <div className="grid grid-cols-3 gap-2">
                     {files.map((file, index) => {
+                      // Debug logging
                       console.log('Rendering file:', file.name, file.type, file.size);
                       return (
                         <div key={index} className="relative">
