@@ -69,7 +69,7 @@ export default function CreateListing({ onClose }: CreateListingProps) {
     } else {
       console.log('No files to add!');
     }
-  }, [files]);
+  }, []);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
