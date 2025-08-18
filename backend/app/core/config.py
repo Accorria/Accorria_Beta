@@ -31,7 +31,9 @@ class Settings(BaseSettings):
         "http://localhost:3001",
         "http://localhost:5173",
         "https://quickflip-ai.vercel.app",
-        "https://quickflip-ai-git-main-prestoneaton.vercel.app"
+        "https://quickflip-ai-git-main-prestoneaton.vercel.app",
+        "https://quickflip-ai-git-main-prestoneaton.vercel.app",
+        "*"  # Allow all origins for mobile testing
     ]
     
     # OpenAI
