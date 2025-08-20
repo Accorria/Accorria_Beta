@@ -187,7 +187,9 @@ export default function CreateListing({ onClose }: CreateListingProps) {
       titleStatus: carDetails.titleStatus,
       postedAt: new Date().toISOString(),
       status: 'active',
-      platforms: selectedPlatforms.length > 0 ? selectedPlatforms : ['facebook_marketplace']
+      platforms: selectedPlatforms.length > 0 ? selectedPlatforms : ['facebook_marketplace'],
+      messages: 0,
+      clicks: Math.floor(Math.random() * 20) + 5 // Random initial views
     };
     
     // Store in localStorage for demo (in real app, this would go to database)
@@ -247,7 +249,6 @@ export default function CreateListing({ onClose }: CreateListingProps) {
     
     // Build description in your exact format with emojis
     description += `🚗 ${year} ${make} ${model}\n`;
-    description += `${priceMessage}\n`;
     description += `💰 Asking Price: $${displayPrice.toLocaleString()}\n`;
     description += `🏁 Mileage: ${parseInt(mileage).toLocaleString()} miles\n`;
     
@@ -935,7 +936,7 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                   placeholder="AI will generate the final polished listing here..."
                 />
                 
-                {/* Test Post Button */}
+                {/* Post Button */}
                 <div className="mt-4">
                   <button
                     type="button"
@@ -943,10 +944,10 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                     className="w-full px-6 py-3 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 transition-all duration-200 flex items-center justify-center space-x-2"
                   >
                     <span>🚀</span>
-                    <span>Test Post</span>
+                    <span>Post Listing</span>
                   </button>
                   <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-2">
-                    This will create a test listing on your dashboard (not posted to Facebook)
+                    This will create your listing on the dashboard
                   </p>
                 </div>
               </div>

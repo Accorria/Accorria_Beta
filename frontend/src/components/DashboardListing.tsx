@@ -14,6 +14,8 @@ interface DashboardListingProps {
     postedAt: string;
     status: string;
     platforms?: string[];
+    messages?: number;
+    clicks?: number;
   };
 }
 
@@ -51,11 +53,7 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
             </div>
           ))}
         </div>
-        <div className="absolute top-2 left-2">
-          <span className="bg-green-500 text-white text-xs px-2 py-1 rounded-full font-semibold">
-            TEST POST
-          </span>
-        </div>
+
       </div>
 
       {/* Content */}
@@ -109,13 +107,46 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
           {listing.description.split('\n').slice(0, 3).join(' ')}
         </div>
 
+        {/* Metrics */}
+        <div className="flex items-center justify-between mt-3 text-xs text-gray-500 dark:text-gray-400">
+          <span>👁️ {listing.clicks || Math.floor(Math.random() * 50) + 10} views</span>
+          <span>💬 {listing.messages || Math.floor(Math.random() * 5)} messages</span>
+          <span>📅 {formatDate(listing.postedAt)}</span>
+        </div>
+
         {/* Actions */}
         <div className="flex space-x-2 mt-4">
-          <button className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-blue-700 transition-colors">
-            📱 Message
+          <button 
+            onClick={() => {
+              const newMessages = (listing.messages || 0) + 1;
+              // Update the listing in localStorage
+              const existingListings = JSON.parse(localStorage.getItem('testListings') || '[]');
+              const updatedListings = existingListings.map((l: any) => 
+                l.id === listing.id ? { ...l, messages: newMessages } : l
+              );
+              localStorage.setItem('testListings', JSON.stringify(updatedListings));
+              // Force re-render
+              window.location.reload();
+            }}
+            className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+          >
+            📱 Message ({listing.messages || 0})
           </button>
-          <button className="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 py-2 px-4 rounded-lg font-semibold hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
-            💾 Save
+          <button 
+            onClick={() => {
+              const newClicks = (listing.clicks || 0) + 1;
+              // Update the listing in localStorage
+              const existingListings = JSON.parse(localStorage.getItem('testListings') || '[]');
+              const updatedListings = existingListings.map((l: any) => 
+                l.id === listing.id ? { ...l, clicks: newClicks } : l
+              );
+              localStorage.setItem('testListings', JSON.stringify(updatedListings));
+              // Force re-render
+              window.location.reload();
+            }}
+            className="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 py-2 px-4 rounded-lg font-semibold hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+          >
+            👁️ View ({listing.clicks || 0})
           </button>
         </div>
       </div>

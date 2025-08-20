@@ -135,16 +135,20 @@ export default function Home() {
             <div className="px-4 py-6">
               <div className="grid grid-cols-3 gap-4">
                 <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-                  <div className="text-2xl font-bold text-blue-600 dark:text-blue-300">3</div>
+                  <div className="text-2xl font-bold text-blue-600 dark:text-blue-300">{testListings.length}</div>
                   <div className="text-xs text-gray-600 dark:text-gray-300">Active Listings</div>
                 </div>
                 <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-                  <div className="text-2xl font-bold text-green-600 dark:text-green-300">12</div>
+                  <div className="text-2xl font-bold text-green-600 dark:text-green-300">
+                    {testListings.reduce((total, listing) => total + (listing.messages || 0), 0)}
+                  </div>
                   <div className="text-xs text-gray-600 dark:text-gray-300">Messages</div>
                 </div>
                 <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-                  <div className="text-2xl font-bold text-purple-600 dark:text-purple-300">$2,400</div>
-                  <div className="text-xs text-gray-600 dark:text-gray-300">This Week</div>
+                  <div className="text-2xl font-bold text-purple-600 dark:text-purple-300">
+                    ${testListings.reduce((total, listing) => total + (listing.clicks || 0), 0).toLocaleString()}
+                  </div>
+                  <div className="text-xs text-gray-600 dark:text-gray-300">Total Views</div>
                 </div>
               </div>
             </div>
@@ -253,14 +257,20 @@ export default function Home() {
               </div>
             )}
 
-            {/* Test Listings */}
+            {/* Active Listings */}
             {testListings.length > 0 && (
               <div className="px-4 mb-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Test Posts</h2>
-                  <span className="text-xs text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/20 px-2 py-1 rounded-full">
-                    Demo Mode
-                  </span>
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Your Listings</h2>
+                  <button
+                    onClick={() => {
+                      localStorage.removeItem('testListings');
+                      setTestListings([]);
+                    }}
+                    className="text-xs text-red-500 hover:text-red-700 px-2 py-1 rounded border border-red-200 hover:border-red-300 transition-colors"
+                  >
+                    Clear All
+                  </button>
                 </div>
                 <div className="space-y-4">
                   {testListings.map((listing) => (
