@@ -560,12 +560,12 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                     ? 'Drop the files here...'
                     : 'Tap to select photos from your camera or gallery'}
                 </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Up to 20 images (JPEG, PNG, WebP) • Max 5MB each
-                </p>
-                <p className="text-xs text-blue-500 mt-2">
-                  💡 Tip: Take photos from different angles for better analysis
-                </p>
+                                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Up to 20 images (JPEG, PNG, WebP) • Auto-compressed for optimal size
+                  </p>
+                                  <p className="text-xs text-blue-500 mt-2">
+                    💡 Tip: Take photos from different angles for better analysis (v2)
+                  </p>
               </div>
 
               {/* Preview Images */}
