@@ -134,7 +134,7 @@ export default function CreateListing({ onClose }: CreateListingProps) {
       'image/*': ['.jpeg', '.jpg', '.png', '.webp', '.heic', '.heif']
     },
     maxFiles: 20,
-    maxSize: 5 * 1024 * 1024, // 5MB max file size (reduced for API limits)
+    maxSize: 50 * 1024 * 1024, // 50MB limit - let compression handle the rest
     multiple: true,
     noClick: false,
     noKeyboard: false
