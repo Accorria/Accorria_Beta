@@ -174,7 +174,7 @@ const AIListingGenerator: React.FC = () => {
               Upload Images
             </Button>
             <Typography variant="caption" color="text.secondary">
-              Upload up to 20 car images (max 10MB each)
+              Upload up to 20 car images (max 5MB each)
             </Typography>
           </Box>
 

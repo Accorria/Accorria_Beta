@@ -57,7 +57,7 @@ export default function CreateListing({ onClose }: CreateListingProps) {
     
     if (rejectedFiles.length > 0) {
       console.log('Rejected files details:', rejectedFiles);
-      alert(`Some files were rejected. Please check file size (max 10MB) and format (JPEG, PNG, WebP).`);
+              alert(`Some files were rejected. Please check file size (max 5MB) and format (JPEG, PNG, WebP).`);
     }
     
     if (acceptedFiles.length > 0) {
@@ -503,7 +503,7 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                     : 'Tap to select photos from your camera or gallery'}
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Up to 20 images (JPEG, PNG, WebP) • Max 10MB each
+                  Up to 20 images (JPEG, PNG, WebP) • Max 5MB each
                 </p>
                 <p className="text-xs text-blue-500 mt-2">
                   💡 Tip: Take photos from different angles for better analysis
