@@ -63,13 +63,57 @@ export default function CreateListing({ onClose }: CreateListingProps) {
     if (acceptedFiles.length > 0) {
       console.log('Setting files...');
       
-      // Convert HEIC files to JPEG for display
+      // Convert and compress files
       const convertedFiles = await Promise.all(
         acceptedFiles.map(async (file) => {
-          if (file.type === 'image/heic' || file.type === 'image/heif') {
-            console.log('Converting HEIC file:', file.name);
-            // For now, just use the original file but mark it as converted
-            return file;
+          // Compress images to reduce file size
+          if (file.type.startsWith('image/')) {
+            console.log('Compressing file:', file.name, 'Size:', file.size);
+            
+            // Create a canvas to compress the image
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const img = new Image();
+            
+            return new Promise((resolve) => {
+              img.onload = () => {
+                // Calculate new dimensions (max 1200px width/height)
+                const maxSize = 1200;
+                let { width, height } = img;
+                
+                if (width > height) {
+                  if (width > maxSize) {
+                    height = (height * maxSize) / width;
+                    width = maxSize;
+                  }
+                } else {
+                  if (height > maxSize) {
+                    width = (width * maxSize) / height;
+                    height = maxSize;
+                  }
+                }
+                
+                canvas.width = width;
+                canvas.height = height;
+                
+                // Draw and compress
+                ctx?.drawImage(img, 0, 0, width, height);
+                canvas.toBlob((blob) => {
+                  if (blob) {
+                    const compressedFile = new File([blob], file.name, {
+                      type: 'image/jpeg',
+                      lastModified: Date.now()
+                    });
+                    console.log('Compressed file:', file.name, 'New size:', compressedFile.size);
+                    resolve(compressedFile);
+                  } else {
+                    resolve(file);
+                  }
+                }, 'image/jpeg', 0.8); // 80% quality
+              };
+              
+              img.src = URL.createObjectURL(file);
+            });
           }
           return file;
         })
@@ -88,7 +132,7 @@ export default function CreateListing({ onClose }: CreateListingProps) {
       'image/*': ['.jpeg', '.jpg', '.png', '.webp', '.heic', '.heif']
     },
     maxFiles: 20,
-    maxSize: 10 * 1024 * 1024, // 10MB max file size
+    maxSize: 5 * 1024 * 1024, // 5MB max file size (reduced for API limits)
     multiple: true,
     noClick: false,
     noKeyboard: false
