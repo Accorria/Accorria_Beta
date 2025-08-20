@@ -77,7 +77,7 @@ export default function LandingPage() {
                 </div>
                 <div className="mt-4">
                   <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
-                    🎉 Free Trial — 3 posts in 7 days
+                    🎉 Free Trial — 3 posts in 7 days (Updated!)
                   </span>
                 </div>
               </div>
