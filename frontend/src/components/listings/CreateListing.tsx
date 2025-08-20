@@ -173,7 +173,8 @@ export default function CreateListing({ onClose }: CreateListingProps) {
       mileage: carDetails.mileage,
       titleStatus: carDetails.titleStatus,
       postedAt: new Date().toISOString(),
-      status: 'active'
+      status: 'active',
+      platforms: selectedPlatforms.length > 0 ? selectedPlatforms : ['facebook_marketplace']
     };
     
     // Store in localStorage for demo (in real app, this would go to database)
@@ -181,7 +182,16 @@ export default function CreateListing({ onClose }: CreateListingProps) {
     existingListings.unshift(testListing);
     localStorage.setItem('testListings', JSON.stringify(existingListings));
     
-    alert('✅ Test listing created! Check your dashboard to see it.');
+    // Show success message with platform info
+    const platformNames = {
+      'facebook_marketplace': 'Facebook Marketplace',
+      'craigslist': 'Craigslist',
+      'offerup': 'OfferUp'
+    };
+    
+    const postedPlatforms = testListing.platforms.map(p => platformNames[p]).join(', ');
+    
+    alert(`✅ Test listing created and posted to: ${postedPlatforms}\n\nCheck your dashboard to see it!`);
     onClose(); // Close the modal
   };
 
@@ -572,10 +582,15 @@ export default function CreateListing({ onClose }: CreateListingProps) {
               {files.length > 0 && (
                 <div className="mt-4 space-y-4">
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Select 4 key photos for AI analysis (saves tokens):
-                    </p>
-                    <span className="text-xs text-blue-600 dark:text-blue-400">
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
+                        🎯 Select 4 Key Photos for AI Analysis
+                      </p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400">
+                        Choose: Exterior, Interior, Dashboard, & Key Features (saves tokens)
+                      </p>
+                    </div>
+                    <span className="text-xs text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/20 px-2 py-1 rounded-full">
                       {selectedFiles.length}/4 selected
                     </span>
                   </div>
@@ -919,67 +934,7 @@ export default function CreateListing({ onClose }: CreateListingProps) {
               </div>
             )}
 
-            {/* Pricing Suggestions */}
-            {analysisResult && analysisResult.price_recommendations && (
-              <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-xl p-4 border border-blue-200 dark:border-blue-700">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center mb-3">
-                  <span className="mr-2">💰</span>
-                  Pricing Suggestions
-                </h3>
-                <div className="space-y-3">
-                  <button
-                    type="button"
-                    onClick={() => handlePricingSelection('quick_sale')}
-                    className="w-full text-left p-3 bg-white dark:bg-gray-800 rounded-lg border border-blue-200 dark:border-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-                  >
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <div className="font-bold text-green-600">🚀 Quick Sale</div>
-                        <div className="text-sm text-gray-600 dark:text-gray-400">Sell it fast</div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-bold text-lg">${analysisResult.price_recommendations.price_recommendations?.quick_sale?.price?.toLocaleString() || 'N/A'}</div>
-                        <div className="text-xs text-gray-500">{analysisResult.price_recommendations.price_recommendations?.quick_sale?.estimated_days_to_sell || '7'} days</div>
-                      </div>
-                    </div>
-                  </button>
-                  
-                  <button
-                    type="button"
-                    onClick={() => handlePricingSelection('market_price')}
-                    className="w-full text-left p-3 bg-white dark:bg-gray-800 rounded-lg border border-blue-200 dark:border-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-                  >
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <div className="font-bold text-blue-600">📊 Market Price</div>
-                        <div className="text-sm text-gray-600 dark:text-gray-400">Regular market value</div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-bold text-lg">${analysisResult.price_recommendations.price_recommendations?.market_price?.price?.toLocaleString() || 'N/A'}</div>
-                        <div className="text-xs text-gray-500">{analysisResult.price_recommendations.price_recommendations?.market_price?.estimated_days_to_sell || '14'} days</div>
-                      </div>
-                    </div>
-                  </button>
-                  
-                  <button
-                    type="button"
-                    onClick={() => handlePricingSelection('top_dollar')}
-                    className="w-full text-left p-3 bg-white dark:bg-gray-800 rounded-lg border border-blue-200 dark:border-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-                  >
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <div className="font-bold text-purple-600">💎 Hold & Make More</div>
-                        <div className="text-sm text-gray-600 dark:text-gray-400">Premium pricing</div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-bold text-lg">${analysisResult.price_recommendations.price_recommendations?.top_dollar?.price?.toLocaleString() || 'N/A'}</div>
-                        <div className="text-xs text-gray-500">{analysisResult.price_recommendations.price_recommendations?.top_dollar?.estimated_days_to_sell || '30'} days</div>
-                      </div>
-                    </div>
-                  </button>
-                </div>
-              </div>
-            )}
+
 
             {/* Platform Selection */}
             <div>

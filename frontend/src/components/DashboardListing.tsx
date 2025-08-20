@@ -13,6 +13,7 @@ interface DashboardListingProps {
     titleStatus: string;
     postedAt: string;
     status: string;
+    platforms?: string[];
   };
 }
 
@@ -80,6 +81,28 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
           <span>📄 {listing.titleStatus}</span>
           <span>🕒 {formatDate(listing.postedAt)}</span>
         </div>
+        
+        {/* Platform Info */}
+        {listing.platforms && listing.platforms.length > 0 && (
+          <div className="mb-3">
+            <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Posted to:</div>
+            <div className="flex flex-wrap gap-1">
+              {listing.platforms.map((platform, index) => {
+                const platformInfo = {
+                  'facebook_marketplace': { name: 'Facebook Marketplace', icon: '📘', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300' },
+                  'craigslist': { name: 'Craigslist', icon: '📋', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-300' },
+                  'offerup': { name: 'OfferUp', icon: '📱', color: 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300' }
+                };
+                const info = platformInfo[platform as keyof typeof platformInfo];
+                return (
+                  <span key={index} className={`text-xs px-2 py-1 rounded-full ${info.color}`}>
+                    {info.icon} {info.name}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Description Preview */}
         <div className="text-gray-700 dark:text-gray-300 text-sm line-clamp-3">
