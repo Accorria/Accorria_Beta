@@ -5,6 +5,7 @@ import CreateListing from '@/components/listings/CreateListing';
 import MessagesView from '@/components/MessagesView';
 import MarketIntelligence from '@/components/MarketIntelligence';
 import AIListingGenerator from '@/components/AIListingGenerator';
+import DashboardListing from '@/components/DashboardListing';
 import Header from '@/components/Header';
 
 export default function Home() {
@@ -60,6 +61,7 @@ export default function Home() {
       status: 'Active',
     },
   ]);
+  const [testListings, setTestListings] = useState<any[]>([]);
   const [logMsg, setLogMsg] = useState<string | null>(null);
 
   // Persist dark mode preference
@@ -70,6 +72,27 @@ export default function Home() {
       document.documentElement.classList.remove('dark');
     }
   }, [darkMode]);
+
+  // Load test listings from localStorage
+  useEffect(() => {
+    const savedTestListings = localStorage.getItem('testListings');
+    if (savedTestListings) {
+      setTestListings(JSON.parse(savedTestListings));
+    }
+  }, []);
+
+  // Listen for storage changes to update test listings
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const savedTestListings = localStorage.getItem('testListings');
+      if (savedTestListings) {
+        setTestListings(JSON.parse(savedTestListings));
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
@@ -227,6 +250,23 @@ export default function Home() {
                 )}
               </div>
             </div>
+
+            {/* Test Listings */}
+            {testListings.length > 0 && (
+              <div className="px-4 mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Test Posts</h2>
+                  <span className="text-xs text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/20 px-2 py-1 rounded-full">
+                    Demo Mode
+                  </span>
+                </div>
+                <div className="space-y-4">
+                  {testListings.map((listing) => (
+                    <DashboardListing key={listing.id} listing={listing} />
+                  ))}
+                </div>
+              </div>
+            )}
           </>
         )}
 

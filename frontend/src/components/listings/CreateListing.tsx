@@ -24,6 +24,7 @@ interface CarDetails {
 
 export default function CreateListing({ onClose }: CreateListingProps) {
   const [files, setFiles] = useState<File[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [carDetails, setCarDetails] = useState<CarDetails>({
     make: '',
     model: '',
@@ -46,6 +47,7 @@ export default function CreateListing({ onClose }: CreateListingProps) {
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [isPosting, setIsPosting] = useState(false);
   const [postingResults, setPostingResults] = useState<any>(null);
+  const [selectedPricingTier, setSelectedPricingTier] = useState<'quick' | 'market' | 'premium' | null>(null);
 
   const onDrop = useCallback(async (acceptedFiles: File[], rejectedFiles: any[]) => {
     console.log('onDrop called!');
@@ -57,7 +59,7 @@ export default function CreateListing({ onClose }: CreateListingProps) {
     
     if (rejectedFiles.length > 0) {
       console.log('Rejected files details:', rejectedFiles);
-              alert(`Some files were rejected. Please check file format (JPEG, PNG, WebP). Files will be auto-compressed.`);
+              alert(`Some files were rejected. Please check file size (max 5MB) and format (JPEG, PNG, WebP).`);
     }
     
     if (acceptedFiles.length > 0) {
@@ -132,7 +134,7 @@ export default function CreateListing({ onClose }: CreateListingProps) {
       'image/*': ['.jpeg', '.jpg', '.png', '.webp', '.heic', '.heif']
     },
     maxFiles: 20,
-    maxSize: 50 * 1024 * 1024, // 50MB limit - let compression handle the rest
+    maxSize: 5 * 1024 * 1024, // 5MB max file size (reduced for API limits)
     multiple: true,
     noClick: false,
     noKeyboard: false
@@ -140,6 +142,47 @@ export default function CreateListing({ onClose }: CreateListingProps) {
 
   const removeFile = (index: number) => {
     setFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const toggleFileSelection = (file: File) => {
+    setSelectedFiles(prev => {
+      if (prev.includes(file)) {
+        return prev.filter(f => f !== file);
+      } else if (prev.length < 4) {
+        return [...prev, file];
+      }
+      return prev;
+    });
+  };
+
+  const handleTestPost = () => {
+    if (!selectedPricingTier) {
+      alert('Please select a pricing tier first');
+      return;
+    }
+    
+    // Create test listing data
+    const testListing = {
+      id: Date.now().toString(),
+      title: `${carDetails.year} ${carDetails.make} ${carDetails.model}`,
+      price: selectedPricingTier === 'quick' ? Math.floor(parseInt(carDetails.price) * 0.85) :
+             selectedPricingTier === 'premium' ? Math.floor(parseInt(carDetails.price) * 1.15) :
+             parseInt(carDetails.price),
+      description: carDetails.finalDescription,
+      images: files.map(file => URL.createObjectURL(file)),
+      mileage: carDetails.mileage,
+      titleStatus: carDetails.titleStatus,
+      postedAt: new Date().toISOString(),
+      status: 'active'
+    };
+    
+    // Store in localStorage for demo (in real app, this would go to database)
+    const existingListings = JSON.parse(localStorage.getItem('testListings') || '[]');
+    existingListings.unshift(testListing);
+    localStorage.setItem('testListings', JSON.stringify(existingListings));
+    
+    alert('✅ Test listing created! Check your dashboard to see it.');
+    onClose(); // Close the modal
   };
 
   const handlePricingSelection = (pricingStrategy: string) => {
@@ -165,9 +208,24 @@ export default function CreateListing({ onClose }: CreateListingProps) {
     const price = carDetails.price || '';
     const titleStatus = carDetails.titleStatus || 'clean';
     
+    // Calculate price based on selected tier
+    let displayPrice = parseInt(price);
+    let priceMessage = '';
+    
+    if (selectedPricingTier === 'quick') {
+      displayPrice = Math.floor(parseInt(price) * 0.85);
+      priceMessage = '🚀 QUICK SALE - Priced to sell fast!';
+    } else if (selectedPricingTier === 'premium') {
+      displayPrice = Math.floor(parseInt(price) * 1.15);
+      priceMessage = '💎 PREMIUM LISTING - Top condition, premium price';
+    } else {
+      priceMessage = '⚖️ FAIR MARKET PRICE - Great value for money';
+    }
+    
     // Build description in your exact format with emojis
     description += `🚗 ${year} ${make} ${model}\n`;
-    description += `💰 Asking Price: $${parseInt(price).toLocaleString()}\n`;
+    description += `${priceMessage}\n`;
+    description += `💰 Asking Price: $${displayPrice.toLocaleString()}\n`;
     description += `🏁 Mileage: ${parseInt(mileage).toLocaleString()} miles\n`;
     
     const titleStatusText = titleStatus === 'clean' ? 'Clean' : 
@@ -259,8 +317,8 @@ export default function CreateListing({ onClose }: CreateListingProps) {
   };
 
   const analyzeImages = async () => {
-    if (files.length === 0) {
-      alert('Please upload at least one image first');
+    if (selectedFiles.length === 0) {
+      alert('Please select at least one image for analysis');
       return;
     }
 
@@ -269,8 +327,8 @@ export default function CreateListing({ onClose }: CreateListingProps) {
       // Use enhanced analysis endpoint for comprehensive image analysis
       const formData = new FormData();
       
-      // Add all images
-      files.forEach((file) => {
+      // Add selected images for analysis
+      selectedFiles.forEach((file) => {
         formData.append('images', file);
       });
       
@@ -503,7 +561,7 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                     : 'Tap to select photos from your camera or gallery'}
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Up to 20 images (JPEG, PNG, WebP) • Auto-compressed for optimal size
+                  Up to 20 images (JPEG, PNG, WebP) • Max 5MB each
                 </p>
                 <p className="text-xs text-blue-500 mt-2">
                   💡 Tip: Take photos from different angles for better analysis
@@ -513,8 +571,17 @@ export default function CreateListing({ onClose }: CreateListingProps) {
               {/* Preview Images */}
               {files.length > 0 && (
                 <div className="mt-4 space-y-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Select 4 key photos for AI analysis (saves tokens):
+                    </p>
+                    <span className="text-xs text-blue-600 dark:text-blue-400">
+                      {selectedFiles.length}/4 selected
+                    </span>
+                  </div>
                   <div className="grid grid-cols-3 gap-2">
                     {files.map((file, index) => {
+                      const isSelected = selectedFiles.includes(file);
                       // Debug logging
                       console.log('Rendering file:', file.name, file.type, file.size);
                       return (
@@ -522,7 +589,10 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                           <img
                             src={URL.createObjectURL(file)}
                             alt={`Preview ${index + 1}`}
-                            className="w-full h-20 object-cover rounded-lg"
+                            className={`w-full h-20 object-cover rounded-lg cursor-pointer transition-all ${
+                              isSelected ? 'ring-2 ring-blue-500 opacity-100' : 'opacity-70 hover:opacity-100'
+                            }`}
+                            onClick={() => toggleFileSelection(file)}
                             onError={(e) => console.error('Image failed to load:', file.name)}
                             onLoad={() => console.log('Image loaded successfully:', file.name)}
                           />
@@ -533,6 +603,11 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                           >
                             ✕
                           </button>
+                          {isSelected && (
+                            <div className="absolute top-1 left-1 w-5 h-5 bg-blue-500 text-white rounded-full text-xs flex items-center justify-center">
+                              ✓
+                            </div>
+                          )}
                         </div>
                       );
                     })}
@@ -712,6 +787,95 @@ export default function CreateListing({ onClose }: CreateListingProps) {
               />
             </div>
 
+            {/* Pricing Tier Selection */}
+            {analysisResult && (
+              <div className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 rounded-xl p-4 border border-green-200 dark:border-green-700">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center mb-3">
+                  <span className="mr-2">🎯</span>
+                  Choose Your Pricing Strategy
+                </h3>
+                <div className="grid grid-cols-1 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedPricingTier('quick');
+                      // Regenerate description with new pricing tier
+                      const newDescription = generateAIDescription(analysisResult, carDetails);
+                      setCarDetails(prev => ({ ...prev, finalDescription: newDescription }));
+                    }}
+                    className={`p-4 rounded-lg border-2 transition-all ${
+                      selectedPricingTier === 'quick' 
+                        ? 'border-green-500 bg-green-50 dark:bg-green-900/20' 
+                        : 'border-gray-200 dark:border-gray-600 hover:border-green-300'
+                    }`}
+                  >
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <div className="font-bold text-green-600">🚀 Quick Sale</div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400">Lower price, faster sale</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-bold text-lg">${Math.floor(parseInt(carDetails.price) * 0.85).toLocaleString()}</div>
+                        <div className="text-xs text-gray-500">~7 days</div>
+                      </div>
+                    </div>
+                  </button>
+                  
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedPricingTier('market');
+                      // Regenerate description with new pricing tier
+                      const newDescription = generateAIDescription(analysisResult, carDetails);
+                      setCarDetails(prev => ({ ...prev, finalDescription: newDescription }));
+                    }}
+                    className={`p-4 rounded-lg border-2 transition-all ${
+                      selectedPricingTier === 'market' 
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
+                        : 'border-gray-200 dark:border-gray-600 hover:border-blue-300'
+                    }`}
+                  >
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <div className="font-bold text-blue-600">⚖️ Market Rate</div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400">Balanced price & speed</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-bold text-lg">${carDetails.price}</div>
+                        <div className="text-xs text-gray-500">~14 days</div>
+                      </div>
+                    </div>
+                  </button>
+                  
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedPricingTier('premium');
+                      // Regenerate description with new pricing tier
+                      const newDescription = generateAIDescription(analysisResult, carDetails);
+                      setCarDetails(prev => ({ ...prev, finalDescription: newDescription }));
+                    }}
+                    className={`p-4 rounded-lg border-2 transition-all ${
+                      selectedPricingTier === 'premium' 
+                        ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20' 
+                        : 'border-gray-200 dark:border-gray-600 hover:border-purple-300'
+                    }`}
+                  >
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <div className="font-bold text-purple-600">💎 Premium</div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400">Higher price, detailed listing</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-bold text-lg">${Math.floor(parseInt(carDetails.price) * 1.15).toLocaleString()}</div>
+                        <div className="text-xs text-gray-500">~21 days</div>
+                      </div>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Final Description Field - Generated by AI */}
             {carDetails.finalDescription && (
               <div>
@@ -737,6 +901,21 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                   rows={12}
                   placeholder="AI will generate the final polished listing here..."
                 />
+                
+                {/* Test Post Button */}
+                <div className="mt-4">
+                  <button
+                    type="button"
+                    onClick={handleTestPost}
+                    className="w-full px-6 py-3 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 transition-all duration-200 flex items-center justify-center space-x-2"
+                  >
+                    <span>🚀</span>
+                    <span>Test Post</span>
+                  </button>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-2">
+                    This will create a test listing on your dashboard (not posted to Facebook)
+                  </p>
+                </div>
               </div>
             )}
 
