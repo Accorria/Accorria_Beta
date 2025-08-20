@@ -206,8 +206,10 @@ export default function CreateListing({ onClose }: CreateListingProps) {
     
     const postedPlatforms = testListing.platforms.map(p => platformNames[p]).join(', ');
     
-    alert(`✅ Test listing created and posted to: ${postedPlatforms}\n\nCheck your dashboard to see it!`);
-    onClose(); // Close the modal
+    alert(`✅ Listing posted successfully to: ${postedPlatforms}\n\nCheck your dashboard to see it!`);
+    
+    // Don't close modal immediately - let user see the success
+    // onClose(); // Close the modal
   };
 
   const handlePricingSelection = (pricingStrategy: string) => {
@@ -770,13 +772,15 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                 Price
               </label>
               <input
-                type="number"
-                value={carDetails.price}
-                onChange={(e) => setCarDetails(prev => ({ ...prev, price: e.target.value }))}
+                type="text"
+                value={carDetails.price ? parseInt(carDetails.price).toLocaleString() : ''}
+                onChange={(e) => {
+                  // Remove all non-numeric characters and convert to number
+                  const numericValue = e.target.value.replace(/[^0-9]/g, '');
+                  setCarDetails(prev => ({ ...prev, price: numericValue }));
+                }}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-bold focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="15000"
-                min="0"
-                step="100"
+                placeholder="15,000"
                 required
               />
               <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mt-2">
@@ -834,8 +838,10 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                     onClick={() => {
                       setSelectedPricingTier('quick');
                       // Regenerate description with new pricing tier
-                      const newDescription = generateAIDescription(analysisResult, carDetails);
-                      setCarDetails(prev => ({ ...prev, finalDescription: newDescription }));
+                      setTimeout(() => {
+                        const newDescription = generateAIDescription(analysisResult, carDetails);
+                        setCarDetails(prev => ({ ...prev, finalDescription: newDescription }));
+                      }, 100);
                     }}
                     className={`p-4 rounded-lg border-2 transition-all ${
                       selectedPricingTier === 'quick' 
@@ -849,7 +855,7 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                         <div className="text-sm text-gray-600 dark:text-gray-400">Lower price, faster sale</div>
                       </div>
                       <div className="text-right">
-                        <div className="font-bold text-lg">${Math.floor(parseInt(carDetails.price) * 0.85).toLocaleString()}</div>
+                        <div className="font-bold text-lg">${Math.floor(parseInt(carDetails.price || '0') * 0.85).toLocaleString()}</div>
                         <div className="text-xs text-gray-500">~7 days</div>
                       </div>
                     </div>
@@ -860,8 +866,10 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                     onClick={() => {
                       setSelectedPricingTier('market');
                       // Regenerate description with new pricing tier
-                      const newDescription = generateAIDescription(analysisResult, carDetails);
-                      setCarDetails(prev => ({ ...prev, finalDescription: newDescription }));
+                      setTimeout(() => {
+                        const newDescription = generateAIDescription(analysisResult, carDetails);
+                        setCarDetails(prev => ({ ...prev, finalDescription: newDescription }));
+                      }, 100);
                     }}
                     className={`p-4 rounded-lg border-2 transition-all ${
                       selectedPricingTier === 'market' 
@@ -875,7 +883,7 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                         <div className="text-sm text-gray-600 dark:text-gray-400">Balanced price & speed</div>
                       </div>
                       <div className="text-right">
-                        <div className="font-bold text-lg">${carDetails.price}</div>
+                        <div className="font-bold text-lg">${parseInt(carDetails.price || '0').toLocaleString()}</div>
                         <div className="text-xs text-gray-500">~14 days</div>
                       </div>
                     </div>
@@ -886,8 +894,10 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                     onClick={() => {
                       setSelectedPricingTier('premium');
                       // Regenerate description with new pricing tier
-                      const newDescription = generateAIDescription(analysisResult, carDetails);
-                      setCarDetails(prev => ({ ...prev, finalDescription: newDescription }));
+                      setTimeout(() => {
+                        const newDescription = generateAIDescription(analysisResult, carDetails);
+                        setCarDetails(prev => ({ ...prev, finalDescription: newDescription }));
+                      }, 100);
                     }}
                     className={`p-4 rounded-lg border-2 transition-all ${
                       selectedPricingTier === 'premium' 
@@ -901,7 +911,7 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                         <div className="text-sm text-gray-600 dark:text-gray-400">Higher price, detailed listing</div>
                       </div>
                       <div className="text-right">
-                        <div className="font-bold text-lg">${Math.floor(parseInt(carDetails.price) * 1.15).toLocaleString()}</div>
+                        <div className="text-lg font-bold">${Math.floor(parseInt(carDetails.price || '0') * 1.15).toLocaleString()}</div>
                         <div className="text-xs text-gray-500">~21 days</div>
                       </div>
                     </div>
