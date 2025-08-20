@@ -65,7 +65,7 @@ export default function CreateListing({ onClose }: CreateListingProps) {
       
       // Convert and compress files
       const convertedFiles = await Promise.all(
-        acceptedFiles.map(async (file) => {
+        acceptedFiles.map(async (file): Promise<File> => {
           // Compress images to reduce file size
           if (file.type.startsWith('image/')) {
             console.log('Compressing file:', file.name, 'Size:', file.size);
@@ -75,7 +75,7 @@ export default function CreateListing({ onClose }: CreateListingProps) {
             const ctx = canvas.getContext('2d');
             const img = new Image();
             
-            return new Promise((resolve) => {
+            return new Promise<File>((resolve) => {
               img.onload = () => {
                 // Calculate new dimensions (max 1200px width/height)
                 const maxSize = 1200;
