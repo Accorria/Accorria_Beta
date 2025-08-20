@@ -205,51 +205,53 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Active Listings */}
-            <div className="px-4 mb-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Your Listings</h2>
-                <button
-                  className="text-xs text-blue-500 hover:underline disabled:text-gray-400"
-                  onClick={handleClearListings}
-                  disabled={listings.length === 0}
-                >
-                  Clear
-                </button>
-              </div>
-              <div className="space-y-4">
-                {listings.length === 0 ? (
-                  <div className="text-gray-400 text-sm">No listings.</div>
-                ) : (
-                  listings.map((l) => (
-                    <div
-                      key={l.id}
-                      className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden border border-gray-200 dark:border-gray-700"
-                    >
-                      <div className={`h-32 bg-gradient-to-r ${l.gradient} flex items-center justify-center text-white text-4xl`}>
-                        {l.icon}
-                      </div>
-                      <div className="p-4">
-                        <h3 className="font-semibold text-gray-900 dark:text-white">{l.title}</h3>
-                        <p className="text-lg font-bold text-blue-600 dark:text-blue-300">{l.price}</p>
-                        <div className="flex items-center justify-between mt-2">
-                          <span className="text-sm text-gray-600 dark:text-gray-300">{l.miles}</span>
-                          <span className="text-sm text-green-600 dark:text-green-400">● {l.status}</span>
+            {/* Active Listings - Hidden for demo */}
+            {false && (
+              <div className="px-4 mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Your Listings</h2>
+                  <button
+                    className="text-xs text-blue-500 hover:underline disabled:text-gray-400"
+                    onClick={handleClearListings}
+                    disabled={listings.length === 0}
+                  >
+                    Clear
+                  </button>
+                </div>
+                <div className="space-y-4">
+                  {listings.length === 0 ? (
+                    <div className="text-gray-400 text-sm">No listings.</div>
+                  ) : (
+                    listings.map((l) => (
+                      <div
+                        key={l.id}
+                        className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden border border-gray-200 dark:border-gray-700"
+                      >
+                        <div className={`h-32 bg-gradient-to-r ${l.gradient} flex items-center justify-center text-white text-4xl`}>
+                          {l.icon}
                         </div>
-                        <div className="flex space-x-2 mt-3">
-                          <button className="flex-1 bg-blue-500 dark:bg-blue-700 text-white py-2 rounded-lg text-sm font-medium hover:bg-blue-600 dark:hover:bg-blue-800 transition-colors">
-                            View Messages
-                          </button>
-                          <button className="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 py-2 rounded-lg text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
-                            Edit
-                          </button>
+                        <div className="p-4">
+                          <h3 className="font-semibold text-gray-900 dark:text-white">{l.title}</h3>
+                          <p className="text-lg font-bold text-blue-600 dark:text-blue-300">{l.price}</p>
+                          <div className="flex items-center justify-between mt-2">
+                            <span className="text-sm text-gray-600 dark:text-gray-300">{l.miles}</span>
+                            <span className="text-sm text-green-600 dark:text-green-400">● {l.status}</span>
+                          </div>
+                          <div className="flex space-x-2 mt-3">
+                            <button className="flex-1 bg-blue-500 dark:bg-blue-700 text-white py-2 rounded-lg text-sm font-medium hover:bg-blue-600 dark:hover:bg-blue-800 transition-colors">
+                              View Messages
+                            </button>
+                            <button className="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 py-2 rounded-lg text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                              Edit
+                            </button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))
-                )}
+                    ))
+                  )}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Test Listings */}
             {testListings.length > 0 && (

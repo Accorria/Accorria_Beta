@@ -155,11 +155,24 @@ export default function CreateListing({ onClose }: CreateListingProps) {
     });
   };
 
-  const handleTestPost = () => {
+  const handleTestPost = async () => {
     if (!selectedPricingTier) {
       alert('Please select a pricing tier first');
       return;
     }
+    
+    // Convert images to base64 for persistent storage
+    const imagePromises = files.map(file => {
+      return new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          resolve(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+      });
+    });
+    
+    const imageUrls = await Promise.all(imagePromises);
     
     // Create test listing data
     const testListing = {
@@ -169,7 +182,7 @@ export default function CreateListing({ onClose }: CreateListingProps) {
              selectedPricingTier === 'premium' ? Math.floor(parseInt(carDetails.price) * 1.15) :
              parseInt(carDetails.price),
       description: carDetails.finalDescription,
-      images: files.map(file => URL.createObjectURL(file)),
+      images: imageUrls, // Use base64 URLs instead of blob URLs
       mileage: carDetails.mileage,
       titleStatus: carDetails.titleStatus,
       postedAt: new Date().toISOString(),
@@ -247,14 +260,6 @@ export default function CreateListing({ onClose }: CreateListingProps) {
     // Details section
     description += `💡 Details:\n`;
     
-    // Add user-provided details
-    if (carDetails.aboutVehicle && carDetails.aboutVehicle.trim()) {
-      const userDetails = carDetails.aboutVehicle.split(',').map(detail => detail.trim());
-      userDetails.forEach(detail => {
-        description += `• ${detail}\n`;
-      });
-    }
-    
     // Add AI-detected details if available
     if (analysisResult.data?.condition_assessment) {
       const condition = analysisResult.data.condition_assessment;
@@ -274,6 +279,19 @@ export default function CreateListing({ onClose }: CreateListingProps) {
     
     // Features section
     description += `🔧 Features & Equipment:\n`;
+    
+    // Add user-provided features (moved from details to features)
+    if (carDetails.aboutVehicle && carDetails.aboutVehicle.trim()) {
+      // Handle both comma-separated and line-break separated items
+      const userFeatures = carDetails.aboutVehicle
+        .split(/[,\n]/) // Split by comma OR newline
+        .map(feature => feature.trim())
+        .filter(feature => feature.length > 0); // Remove empty items
+      
+      userFeatures.forEach(feature => {
+        description += `• ${feature}\n`;
+      });
+    }
     
     // Add detected features from analysis
     if (analysisResult.data?.features_detected) {
