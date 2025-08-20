@@ -206,10 +206,15 @@ export default function CreateListing({ onClose }: CreateListingProps) {
     
     const postedPlatforms = testListing.platforms.map(p => platformNames[p]).join(', ');
     
-    alert(`✅ Listing posted successfully to: ${postedPlatforms}\n\nCheck your dashboard to see it!`);
+    alert(`✅ Listing posted successfully to: ${postedPlatforms}\n\nRedirecting to dashboard...`);
     
-    // Don't close modal immediately - let user see the success
-    // onClose(); // Close the modal
+    // Close modal and navigate to dashboard
+    onClose();
+    
+    // Force dashboard to refresh and show new listing
+    setTimeout(() => {
+      window.location.reload();
+    }, 500);
   };
 
   const handlePricingSelection = (pricingStrategy: string) => {
@@ -787,13 +792,15 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                 Lowest I'll Take
               </label>
               <input
-                type="number"
-                value={carDetails.lowestPrice}
-                onChange={(e) => setCarDetails(prev => ({ ...prev, lowestPrice: e.target.value }))}
+                type="text"
+                value={carDetails.lowestPrice ? parseInt(carDetails.lowestPrice).toLocaleString() : ''}
+                onChange={(e) => {
+                  // Remove all non-numeric characters and convert to number
+                  const numericValue = e.target.value.replace(/[^0-9]/g, '');
+                  setCarDetails(prev => ({ ...prev, lowestPrice: numericValue }));
+                }}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-bold focus:ring-2 focus:ring-blue-500 focus:border-transparent mt-1"
-                placeholder="12000"
-                min="0"
-                step="100"
+                placeholder="12,000"
               />
             </div>
 
@@ -838,10 +845,8 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                     onClick={() => {
                       setSelectedPricingTier('quick');
                       // Regenerate description with new pricing tier
-                      setTimeout(() => {
-                        const newDescription = generateAIDescription(analysisResult, carDetails);
-                        setCarDetails(prev => ({ ...prev, finalDescription: newDescription }));
-                      }, 100);
+                      const newDescription = generateAIDescription(analysisResult, carDetails);
+                      setCarDetails(prev => ({ ...prev, finalDescription: newDescription }));
                     }}
                     className={`p-4 rounded-lg border-2 transition-all ${
                       selectedPricingTier === 'quick' 
@@ -866,10 +871,8 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                     onClick={() => {
                       setSelectedPricingTier('market');
                       // Regenerate description with new pricing tier
-                      setTimeout(() => {
-                        const newDescription = generateAIDescription(analysisResult, carDetails);
-                        setCarDetails(prev => ({ ...prev, finalDescription: newDescription }));
-                      }, 100);
+                      const newDescription = generateAIDescription(analysisResult, carDetails);
+                      setCarDetails(prev => ({ ...prev, finalDescription: newDescription }));
                     }}
                     className={`p-4 rounded-lg border-2 transition-all ${
                       selectedPricingTier === 'market' 
@@ -894,10 +897,8 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                     onClick={() => {
                       setSelectedPricingTier('premium');
                       // Regenerate description with new pricing tier
-                      setTimeout(() => {
-                        const newDescription = generateAIDescription(analysisResult, carDetails);
-                        setCarDetails(prev => ({ ...prev, finalDescription: newDescription }));
-                      }, 100);
+                      const newDescription = generateAIDescription(analysisResult, carDetails);
+                      setCarDetails(prev => ({ ...prev, finalDescription: newDescription }));
                     }}
                     className={`p-4 rounded-lg border-2 transition-all ${
                       selectedPricingTier === 'premium' 

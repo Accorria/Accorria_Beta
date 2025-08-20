@@ -295,50 +295,23 @@ export default function Home() {
             </div>
             
             <div className="space-y-4">
-              {/* Same listing cards as dashboard */}
-              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden border border-gray-200 dark:border-gray-700">
-                <div className="h-32 bg-gradient-to-r from-blue-400 to-purple-500 flex items-center justify-center text-white text-4xl">
-                  🚗
+              {testListings.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="text-gray-400 text-6xl mb-4">🚗</div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No listings yet</h3>
+                  <p className="text-gray-600 dark:text-gray-400 mb-4">Create your first listing to get started</p>
+                  <button
+                    onClick={() => setShowCreateListing(true)}
+                    className="bg-blue-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-600 transition-colors"
+                  >
+                    Create First Listing
+                  </button>
                 </div>
-                <div className="p-4">
-                  <h3 className="font-semibold text-gray-900 dark:text-white">2017 Nissan Altima</h3>
-                  <p className="text-lg font-bold text-blue-600 dark:text-blue-300">$10,500</p>
-                  <div className="flex items-center justify-between mt-2">
-                    <span className="text-sm text-gray-600 dark:text-gray-300">45,000 miles</span>
-                    <span className="text-sm text-green-600 dark:text-green-400">● Active</span>
-                  </div>
-                  <div className="flex space-x-2 mt-3">
-                    <button className="flex-1 bg-blue-500 dark:bg-blue-700 text-white py-2 rounded-lg text-sm font-medium hover:bg-blue-600 dark:hover:bg-blue-800 transition-colors">
-                      View Messages
-                    </button>
-                    <button className="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 py-2 rounded-lg text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
-                      Edit
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden border border-gray-200 dark:border-gray-700">
-                <div className="h-32 bg-gradient-to-r from-green-400 to-blue-500 flex items-center justify-center text-white text-4xl">
-                  🚙
-                </div>
-                <div className="p-4">
-                  <h3 className="font-semibold text-gray-900 dark:text-white">2019 Honda Civic</h3>
-                  <p className="text-lg font-bold text-blue-600 dark:text-blue-300">$18,500</p>
-                  <div className="flex items-center justify-between mt-2">
-                    <span className="text-sm text-gray-600 dark:text-gray-300">32,000 miles</span>
-                    <span className="text-sm text-green-600 dark:text-green-400">● Active</span>
-                  </div>
-                  <div className="flex space-x-2 mt-3">
-                    <button className="flex-1 bg-blue-500 dark:bg-blue-700 text-white py-2 rounded-lg text-sm font-medium hover:bg-blue-600 dark:hover:bg-blue-800 transition-colors">
-                      View Messages
-                    </button>
-                    <button className="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 py-2 rounded-lg text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
-                      Edit
-                    </button>
-                  </div>
-                </div>
-              </div>
+              ) : (
+                testListings.map((listing) => (
+                  <DashboardListing key={listing.id} listing={listing} />
+                ))
+              )}
             </div>
           </div>
         )}

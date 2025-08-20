@@ -149,6 +149,25 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
             👁️ View ({listing.clicks || 0})
           </button>
         </div>
+        
+        {/* Delete Button */}
+        <div className="mt-3">
+          <button 
+            onClick={() => {
+              if (confirm('Are you sure you want to delete this listing?')) {
+                // Remove the listing from localStorage
+                const existingListings = JSON.parse(localStorage.getItem('testListings') || '[]');
+                const updatedListings = existingListings.filter((l: any) => l.id !== listing.id);
+                localStorage.setItem('testListings', JSON.stringify(updatedListings));
+                // Force re-render
+                window.location.reload();
+              }
+            }}
+            className="w-full bg-red-500 text-white py-2 px-4 rounded-lg font-semibold hover:bg-red-600 transition-colors"
+          >
+            🗑️ Delete Listing
+          </button>
+        </div>
       </div>
     </div>
   );
