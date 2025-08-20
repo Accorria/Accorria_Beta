@@ -261,7 +261,7 @@ export default function Home() {
             {testListings.length > 0 && (
               <div className="px-4 mb-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Your Listings</h2>
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Your Listings ({testListings.length})</h2>
                   <button
                     onClick={() => {
                       localStorage.removeItem('testListings');
@@ -272,7 +272,7 @@ export default function Home() {
                     Clear All
                   </button>
                 </div>
-                <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {testListings.map((listing) => (
                     <DashboardListing key={listing.id} listing={listing} />
                   ))}

@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 
 interface DashboardListingProps {
   listing: {
@@ -20,6 +20,9 @@ interface DashboardListingProps {
 }
 
 export default function DashboardListing({ listing }: DashboardListingProps) {
+  const [showPhotoGallery, setShowPhotoGallery] = useState(false);
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -31,11 +34,22 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
     return date.toLocaleDateString();
   };
 
+  const nextPhoto = () => {
+    setCurrentPhotoIndex((prev) => (prev + 1) % listing.images.length);
+  };
+
+  const prevPhoto = () => {
+    setCurrentPhotoIndex((prev) => (prev - 1 + listing.images.length) % listing.images.length);
+  };
+
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
       {/* Images */}
       <div className="relative">
-        <div className="grid grid-cols-2 gap-1 h-48">
+        <div 
+          className="grid grid-cols-2 gap-1 h-48 cursor-pointer"
+          onClick={() => setShowPhotoGallery(true)}
+        >
           {listing.images.slice(0, 4).map((image, index) => (
             <div key={index} className="relative">
               <img
@@ -53,32 +67,32 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
             </div>
           ))}
         </div>
-
+        <div className="absolute bottom-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
+          Click to view all {listing.images.length} photos
+        </div>
       </div>
 
-      {/* Content */}
-      <div className="p-4">
-        {/* Title and Price */}
-        <div className="flex justify-between items-start mb-2">
-          <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-            {listing.title}
-          </h3>
-          <div className="text-right">
-            <div className="text-xl font-bold text-green-600">
-              ${listing.price.toLocaleString()}
+              {/* Content */}
+        <div className="p-4">
+          {/* Title and Price */}
+          <div className="flex justify-between items-start mb-2">
+            <div className="flex-1">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                {listing.title}
+              </h3>
+              <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                {listing.mileage} miles • {listing.titleStatus} title
+              </div>
             </div>
-            <div className="text-sm text-gray-500 dark:text-gray-400">
-              {listing.mileage} miles
+            <div className="text-right">
+              <div className="text-xl font-bold text-green-600">
+                ${listing.price.toLocaleString()}
+              </div>
+              <div className="text-sm text-gray-500 dark:text-gray-400">
+                {formatDate(listing.postedAt)}
+              </div>
             </div>
           </div>
-        </div>
-
-        {/* Details */}
-        <div className="flex items-center space-x-4 mb-3 text-sm text-gray-600 dark:text-gray-400">
-          <span>📍 Detroit, MI</span>
-          <span>📄 {listing.titleStatus}</span>
-          <span>🕒 {formatDate(listing.postedAt)}</span>
-        </div>
         
         {/* Platform Info */}
         {listing.platforms && listing.platforms.length > 0 && (
@@ -169,6 +183,70 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
           </button>
         </div>
       </div>
+
+      {/* Photo Gallery Modal */}
+      {showPhotoGallery && (
+        <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center">
+          <div className="relative w-full h-full flex items-center justify-center">
+            {/* Close Button */}
+            <button
+              onClick={() => setShowPhotoGallery(false)}
+              className="absolute top-4 right-4 text-white text-2xl hover:text-gray-300 z-10"
+            >
+              ✕
+            </button>
+            
+            {/* Photo Counter */}
+            <div className="absolute top-4 left-4 text-white text-sm z-10">
+              {currentPhotoIndex + 1} of {listing.images.length}
+            </div>
+            
+            {/* Main Image */}
+            <img
+              src={listing.images[currentPhotoIndex]}
+              alt={`${listing.title} - Photo ${currentPhotoIndex + 1}`}
+              className="max-w-full max-h-full object-contain"
+            />
+            
+            {/* Navigation Buttons */}
+            {listing.images.length > 1 && (
+              <>
+                <button
+                  onClick={prevPhoto}
+                  className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white text-4xl hover:text-gray-300 z-10"
+                >
+                  ‹
+                </button>
+                <button
+                  onClick={nextPhoto}
+                  className="absolute right-4 top-1/2 transform -translate-y-1/2 text-white text-4xl hover:text-gray-300 z-10"
+                >
+                  ›
+                </button>
+              </>
+            )}
+            
+            {/* Thumbnail Strip */}
+            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2 z-10">
+              {listing.images.map((image, index) => (
+                <button
+                  key={index}
+                  onClick={() => setCurrentPhotoIndex(index)}
+                  className={`w-16 h-12 rounded overflow-hidden border-2 ${
+                    index === currentPhotoIndex ? 'border-white' : 'border-gray-600'
+                  }`}
+                >
+                  <img
+                    src={image}
+                    alt={`Thumbnail ${index + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
