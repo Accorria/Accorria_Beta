@@ -41,6 +41,7 @@ export default function CreateListing({ onClose }: CreateListingProps) {
   const [customMake, setCustomMake] = useState('');
   const [customModel, setCustomModel] = useState('');
   const [analysisResult, setAnalysisResult] = useState<any>(null);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [isSearchingMarket, setIsSearchingMarket] = useState(false);
   const [descriptionSuggestions, setDescriptionSuggestions] = useState<string[]>([]);
@@ -742,6 +743,16 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                       </>
                     )}
                   </button>
+                  
+                  {/* Error Display */}
+                  {analysisError && (
+                    <div className="mt-3 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+                      <div className="flex items-center">
+                        <span className="text-red-500 mr-2">⚠️</span>
+                        <span className="text-sm">{analysisError}</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
