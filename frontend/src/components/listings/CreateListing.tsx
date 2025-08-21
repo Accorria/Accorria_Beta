@@ -213,24 +213,13 @@ export default function CreateListing({ onClose }: CreateListingProps) {
     existingListings.unshift(testListing);
     localStorage.setItem('testListings', JSON.stringify(existingListings));
     
-    // Show success message with platform info
-    const platformNames = {
-      'facebook_marketplace': 'Facebook Marketplace',
-      'craigslist': 'Craigslist',
-      'offerup': 'OfferUp'
-    };
-    
-    const postedPlatforms = testListing.platforms.map(p => platformNames[p]).join(', ');
-    
-    alert(`✅ Listing posted successfully to: ${postedPlatforms}\n\nRedirecting to dashboard...`);
-    
-    // Close modal and navigate to dashboard
+    // Close modal and navigate to dashboard immediately
     onClose();
     
     // Force dashboard to refresh and show new listing
     setTimeout(() => {
       window.location.reload();
-    }, 500);
+    }, 100);
   };
 
   const handlePricingSelection = (pricingStrategy: string) => {

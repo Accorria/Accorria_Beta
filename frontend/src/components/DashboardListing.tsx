@@ -16,12 +16,20 @@ interface DashboardListingProps {
     platforms?: string[];
     messages?: number;
     clicks?: number;
+    soldAt?: string;
+    soldFor?: number;
+    soldTo?: string;
   };
 }
 
 export default function DashboardListing({ listing }: DashboardListingProps) {
   const [showPhotoGallery, setShowPhotoGallery] = useState(false);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  const [showSaleForm, setShowSaleForm] = useState(false);
+  const [saleData, setSaleData] = useState({
+    soldFor: '',
+    soldTo: ''
+  });
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -188,8 +196,26 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
           </button>
         </div>
         
-        {/* Delete Button */}
-        <div className="mt-3">
+        {/* Action Buttons */}
+        <div className="mt-3 space-y-2">
+          {!listing.soldAt ? (
+            <button 
+              onClick={() => setShowSaleForm(true)}
+              className="w-full bg-green-500 text-white py-2 px-4 rounded-lg font-semibold hover:bg-green-600 transition-colors"
+            >
+              🎉 Car Sold
+            </button>
+          ) : (
+            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
+              <div className="text-green-800 dark:text-green-200 text-sm font-semibold mb-1">
+                ✅ SOLD - ${listing.soldFor?.toLocaleString()}
+              </div>
+              <div className="text-green-600 dark:text-green-300 text-xs">
+                Sold to: {listing.soldTo} • {new Date(listing.soldAt).toLocaleDateString()}
+              </div>
+            </div>
+          )}
+          
           <button 
             onClick={() => {
               if (confirm('Are you sure you want to delete this listing?')) {
@@ -267,6 +293,88 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
                   />
                 </button>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Sale Form Modal */}
+      {showSaleForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                🎉 Car Sold!
+              </h3>
+              <button
+                onClick={() => setShowSaleForm(false)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  How much did you sell it for?
+                </label>
+                <input
+                  type="text"
+                  value={saleData.soldFor}
+                  onChange={(e) => setSaleData(prev => ({ ...prev, soldFor: e.target.value }))}
+                  placeholder="e.g., 8500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Who did you sell it to?
+                </label>
+                <input
+                  type="text"
+                  value={saleData.soldTo}
+                  onChange={(e) => setSaleData(prev => ({ ...prev, soldTo: e.target.value }))}
+                  placeholder="e.g., John Smith"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+            </div>
+            
+            <div className="flex space-x-3 mt-6">
+              <button
+                onClick={() => setShowSaleForm(false)}
+                className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  if (!saleData.soldFor || !saleData.soldTo) {
+                    alert('Please fill in both fields');
+                    return;
+                  }
+                  
+                  // Update the listing in localStorage
+                  const existingListings = JSON.parse(localStorage.getItem('testListings') || '[]');
+                  const updatedListings = existingListings.map((l: any) => 
+                    l.id === listing.id ? {
+                      ...l,
+                      soldAt: new Date().toISOString(),
+                      soldFor: parseInt(saleData.soldFor),
+                      soldTo: saleData.soldTo
+                    } : l
+                  );
+                  localStorage.setItem('testListings', JSON.stringify(updatedListings));
+                  
+                  setShowSaleForm(false);
+                  window.location.reload();
+                }}
+                className="flex-1 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+              >
+                Mark as Sold
+              </button>
             </div>
           </div>
         </div>
