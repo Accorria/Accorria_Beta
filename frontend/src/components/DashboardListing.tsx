@@ -56,7 +56,7 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
       {/* Images */}
       <div className="relative">
         <div 
-          className="grid grid-cols-2 gap-1 h-24 sm:h-32 cursor-pointer"
+          className="grid grid-cols-2 gap-1 h-20 sm:h-24 md:h-32 cursor-pointer"
           onClick={() => setShowPhotoGallery(true)}
         >
           {listing.images.slice(0, 2).map((image, index) => (
@@ -259,7 +259,10 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
           )}
           
           <button 
-            onClick={() => setShowDeleteConfirm(true)}
+            onClick={() => {
+              console.log('Delete button clicked, showing confirmation modal');
+              setShowDeleteConfirm(true);
+            }}
             className="w-full bg-red-500 text-white py-2 px-4 rounded-lg font-semibold hover:bg-red-600 transition-colors"
           >
             🗑️ Delete Listing
@@ -428,8 +431,8 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-[9999] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md relative">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-gray-900 dark:text-white">
                 🗑️ Delete Listing
@@ -465,6 +468,8 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
               </button>
               <button
                 onClick={() => {
+                  console.log('Delete button clicked for listing:', listing.id);
+                  
                   // Store deleted listing in analytics
                   const deletedListing = {
                     ...listing,
@@ -475,11 +480,14 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
                   const existingAnalytics = JSON.parse(localStorage.getItem('listingAnalytics') || '[]');
                   existingAnalytics.push(deletedListing);
                   localStorage.setItem('listingAnalytics', JSON.stringify(existingAnalytics));
+                  console.log('Analytics updated:', existingAnalytics);
                   
                   // Remove the listing from active listings
                   const existingListings = JSON.parse(localStorage.getItem('testListings') || '[]');
+                  console.log('Existing listings before delete:', existingListings);
                   const updatedListings = existingListings.filter((l: any) => l.id !== listing.id);
                   localStorage.setItem('testListings', JSON.stringify(updatedListings));
+                  console.log('Updated listings after delete:', updatedListings);
                   
                   setShowDeleteConfirm(false);
                   window.location.reload();
