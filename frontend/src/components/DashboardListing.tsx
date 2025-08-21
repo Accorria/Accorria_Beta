@@ -121,11 +121,35 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
           {listing.description.split('\n').slice(0, 3).join(' ')}
         </div>
 
-        {/* Metrics */}
-        <div className="flex items-center justify-between mt-3 text-xs text-gray-500 dark:text-gray-400">
-          <span>👁️ {listing.clicks || Math.floor(Math.random() * 50) + 10} views</span>
-          <span>💬 {listing.messages || Math.floor(Math.random() * 5)} messages</span>
-          <span>📅 {formatDate(listing.postedAt)}</span>
+        {/* Detailed Metrics Bar */}
+        <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+          <div className="grid grid-cols-2 gap-3 text-xs">
+            <div className="text-center">
+              <div className="text-gray-500 dark:text-gray-400">Listed Price</div>
+              <div className="font-bold text-green-600">${listing.price.toLocaleString()}</div>
+            </div>
+            <div className="text-center">
+              <div className="text-gray-500 dark:text-gray-400">Days Posted</div>
+              <div className="font-bold text-gray-700 dark:text-gray-300">
+                {(() => {
+                  const postedDate = new Date(listing.postedAt);
+                  const now = new Date();
+                  const diffInDays = Math.floor((now.getTime() - postedDate.getTime()) / (1000 * 60 * 60 * 24));
+                  return diffInDays === 0 ? 'Today' : `${diffInDays} day${diffInDays > 1 ? 's' : ''}`;
+                })()}
+              </div>
+            </div>
+            <div className="text-center">
+              <div className="text-gray-500 dark:text-gray-400">Posted Time</div>
+              <div className="font-bold text-gray-700 dark:text-gray-300">
+                {new Date(listing.postedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </div>
+            </div>
+            <div className="text-center">
+              <div className="text-gray-500 dark:text-gray-400">Views</div>
+              <div className="font-bold text-blue-600">{listing.clicks || Math.floor(Math.random() * 50) + 10}</div>
+            </div>
+          </div>
         </div>
 
         {/* Actions */}

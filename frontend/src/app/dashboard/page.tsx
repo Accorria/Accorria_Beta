@@ -146,9 +146,15 @@ export default function Home() {
                 </div>
                 <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
                   <div className="text-2xl font-bold text-purple-600 dark:text-purple-300">
-                    ${testListings.reduce((total, listing) => total + (listing.clicks || 0), 0).toLocaleString()}
+                    ${testListings.reduce((total, listing) => {
+                      // Calculate revenue: assume 5% of views convert to sales at listing price
+                      const views = listing.clicks || 0;
+                      const conversionRate = 0.05; // 5% conversion rate
+                      const revenue = Math.floor(views * conversionRate * listing.price);
+                      return total + revenue;
+                    }, 0).toLocaleString()}
                   </div>
-                  <div className="text-xs text-gray-600 dark:text-gray-300">Total Views</div>
+                  <div className="text-xs text-gray-600 dark:text-gray-300">Total Revenue</div>
                 </div>
               </div>
             </div>
