@@ -55,33 +55,33 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
       {/* Images */}
       <div className="relative">
         <div 
-          className="grid grid-cols-2 gap-1 h-48 cursor-pointer"
+          className="grid grid-cols-2 gap-2 h-32 cursor-pointer"
           onClick={() => setShowPhotoGallery(true)}
         >
-          {listing.images.slice(0, 4).map((image, index) => (
+          {listing.images.slice(0, 2).map((image, index) => (
             <div key={index} className="relative">
               <img
                 src={image}
                 alt={`${listing.title} - Image ${index + 1}`}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover rounded-lg"
               />
-              {index === 3 && listing.images.length > 4 && (
-                <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-                  <span className="text-white font-bold text-lg">
-                    +{listing.images.length - 4}
+              {index === 1 && listing.images.length > 2 && (
+                <div className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center rounded-lg">
+                  <span className="text-white font-bold text-sm">
+                    +{listing.images.length - 2}
                   </span>
                 </div>
               )}
             </div>
           ))}
         </div>
-        <div className="absolute bottom-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
+        <div className="absolute bottom-2 right-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded">
           Click to view all {listing.images.length} photos
         </div>
       </div>
 
               {/* Content */}
-        <div className="p-4">
+        <div className="p-4 pt-6">
           {/* Title and Price */}
           <div className="flex justify-between items-start mb-2">
             <div className="flex-1">
@@ -130,22 +130,14 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
         </div>
 
         {/* Enhanced Listing Stats */}
-        <div className="mt-3 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+        <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
           {/* Top Row - Posted Info & Status */}
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center space-x-4 text-xs text-gray-600 dark:text-gray-400">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center space-x-3 text-xs text-gray-600 dark:text-gray-400">
               <span>🕒 {new Date(listing.postedAt).toLocaleDateString('en-US', { 
                 month: 'short', 
-                day: 'numeric', 
-                year: 'numeric' 
-              })} @ {new Date(listing.postedAt).toLocaleTimeString([], { 
-                hour: '2-digit', 
-                minute: '2-digit' 
-              })}</span>
-              <span>🔄 {new Date(listing.postedAt).toLocaleDateString('en-US', { 
-                month: 'short', 
                 day: 'numeric' 
-              })} - {new Date(listing.postedAt).toLocaleTimeString([], { 
+              })} @ {new Date(listing.postedAt).toLocaleTimeString([], { 
                 hour: '2-digit', 
                 minute: '2-digit' 
               })}</span>
@@ -165,7 +157,7 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
           </div>
 
           {/* Middle Row - Platforms & Price */}
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-2">
             <div className="flex items-center space-x-2">
               <span className="text-xs text-gray-600 dark:text-gray-400">📍</span>
               <div className="flex space-x-1">
@@ -194,7 +186,7 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
 
           {/* Bottom Row - Activity Metrics */}
           <div className="flex items-center justify-between text-xs">
-            <div className="flex items-center space-x-4 text-gray-600 dark:text-gray-400">
+            <div className="flex items-center space-x-3 text-gray-600 dark:text-gray-400">
               <span>👁️ {listing.clicks || Math.floor(Math.random() * 50) + 10} views</span>
               <span>💬 {listing.messages || Math.floor(Math.random() * 5)} messages</span>
             </div>
