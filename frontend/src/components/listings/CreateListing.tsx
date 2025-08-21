@@ -634,7 +634,7 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                         🎯 Select 4 Key Photos for AI Analysis
                       </p>
                       <p className="text-xs text-gray-600 dark:text-gray-400">
-                        Click to select • Click & hold to drag & reorder
+                        Hover to see selection checkbox • Drag to reorder
                       </p>
                     </div>
                     <span className="text-xs text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/20 px-2 py-1 rounded-full">
@@ -649,16 +649,6 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                           key={`${file.name}-${index}`}
                           className="relative group"
                           draggable
-                          onMouseDown={(e) => {
-                            setDragStartTime(Date.now());
-                          }}
-                          onMouseUp={(e) => {
-                            const clickDuration = Date.now() - dragStartTime;
-                            // If it's a short click (less than 200ms), treat as click for selection
-                            if (clickDuration < 200 && !isDragging) {
-                              toggleFileSelection(file);
-                            }
-                          }}
                           onDragStart={(e) => {
                             setIsDragging(true);
                             e.dataTransfer.setData('text/plain', index.toString());
@@ -693,27 +683,57 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                           <img
                             src={URL.createObjectURL(file)}
                             alt={`Preview ${index + 1}`}
-                            className={`w-full h-20 object-cover rounded-lg cursor-pointer transition-all ${
+                            className={`w-full h-20 object-cover rounded-lg transition-all ${
                               isSelected ? 'ring-2 ring-blue-500 opacity-100' : 'opacity-70 hover:opacity-100'
                             }`}
                             onError={(e) => console.error('Image failed to load:', file.name)}
                             onLoad={() => console.log('Image loaded successfully:', file.name)}
                           />
+                          
+                          {/* Selection Checkbox - appears on hover */}
                           <button
                             type="button"
-                            onClick={() => removeFile(index)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleFileSelection(file);
+                            }}
+                            className={`absolute top-1 left-1 w-6 h-6 rounded-full border-2 transition-all ${
+                              isSelected 
+                                ? 'bg-green-500 border-green-500 text-white' 
+                                : 'bg-white border-gray-300 hover:border-green-400 hover:bg-green-50'
+                            } opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center`}
+                          >
+                            {isSelected ? (
+                              <span className="text-xs font-bold">✓</span>
+                            ) : (
+                              <span className="text-xs text-gray-400">+</span>
+                            )}
+                          </button>
+                          
+                          {/* Delete Button */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removeFile(index);
+                            }}
                             className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs flex items-center justify-center hover:bg-red-600 transition-colors opacity-0 group-hover:opacity-100 transition-opacity"
                           >
                             ✕
                           </button>
-                          {isSelected && (
-                            <div className="absolute top-1 left-1 w-5 h-5 bg-blue-500 text-white rounded-full text-xs flex items-center justify-center">
-                              ✓
-                            </div>
-                          )}
                           <div className="absolute bottom-1 right-1 bg-black bg-opacity-50 text-white text-xs px-1 rounded">
                             {index + 1}
                           </div>
+                          
+                          {/* Selected indicator overlay */}
+                          {isSelected && (
+                            <div className="absolute inset-0 bg-green-500 bg-opacity-20 border-2 border-green-500 rounded-lg flex items-center justify-center">
+                              <div className="bg-green-500 text-white rounded-full w-8 h-8 flex items-center justify-center">
+                                <span className="text-sm font-bold">✓</span>
+                              </div>
+                            </div>
+                          )}
+                          
                           <div className="absolute inset-0 bg-blue-500 bg-opacity-0 group-hover:bg-opacity-10 transition-all duration-200 rounded-lg flex items-center justify-center">
                             <span className="text-white text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity">
                               Drag to reorder
