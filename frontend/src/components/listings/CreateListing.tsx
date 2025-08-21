@@ -2,7 +2,6 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import carDataRaw from '../../data/carData.json';
 import { api } from '../../utils/api';
 const carData = carDataRaw as Record<string, string[]>;
@@ -619,75 +618,84 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                         🎯 Select 4 Key Photos for AI Analysis
                       </p>
                       <p className="text-xs text-gray-600 dark:text-gray-400">
-                        Choose: Exterior, Interior, Dashboard, & Key Features • Drag to reorder photos
+                        Choose: Exterior, Interior, Dashboard, & Key Features • Hover & drag to reorder
                       </p>
                     </div>
                     <span className="text-xs text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/20 px-2 py-1 rounded-full">
                       {selectedFiles.length}/4 selected
                     </span>
                   </div>
-                  <DragDropContext onDragEnd={(result) => {
-                    if (!result.destination) return;
-                    
-                    const items = Array.from(files);
-                    const [reorderedItem] = items.splice(result.source.index, 1);
-                    items.splice(result.destination.index, 0, reorderedItem);
-                    
-                    setFiles(items);
-                  }}>
-                    <Droppable droppableId="photos" direction="horizontal">
-                      {(provided) => (
+                  <div className="grid grid-cols-3 gap-2">
+                    {files.map((file, index) => {
+                      const isSelected = selectedFiles.includes(file);
+                      return (
                         <div 
-                          {...provided.droppableProps}
-                          ref={provided.innerRef}
-                          className="grid grid-cols-3 gap-2"
+                          key={`${file.name}-${index}`}
+                          className="relative group"
+                          draggable
+                          onDragStart={(e) => {
+                            e.dataTransfer.setData('text/plain', index.toString());
+                            e.currentTarget.classList.add('opacity-50');
+                          }}
+                          onDragEnd={(e) => {
+                            e.currentTarget.classList.remove('opacity-50');
+                          }}
+                          onDragOver={(e) => {
+                            e.preventDefault();
+                            e.currentTarget.classList.add('ring-2', 'ring-blue-300');
+                          }}
+                          onDragLeave={(e) => {
+                            e.currentTarget.classList.remove('ring-2', 'ring-blue-300');
+                          }}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            e.currentTarget.classList.remove('ring-2', 'ring-blue-300');
+                            
+                            const draggedIndex = parseInt(e.dataTransfer.getData('text/plain'));
+                            const dropIndex = index;
+                            
+                            if (draggedIndex !== dropIndex) {
+                              const newFiles = [...files];
+                              const [draggedFile] = newFiles.splice(draggedIndex, 1);
+                              newFiles.splice(dropIndex, 0, draggedFile);
+                              setFiles(newFiles);
+                            }
+                          }}
                         >
-                          {files.map((file, index) => {
-                            const isSelected = selectedFiles.includes(file);
-                            return (
-                              <Draggable key={`${file.name}-${index}`} draggableId={`${file.name}-${index}`} index={index}>
-                                {(provided, snapshot) => (
-                                  <div
-                                    ref={provided.innerRef}
-                                    {...provided.draggableProps}
-                                    {...provided.dragHandleProps}
-                                    className={`relative ${snapshot.isDragging ? 'opacity-50' : ''}`}
-                                  >
-                                    <img
-                                      src={URL.createObjectURL(file)}
-                                      alt={`Preview ${index + 1}`}
-                                      className={`w-full h-20 object-cover rounded-lg cursor-pointer transition-all ${
-                                        isSelected ? 'ring-2 ring-blue-500 opacity-100' : 'opacity-70 hover:opacity-100'
-                                      }`}
-                                      onClick={() => toggleFileSelection(file)}
-                                      onError={(e) => console.error('Image failed to load:', file.name)}
-                                      onLoad={() => console.log('Image loaded successfully:', file.name)}
-                                    />
-                                    <button
-                                      type="button"
-                                      onClick={() => removeFile(index)}
-                                      className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs flex items-center justify-center hover:bg-red-600 transition-colors"
-                                    >
-                                      ✕
-                                    </button>
-                                    {isSelected && (
-                                      <div className="absolute top-1 left-1 w-5 h-5 bg-blue-500 text-white rounded-full text-xs flex items-center justify-center">
-                                        ✓
-                                      </div>
-                                    )}
-                                    <div className="absolute bottom-1 right-1 bg-black bg-opacity-50 text-white text-xs px-1 rounded">
-                                      {index + 1}
-                                    </div>
-                                  </div>
-                                )}
-                              </Draggable>
-                            );
-                          })}
-                          {provided.placeholder}
+                          <img
+                            src={URL.createObjectURL(file)}
+                            alt={`Preview ${index + 1}`}
+                            className={`w-full h-20 object-cover rounded-lg cursor-pointer transition-all ${
+                              isSelected ? 'ring-2 ring-blue-500 opacity-100' : 'opacity-70 hover:opacity-100'
+                            }`}
+                            onClick={() => toggleFileSelection(file)}
+                            onError={(e) => console.error('Image failed to load:', file.name)}
+                            onLoad={() => console.log('Image loaded successfully:', file.name)}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeFile(index)}
+                            className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs flex items-center justify-center hover:bg-red-600 transition-colors opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            ✕
+                          </button>
+                          {isSelected && (
+                            <div className="absolute top-1 left-1 w-5 h-5 bg-blue-500 text-white rounded-full text-xs flex items-center justify-center">
+                              ✓
+                            </div>
+                          )}
+                          <div className="absolute bottom-1 right-1 bg-black bg-opacity-50 text-white text-xs px-1 rounded">
+                            {index + 1}
+                          </div>
+                          <div className="absolute inset-0 bg-blue-500 bg-opacity-0 group-hover:bg-opacity-10 transition-all duration-200 rounded-lg flex items-center justify-center">
+                            <span className="text-white text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                              Drag to reorder
+                            </span>
+                          </div>
                         </div>
-                      )}
-                    </Droppable>
-                  </DragDropContext>
+                      );
+                    })}
+                  </div>
                   
                   {/* AI Analysis Button */}
                   <button
