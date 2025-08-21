@@ -129,33 +129,82 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
           {listing.description.split('\n').slice(0, 3).join(' ')}
         </div>
 
-        {/* Detailed Metrics Bar */}
-        <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-          <div className="grid grid-cols-2 gap-3 text-xs">
-            <div className="text-center">
-              <div className="text-gray-500 dark:text-gray-400">Listed Price</div>
-              <div className="font-bold text-green-600">${listing.price.toLocaleString()}</div>
+        {/* Enhanced Listing Stats */}
+        <div className="mt-3 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+          {/* Top Row - Posted Info & Status */}
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center space-x-4 text-xs text-gray-600 dark:text-gray-400">
+              <span>🕒 {new Date(listing.postedAt).toLocaleDateString('en-US', { 
+                month: 'short', 
+                day: 'numeric', 
+                year: 'numeric' 
+              })} @ {new Date(listing.postedAt).toLocaleTimeString([], { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+              })}</span>
+              <span>🔄 {new Date(listing.postedAt).toLocaleDateString('en-US', { 
+                month: 'short', 
+                day: 'numeric' 
+              })} - {new Date(listing.postedAt).toLocaleTimeString([], { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+              })}</span>
             </div>
-            <div className="text-center">
-              <div className="text-gray-500 dark:text-gray-400">Days Posted</div>
-              <div className="font-bold text-gray-700 dark:text-gray-300">
-                {(() => {
-                  const postedDate = new Date(listing.postedAt);
-                  const now = new Date();
-                  const diffInDays = Math.floor((now.getTime() - postedDate.getTime()) / (1000 * 60 * 60 * 24));
-                  return diffInDays === 0 ? 'Today' : `${diffInDays} day${diffInDays > 1 ? 's' : ''}`;
-                })()}
+            <div className="flex items-center space-x-2">
+              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                listing.soldAt 
+                  ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300' 
+                  : 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300'
+              }`}>
+                📊 {listing.soldAt ? 'Sold' : 'Active'}
+              </span>
+              <span className="text-xs text-gray-500 dark:text-gray-400">
+                #{listing.id.slice(-6)}
+              </span>
+            </div>
+          </div>
+
+          {/* Middle Row - Platforms & Price */}
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center space-x-2">
+              <span className="text-xs text-gray-600 dark:text-gray-400">📍</span>
+              <div className="flex space-x-1">
+                {listing.platforms?.map((platform, index) => {
+                  const platformInfo = {
+                    'facebook_marketplace': { name: 'FB', icon: '📘', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300' },
+                    'craigslist': { name: 'CL', icon: '📋', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-300' },
+                    'offerup': { name: 'OU', icon: '📱', color: 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300' }
+                  };
+                  const info = platformInfo[platform as keyof typeof platformInfo];
+                  return (
+                    <span key={index} className={`text-xs px-2 py-1 rounded-full ${info.color}`}>
+                      {info.icon} {info.name}
+                    </span>
+                  );
+                })}
               </div>
             </div>
-            <div className="text-center">
-              <div className="text-gray-500 dark:text-gray-400">Posted Time</div>
-              <div className="font-bold text-gray-700 dark:text-gray-300">
-                {new Date(listing.postedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            <div className="text-right">
+              <div className="text-sm font-bold text-green-600">
+                ${listing.price.toLocaleString()}
               </div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">Listed Price</div>
             </div>
-            <div className="text-center">
-              <div className="text-gray-500 dark:text-gray-400">Views</div>
-              <div className="font-bold text-blue-600">{listing.clicks || Math.floor(Math.random() * 50) + 10}</div>
+          </div>
+
+          {/* Bottom Row - Activity Metrics */}
+          <div className="flex items-center justify-between text-xs">
+            <div className="flex items-center space-x-4 text-gray-600 dark:text-gray-400">
+              <span>👁️ {listing.clicks || Math.floor(Math.random() * 50) + 10} views</span>
+              <span>💬 {listing.messages || Math.floor(Math.random() * 5)} messages</span>
+            </div>
+            <div className="text-gray-500 dark:text-gray-400">
+              {(() => {
+                const postedDate = new Date(listing.postedAt);
+                const now = new Date();
+                const diffInDays = Math.floor((now.getTime() - postedDate.getTime()) / (1000 * 60 * 60 * 24));
+                return diffInDays === 0 ? 'Today' : `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`;
+              })()}
             </div>
           </div>
         </div>
