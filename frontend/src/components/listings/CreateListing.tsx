@@ -157,12 +157,16 @@ export default function CreateListing({ onClose }: CreateListingProps) {
   };
 
   const toggleFileSelection = (file: File) => {
+    console.log('Toggle file selection called for:', file.name);
     setSelectedFiles(prev => {
       if (prev.includes(file)) {
+        console.log('Removing file from selection:', file.name);
         return prev.filter(f => f !== file);
       } else if (prev.length < 4) {
+        console.log('Adding file to selection:', file.name);
         return [...prev, file];
       }
+      console.log('Max selection reached (4 files)');
       return prev;
     });
   };
@@ -649,6 +653,10 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                           key={`${file.name}-${index}`}
                           className="relative group"
                           draggable
+                          onMouseDown={(e) => {
+                            // Start tracking for drag vs click
+                            e.currentTarget.dataset.mouseDownTime = Date.now().toString();
+                          }}
                           onDragStart={(e) => {
                             setIsDragging(true);
                             e.dataTransfer.setData('text/plain', index.toString());
@@ -693,15 +701,21 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                           {/* Selection Checkbox - appears on hover */}
                           <button
                             type="button"
+                            onMouseDown={(e) => {
+                              e.stopPropagation();
+                              e.preventDefault();
+                            }}
                             onClick={(e) => {
                               e.stopPropagation();
+                              e.preventDefault();
+                              console.log('Selection button clicked for:', file.name);
                               toggleFileSelection(file);
                             }}
-                            className={`absolute top-1 left-1 w-6 h-6 rounded-full border-2 transition-all ${
+                            className={`absolute top-1 left-1 w-6 h-6 rounded-full border-2 transition-all z-10 ${
                               isSelected 
                                 ? 'bg-green-500 border-green-500 text-white' 
                                 : 'bg-white border-gray-300 hover:border-green-400 hover:bg-green-50'
-                            } opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center`}
+                            } opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer`}
                           >
                             {isSelected ? (
                               <span className="text-xs font-bold">✓</span>
