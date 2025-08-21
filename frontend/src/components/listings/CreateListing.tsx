@@ -48,6 +48,8 @@ export default function CreateListing({ onClose }: CreateListingProps) {
   const [isPosting, setIsPosting] = useState(false);
   const [postingResults, setPostingResults] = useState<any>(null);
   const [selectedPricingTier, setSelectedPricingTier] = useState<'quick' | 'market' | 'premium' | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStartTime, setDragStartTime] = useState(0);
 
   // Regenerate description when pricing tier changes
   useEffect(() => {
@@ -364,7 +366,20 @@ export default function CreateListing({ onClose }: CreateListingProps) {
     }
 
     setIsAnalyzing(true);
+    setAnalysisError(null);
+    
     try {
+      // Test API connectivity first
+      try {
+        const healthCheck = await api.get('/health');
+        console.log('✅ Backend health check:', healthCheck.data);
+      } catch (healthError) {
+        console.error('❌ Backend health check failed:', healthError);
+        setAnalysisError('Backend service unavailable. Please try again later.');
+        setIsAnalyzing(false);
+        return;
+      }
+      
       // Use enhanced analysis endpoint for comprehensive image analysis
       const formData = new FormData();
       
@@ -618,7 +633,7 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                         🎯 Select 4 Key Photos for AI Analysis
                       </p>
                       <p className="text-xs text-gray-600 dark:text-gray-400">
-                        Choose: Exterior, Interior, Dashboard, & Key Features • Hover & drag to reorder
+                        Click to select • Click & hold to drag & reorder
                       </p>
                     </div>
                     <span className="text-xs text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/20 px-2 py-1 rounded-full">
@@ -633,11 +648,23 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                           key={`${file.name}-${index}`}
                           className="relative group"
                           draggable
+                          onMouseDown={(e) => {
+                            setDragStartTime(Date.now());
+                          }}
+                          onMouseUp={(e) => {
+                            const clickDuration = Date.now() - dragStartTime;
+                            // If it's a short click (less than 200ms), treat as click for selection
+                            if (clickDuration < 200 && !isDragging) {
+                              toggleFileSelection(file);
+                            }
+                          }}
                           onDragStart={(e) => {
+                            setIsDragging(true);
                             e.dataTransfer.setData('text/plain', index.toString());
                             e.currentTarget.classList.add('opacity-50');
                           }}
                           onDragEnd={(e) => {
+                            setIsDragging(false);
                             e.currentTarget.classList.remove('opacity-50');
                           }}
                           onDragOver={(e) => {
@@ -668,7 +695,6 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                             className={`w-full h-20 object-cover rounded-lg cursor-pointer transition-all ${
                               isSelected ? 'ring-2 ring-blue-500 opacity-100' : 'opacity-70 hover:opacity-100'
                             }`}
-                            onClick={() => toggleFileSelection(file)}
                             onError={(e) => console.error('Image failed to load:', file.name)}
                             onLoad={() => console.log('Image loaded successfully:', file.name)}
                           />
