@@ -6,7 +6,7 @@
 echo "🚀 Deploying QuickFlip AI Backend (Supabase-only)..."
 
 # Set variables
-PROJECT_ID="quickflip-ai-backend"
+PROJECT_ID="quickflip-ai"
 REGION="us-central1"
 SERVICE_NAME="quickflip-ai-backend"
 

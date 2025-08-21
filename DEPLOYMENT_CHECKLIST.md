@@ -166,4 +166,4 @@ DEBUG=false
 3. **Deploy to Vercel** (15 min)
 4. **Test and launch** (5 min)
 
-**You're literally 30 minutes away from a live, production-ready car flipping application!** 🚀
+**You're literally 30 minutes away from a live, production-ready car selling application!** 🚀

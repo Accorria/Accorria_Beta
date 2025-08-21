@@ -128,7 +128,7 @@ GET /api/v1/car-listing/platforms
 ## 🚀 Next Steps
 
 Once you have this working, you can:
-1. **Integrate with existing listings**: Connect to your current car inventory
+1. **Integrate with existing listings**: Connect to your current car listings
 2. **Automate posting**: Add direct posting to platforms
 3. **Track performance**: Monitor which listings perform best
 4. **Customize templates**: Modify listing formats for your style

@@ -1,0 +1,27 @@
+# Exclude frontend code from backend builds
+frontend/
+src/
+public/
+*.tsx
+*.ts
+*.js
+*.jsx
+package.json
+package-lock.json
+next.config.js
+tailwind.config.js
+eslint.config.mjs
+
+# Exclude other unnecessary files
+.git/
+.gitignore
+README.md
+*.md
+node_modules/
+.env.local
+.env.example
+
+# Keep only backend files
+!backend/
+!requirements.txt
+!Dockerfile

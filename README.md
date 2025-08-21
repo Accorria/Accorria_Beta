@@ -1,6 +1,6 @@
 # QuickFlips AI MVP
 
-AI-powered car flipping co-pilot that helps car salespeople and dealers generate more leads, optimize listings, and close more deals through intelligent automation and multi-platform posting.
+AI-powered car selling assistant that helps car owners create professional listings, get optimal pricing, and handle buyer communication automatically.
 
 ## 📋 Quick Links
 

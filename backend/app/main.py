@@ -84,6 +84,21 @@ app.add_middleware(
 # Rate limiting middleware
 app.middleware("http")(rate_limit_middleware)
 
+# Health check endpoint
+@app.get("/health")
+async def health_check():
+    """Health check endpoint"""
+    return {
+        "status": "healthy",
+        "service": "QuickFlip AI Backend",
+        "version": "1.0.0",
+        "apis": {
+            "google_vision": "configured",
+            "openai": "configured", 
+            "supabase": "configured"
+        }
+    }
+
 # Security headers middleware
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next):

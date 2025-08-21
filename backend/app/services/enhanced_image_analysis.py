@@ -30,6 +30,17 @@ class EnhancedImageAnalysis:
         except Exception as e:
             logger.warning(f"⚠️ Vision API initialization failed: {e}")
             self.client = None
+            
+        # Test the client
+        if self.client:
+            try:
+                # Test with a simple image
+                test_image = vision.Image(content=b"test")
+                self.client.text_detection(image=test_image)
+                logger.info("✅ Google Vision API client test successful")
+            except Exception as e:
+                logger.error(f"❌ Google Vision API client test failed: {e}")
+                self.client = None
     
     async def analyze_car_images(self, image_files: List[bytes], car_details: Dict[str, Any]) -> Dict[str, Any]:
         """

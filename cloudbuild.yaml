@@ -1,7 +1,8 @@
 steps:
-  # Build the container image from backend directory
+  # Build the container image from backend directory only
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['build', '-t', 'us-central1-docker.pkg.dev/$PROJECT_ID/quickflip-ai-backend/quickflip-ai-backend', './backend']
+    args: ['build', '-t', 'us-central1-docker.pkg.dev/$PROJECT_ID/quickflip-ai-backend/quickflip-ai-backend', '.']
+    dir: './backend'
   
   # Push the container image to Artifact Registry
   - name: 'gcr.io/cloud-builders/docker'

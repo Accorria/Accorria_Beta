@@ -268,7 +268,7 @@
 ## 🎉 **Expected Outcome:**
 
 **After 8 hours, you'll have:**
-- ✅ Live, production-ready car flipping application
+- ✅ Live, production-ready car selling application
 - ✅ AI-powered car analysis
 - ✅ User authentication system
 - ✅ Car listing management

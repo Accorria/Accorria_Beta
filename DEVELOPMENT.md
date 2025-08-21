@@ -398,4 +398,4 @@ vercel --prod
 
 ---
 
-**QuickFlip AI** - Making car flipping smarter! 🚗💨 
+**QuickFlip AI** - Making car selling smarter! 🚗💨 

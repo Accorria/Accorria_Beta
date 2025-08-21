@@ -6,7 +6,7 @@
 
 ## 🎯 **Agent Overview**
 
-QuickFlips.ai uses a sophisticated **8-agent AI system** to provide comprehensive car flipping automation while maintaining user control and approval at every step.
+QuickFlips.ai uses a sophisticated **8-agent AI system** to provide comprehensive car selling assistance while maintaining user control and approval at every step.
 
 ### **Agent List:**
 1. **Vision Agent** 👁️ - Image Analysis Specialist
