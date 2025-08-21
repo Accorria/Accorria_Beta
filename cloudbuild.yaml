@@ -23,7 +23,7 @@ steps:
       - 'managed'
       - '--allow-unauthenticated'
       - '--port'
-      - '8000'
+      - '8080'
       - '--memory'
       - '1Gi'
       - '--cpu'
@@ -36,6 +36,8 @@ steps:
       - '300'
       - '--concurrency'
       - '80'
+      - '--set-env-vars'
+      - 'PORT=8080'
 
 images:
   - 'us-central1-docker.pkg.dev/$PROJECT_ID/quickflip-ai-backend/quickflip-ai-backend' 
