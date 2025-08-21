@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
+import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import carDataRaw from '../../data/carData.json';
 import { api } from '../../utils/api';
 const carData = carDataRaw as Record<string, string[]>;
@@ -48,6 +49,14 @@ export default function CreateListing({ onClose }: CreateListingProps) {
   const [isPosting, setIsPosting] = useState(false);
   const [postingResults, setPostingResults] = useState<any>(null);
   const [selectedPricingTier, setSelectedPricingTier] = useState<'quick' | 'market' | 'premium' | null>(null);
+
+  // Regenerate description when pricing tier changes
+  useEffect(() => {
+    if (selectedPricingTier && analysisResult && carDetails.finalDescription) {
+      const newDescription = generateAIDescription(analysisResult, carDetails);
+      setCarDetails(prev => ({ ...prev, finalDescription: newDescription }));
+    }
+  }, [selectedPricingTier, analysisResult]);
 
   const onDrop = useCallback(async (acceptedFiles: File[], rejectedFiles: any[]) => {
     console.log('onDrop called!');
@@ -121,7 +130,8 @@ export default function CreateListing({ onClose }: CreateListingProps) {
         })
       );
       
-      setFiles(convertedFiles);
+      // Append new files instead of replacing
+      setFiles(prev => [...prev, ...convertedFiles]);
       console.log('Files state updated with:', convertedFiles.length, 'files');
     } else {
       console.log('No files to add!');
@@ -241,18 +251,14 @@ export default function CreateListing({ onClose }: CreateListingProps) {
     const titleStatus = carDetails.titleStatus || 'clean';
     
     // Calculate price based on selected tier
-    let displayPrice = parseInt(price);
-    let priceMessage = '';
+    let displayPrice = parseInt(price || '0');
     
     if (selectedPricingTier === 'quick') {
-      displayPrice = Math.floor(parseInt(price) * 0.85);
-      priceMessage = '🚀 QUICK SALE - Priced to sell fast!';
+      displayPrice = Math.floor(parseInt(price || '0') * 0.85);
     } else if (selectedPricingTier === 'premium') {
-      displayPrice = Math.floor(parseInt(price) * 1.15);
-      priceMessage = '💎 PREMIUM LISTING - Top condition, premium price';
-    } else {
-      priceMessage = '⚖️ FAIR MARKET PRICE - Great value for money';
+      displayPrice = Math.floor(parseInt(price || '0') * 1.15);
     }
+    // For market rate, use the original price
     
     // Build description in your exact format with emojis
     description += `🚗 ${year} ${make} ${model}\n`;
@@ -613,46 +619,75 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                         🎯 Select 4 Key Photos for AI Analysis
                       </p>
                       <p className="text-xs text-gray-600 dark:text-gray-400">
-                        Choose: Exterior, Interior, Dashboard, & Key Features (saves tokens)
+                        Choose: Exterior, Interior, Dashboard, & Key Features • Drag to reorder photos
                       </p>
                     </div>
                     <span className="text-xs text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/20 px-2 py-1 rounded-full">
                       {selectedFiles.length}/4 selected
                     </span>
                   </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    {files.map((file, index) => {
-                      const isSelected = selectedFiles.includes(file);
-                      // Debug logging
-                      console.log('Rendering file:', file.name, file.type, file.size);
-                      return (
-                        <div key={index} className="relative">
-                          <img
-                            src={URL.createObjectURL(file)}
-                            alt={`Preview ${index + 1}`}
-                            className={`w-full h-20 object-cover rounded-lg cursor-pointer transition-all ${
-                              isSelected ? 'ring-2 ring-blue-500 opacity-100' : 'opacity-70 hover:opacity-100'
-                            }`}
-                            onClick={() => toggleFileSelection(file)}
-                            onError={(e) => console.error('Image failed to load:', file.name)}
-                            onLoad={() => console.log('Image loaded successfully:', file.name)}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => removeFile(index)}
-                            className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs flex items-center justify-center hover:bg-red-600 transition-colors"
-                          >
-                            ✕
-                          </button>
-                          {isSelected && (
-                            <div className="absolute top-1 left-1 w-5 h-5 bg-blue-500 text-white rounded-full text-xs flex items-center justify-center">
-                              ✓
-                            </div>
-                          )}
+                  <DragDropContext onDragEnd={(result) => {
+                    if (!result.destination) return;
+                    
+                    const items = Array.from(files);
+                    const [reorderedItem] = items.splice(result.source.index, 1);
+                    items.splice(result.destination.index, 0, reorderedItem);
+                    
+                    setFiles(items);
+                  }}>
+                    <Droppable droppableId="photos" direction="horizontal">
+                      {(provided) => (
+                        <div 
+                          {...provided.droppableProps}
+                          ref={provided.innerRef}
+                          className="grid grid-cols-3 gap-2"
+                        >
+                          {files.map((file, index) => {
+                            const isSelected = selectedFiles.includes(file);
+                            return (
+                              <Draggable key={`${file.name}-${index}`} draggableId={`${file.name}-${index}`} index={index}>
+                                {(provided, snapshot) => (
+                                  <div
+                                    ref={provided.innerRef}
+                                    {...provided.draggableProps}
+                                    {...provided.dragHandleProps}
+                                    className={`relative ${snapshot.isDragging ? 'opacity-50' : ''}`}
+                                  >
+                                    <img
+                                      src={URL.createObjectURL(file)}
+                                      alt={`Preview ${index + 1}`}
+                                      className={`w-full h-20 object-cover rounded-lg cursor-pointer transition-all ${
+                                        isSelected ? 'ring-2 ring-blue-500 opacity-100' : 'opacity-70 hover:opacity-100'
+                                      }`}
+                                      onClick={() => toggleFileSelection(file)}
+                                      onError={(e) => console.error('Image failed to load:', file.name)}
+                                      onLoad={() => console.log('Image loaded successfully:', file.name)}
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => removeFile(index)}
+                                      className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs flex items-center justify-center hover:bg-red-600 transition-colors"
+                                    >
+                                      ✕
+                                    </button>
+                                    {isSelected && (
+                                      <div className="absolute top-1 left-1 w-5 h-5 bg-blue-500 text-white rounded-full text-xs flex items-center justify-center">
+                                        ✓
+                                      </div>
+                                    )}
+                                    <div className="absolute bottom-1 right-1 bg-black bg-opacity-50 text-white text-xs px-1 rounded">
+                                      {index + 1}
+                                    </div>
+                                  </div>
+                                )}
+                              </Draggable>
+                            );
+                          })}
+                          {provided.placeholder}
                         </div>
-                      );
-                    })}
-                  </div>
+                      )}
+                    </Droppable>
+                  </DragDropContext>
                   
                   {/* AI Analysis Button */}
                   <button
@@ -842,12 +877,7 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                 <div className="grid grid-cols-1 gap-3">
                   <button
                     type="button"
-                    onClick={() => {
-                      setSelectedPricingTier('quick');
-                      // Regenerate description with new pricing tier
-                      const newDescription = generateAIDescription(analysisResult, carDetails);
-                      setCarDetails(prev => ({ ...prev, finalDescription: newDescription }));
-                    }}
+                    onClick={() => setSelectedPricingTier('quick')}
                     className={`p-4 rounded-lg border-2 transition-all ${
                       selectedPricingTier === 'quick' 
                         ? 'border-green-500 bg-green-50 dark:bg-green-900/20' 
@@ -868,12 +898,7 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                   
                   <button
                     type="button"
-                    onClick={() => {
-                      setSelectedPricingTier('market');
-                      // Regenerate description with new pricing tier
-                      const newDescription = generateAIDescription(analysisResult, carDetails);
-                      setCarDetails(prev => ({ ...prev, finalDescription: newDescription }));
-                    }}
+                    onClick={() => setSelectedPricingTier('market')}
                     className={`p-4 rounded-lg border-2 transition-all ${
                       selectedPricingTier === 'market' 
                         ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
@@ -894,12 +919,7 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                   
                   <button
                     type="button"
-                    onClick={() => {
-                      setSelectedPricingTier('premium');
-                      // Regenerate description with new pricing tier
-                      const newDescription = generateAIDescription(analysisResult, carDetails);
-                      setCarDetails(prev => ({ ...prev, finalDescription: newDescription }));
-                    }}
+                    onClick={() => setSelectedPricingTier('premium')}
                     className={`p-4 rounded-lg border-2 transition-all ${
                       selectedPricingTier === 'premium' 
                         ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20' 
