@@ -6,6 +6,7 @@ import MessagesView from '@/components/MessagesView';
 import MarketIntelligence from '@/components/MarketIntelligence';
 import AIListingGenerator from '@/components/AIListingGenerator';
 import DashboardListing from '@/components/DashboardListing';
+import Analytics from '@/components/Analytics';
 import Header from '@/components/Header';
 
 export default function Home() {
@@ -321,45 +322,7 @@ export default function Home() {
 
         {activeTab === 'messages' && <MessagesView />}
 
-        {activeTab === 'analytics' && (
-          <div className="px-4 py-6">
-            <h1 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">Analytics</h1>
-            
-            <div className="space-y-6">
-              <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-                <h3 className="font-semibold text-gray-900 dark:text-white mb-4">This Week</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-blue-600 dark:text-blue-300">$2,400</div>
-                    <div className="text-sm text-gray-600 dark:text-gray-300">Revenue</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-green-600 dark:text-green-300">3</div>
-                    <div className="text-sm text-gray-600 dark:text-gray-300">Cars Sold</div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-                <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Performance</h3>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600 dark:text-gray-300">Response Rate</span>
-                    <span className="text-sm font-medium text-green-600 dark:text-green-400">95%</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600 dark:text-gray-300">Avg. Response Time</span>
-                    <span className="text-sm font-medium text-blue-600 dark:text-blue-400">2.3 min</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600 dark:text-gray-300">Conversion Rate</span>
-                    <span className="text-sm font-medium text-purple-600 dark:text-purple-400">12%</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        {activeTab === 'analytics' && <Analytics />}
 
         {activeTab === 'market-intelligence' && (
           <div className="px-4 py-6">

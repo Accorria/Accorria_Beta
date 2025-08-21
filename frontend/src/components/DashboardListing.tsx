@@ -26,6 +26,7 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
   const [showPhotoGallery, setShowPhotoGallery] = useState(false);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [showSaleForm, setShowSaleForm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [saleData, setSaleData] = useState({
     soldFor: '',
     soldTo: ''
@@ -55,7 +56,7 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
       {/* Images */}
       <div className="relative">
         <div 
-          className="grid grid-cols-2 gap-2 h-32 cursor-pointer"
+          className="grid grid-cols-2 gap-1 h-24 sm:h-32 cursor-pointer"
           onClick={() => setShowPhotoGallery(true)}
         >
           {listing.images.slice(0, 2).map((image, index) => (
@@ -67,7 +68,7 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
               />
               {index === 1 && listing.images.length > 2 && (
                 <div className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center rounded-lg">
-                  <span className="text-white font-bold text-sm">
+                  <span className="text-white font-bold text-xs sm:text-sm">
                     +{listing.images.length - 2}
                   </span>
                 </div>
@@ -75,7 +76,7 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
             </div>
           ))}
         </div>
-        <div className="absolute bottom-2 right-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded">
+        <div className="absolute bottom-1 right-1 sm:bottom-2 sm:right-2 bg-black bg-opacity-70 text-white text-xs px-1 py-0.5 sm:px-2 sm:py-1 rounded text-xs">
           Click to view all {listing.images.length} photos
         </div>
       </div>
@@ -258,16 +259,7 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
           )}
           
           <button 
-            onClick={() => {
-              if (confirm('Are you sure you want to delete this listing?')) {
-                // Remove the listing from localStorage
-                const existingListings = JSON.parse(localStorage.getItem('testListings') || '[]');
-                const updatedListings = existingListings.filter((l: any) => l.id !== listing.id);
-                localStorage.setItem('testListings', JSON.stringify(updatedListings));
-                // Force re-render
-                window.location.reload();
-              }
-            }}
+            onClick={() => setShowDeleteConfirm(true)}
             className="w-full bg-red-500 text-white py-2 px-4 rounded-lg font-semibold hover:bg-red-600 transition-colors"
           >
             🗑️ Delete Listing
@@ -397,6 +389,19 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
                     return;
                   }
                   
+                  // Store sold listing in analytics
+                  const soldListing = {
+                    ...listing,
+                    soldAt: new Date().toISOString(),
+                    soldFor: parseInt(saleData.soldFor),
+                    soldTo: saleData.soldTo,
+                    action: 'sold'
+                  };
+                  
+                  const existingAnalytics = JSON.parse(localStorage.getItem('listingAnalytics') || '[]');
+                  existingAnalytics.push(soldListing);
+                  localStorage.setItem('listingAnalytics', JSON.stringify(existingAnalytics));
+                  
                   // Update the listing in localStorage
                   const existingListings = JSON.parse(localStorage.getItem('testListings') || '[]');
                   const updatedListings = existingListings.map((l: any) => 
@@ -415,6 +420,73 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
                 className="flex-1 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
               >
                 Mark as Sold
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                🗑️ Delete Listing
+              </h3>
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div className="mb-6">
+              <p className="text-gray-700 dark:text-gray-300">
+                Are you sure you want to delete this listing? This action cannot be undone.
+              </p>
+              <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <div className="text-sm font-medium text-gray-900 dark:text-white">
+                  {listing.title}
+                </div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">
+                  ${listing.price.toLocaleString()} • {listing.mileage} miles
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex space-x-3">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  // Store deleted listing in analytics
+                  const deletedListing = {
+                    ...listing,
+                    deletedAt: new Date().toISOString(),
+                    action: 'deleted'
+                  };
+                  
+                  const existingAnalytics = JSON.parse(localStorage.getItem('listingAnalytics') || '[]');
+                  existingAnalytics.push(deletedListing);
+                  localStorage.setItem('listingAnalytics', JSON.stringify(existingAnalytics));
+                  
+                  // Remove the listing from active listings
+                  const existingListings = JSON.parse(localStorage.getItem('testListings') || '[]');
+                  const updatedListings = existingListings.filter((l: any) => l.id !== listing.id);
+                  localStorage.setItem('testListings', JSON.stringify(updatedListings));
+                  
+                  setShowDeleteConfirm(false);
+                  window.location.reload();
+                }}
+                className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+              >
+                Delete Listing
               </button>
             </div>
           </div>
