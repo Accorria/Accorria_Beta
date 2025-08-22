@@ -134,18 +134,18 @@ export default function Home() {
           <>
             {/* Quick Stats */}
             <div className="px-4 py-6">
-              <div className="grid grid-cols-3 gap-4">
-                <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+              <div className="grid grid-cols-3 gap-2 sm:gap-4">
+                <div className="bg-white dark:bg-gray-800 p-3 sm:p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
                   <div className="text-2xl font-bold text-blue-600 dark:text-blue-300">{testListings.length}</div>
                   <div className="text-xs text-gray-600 dark:text-gray-300">Active Listings</div>
                 </div>
-                <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+                <div className="bg-white dark:bg-gray-800 p-3 sm:p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
                   <div className="text-2xl font-bold text-green-600 dark:text-green-300">
                     {testListings.reduce((total, listing) => total + (listing.messages || 0), 0)}
                   </div>
                   <div className="text-xs text-gray-600 dark:text-gray-300">Messages</div>
                 </div>
-                <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+                <div className="bg-white dark:bg-gray-800 p-3 sm:p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
                   <div className="text-2xl font-bold text-purple-600 dark:text-purple-300">
                     ${testListings.reduce((total, listing) => {
                       // Only count actual sales, not estimated revenue
@@ -380,55 +380,55 @@ export default function Home() {
       </main>
 
       {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-4 py-2">
+      <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-2 sm:px-4 py-2">
         <div className="flex justify-around">
           <button
-            className={`flex flex-col items-center py-2 px-3 rounded-lg transition-colors ${
+            className={`flex flex-col items-center py-1 sm:py-2 px-2 sm:px-3 rounded-lg transition-colors ${
               activeTab === 'dashboard' ? 'text-blue-500' : 'text-gray-500 dark:text-gray-400'
             }`}
             onClick={() => setActiveTab('dashboard')}
           >
-            <span className="text-xl">🏠</span>
+            <span className="text-lg sm:text-xl">🏠</span>
             <span className="text-xs mt-1">Home</span>
           </button>
           
           <button
-            className={`flex flex-col items-center py-2 px-3 rounded-lg transition-colors ${
+            className={`flex flex-col items-center py-1 sm:py-2 px-2 sm:px-3 rounded-lg transition-colors ${
               activeTab === 'listings' ? 'text-blue-500' : 'text-gray-500 dark:text-gray-400'
             }`}
             onClick={() => setActiveTab('listings')}
           >
-            <span className="text-xl">🚗</span>
+            <span className="text-lg sm:text-xl">🚗</span>
             <span className="text-xs mt-1">Listings</span>
           </button>
           
           <button
-            className={`flex flex-col items-center py-2 px-3 rounded-lg transition-colors ${
+            className={`flex flex-col items-center py-1 sm:py-2 px-2 sm:px-3 rounded-lg transition-colors ${
               activeTab === 'messages' ? 'text-blue-500' : 'text-gray-500 dark:text-gray-400'
             }`}
             onClick={() => setActiveTab('messages')}
           >
-            <span className="text-xl">💬</span>
+            <span className="text-lg sm:text-xl">💬</span>
             <span className="text-xs mt-1">Messages</span>
           </button>
           
           <button
-            className={`flex flex-col items-center py-2 px-3 rounded-lg transition-colors ${
+            className={`flex flex-col items-center py-1 sm:py-2 px-2 sm:px-3 rounded-lg transition-colors ${
               activeTab === 'analytics' ? 'text-blue-500' : 'text-gray-500 dark:text-gray-400'
             }`}
             onClick={() => setActiveTab('analytics')}
           >
-            <span className="text-xl">📊</span>
+            <span className="text-lg sm:text-xl">📊</span>
             <span className="text-xs mt-1">Analytics</span>
           </button>
           
           <button
-            className={`flex flex-col items-center py-2 px-3 rounded-lg transition-colors ${
+            className={`flex flex-col items-center py-1 sm:py-2 px-2 sm:px-3 rounded-lg transition-colors ${
               activeTab === 'market-intelligence' ? 'text-blue-500' : 'text-gray-500 dark:text-gray-400'
             }`}
             onClick={() => setActiveTab('market-intelligence')}
           >
-            <span className="text-xl">🔍</span>
+            <span className="text-lg sm:text-xl">🔍</span>
             <span className="text-xs mt-1">Market Intel</span>
           </button>
           

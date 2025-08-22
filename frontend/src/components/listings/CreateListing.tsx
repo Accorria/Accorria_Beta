@@ -574,9 +574,9 @@ export default function CreateListing({ onClose }: CreateListingProps) {
   const years = Array.from({ length: currentYear - 1959 }, (_, i) => (currentYear - i).toString());
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 animate-fade-in">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto animate-slide-up" onClick={(e) => e.stopPropagation()}>
-        <div className="p-6">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50 animate-fade-in">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md sm:max-w-lg max-h-[95vh] sm:max-h-[90vh] overflow-y-auto animate-slide-up" onClick={(e) => e.stopPropagation()}>
+        <div className="p-4 sm:p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
               Create New Listing
@@ -589,7 +589,7 @@ export default function CreateListing({ onClose }: CreateListingProps) {
             </button>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
             {/* Image Upload */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -597,7 +597,7 @@ export default function CreateListing({ onClose }: CreateListingProps) {
               </label>
               <div
                 {...getRootProps()}
-                className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors ${
+                className={`border-2 border-dashed rounded-xl p-4 sm:p-6 text-center cursor-pointer transition-colors ${
                   isDragActive
                     ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
                     : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
@@ -634,7 +634,7 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                       {selectedFiles.length}/4 selected
                     </span>
                   </div>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {files.map((file, index) => {
                       const isSelected = selectedFiles.includes(file);
                       return (
