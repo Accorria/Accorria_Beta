@@ -1,5 +1,5 @@
 """
-Vision API Test Endpoint for QuickFlip AI
+Vision API Test Endpoint for Plazoria
 Simple endpoint for testing Google Vision API integration visually
 """
 

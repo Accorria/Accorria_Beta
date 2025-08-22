@@ -9,16 +9,16 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv("backend/.env")
 
-app = FastAPI(title="QuickFlip AI - Test API")
+app = FastAPI(title="Plazoria - Test API")
 
 # Test endpoint
 @app.get("/")
 async def root():
-    return {"message": "QuickFlip AI is running!", "status": "ok"}
+    return {"message": "Plazoria is running!", "status": "ok"}
 
 @app.get("/health")
 async def health():
-    return {"status": "healthy", "service": "quickflip-ai"}
+    return {"status": "healthy", "service": "plazoria"}
 
 # Test OpenAI connection
 @app.get("/test-openai")
@@ -32,7 +32,7 @@ async def test_openai():
         client = openai.Client(api_key=api_key)
         response = client.chat.completions.create(
             model="gpt-4o-mini",
-            messages=[{"role": "user", "content": "Say 'QuickFlip AI test successful'"}],
+            messages=[{"role": "user", "content": "Say 'Plazoria test successful'"}],
             max_tokens=10
         )
         

@@ -1,5 +1,5 @@
 """
-Supabase Service for QuickFlip AI
+Supabase Service for Plazoria
 
 Handles database operations using Supabase instead of Firestore
 """

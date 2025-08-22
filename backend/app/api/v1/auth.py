@@ -1,5 +1,5 @@
 """
-Authentication API endpoints for QuickFlip AI
+Authentication API endpoints for Plazoria
 """
 
 from fastapi import APIRouter, HTTPException, Depends, status

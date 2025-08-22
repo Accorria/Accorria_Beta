@@ -1,8 +1,8 @@
-# QuickFlips AI — Source Map & Integration Guide
+# Plazoria — Source Map & Integration Guide
 
 ## 🎯 Overview
 
-This document maps out **exactly** how QuickFlips AI works, what comes from our internal playbook vs. external sources, and how to implement each component for a professional, scalable system.
+This document maps out **exactly** how Plazoria works, what comes from our internal playbook vs. external sources, and how to implement each component for a professional, scalable system.
 
 ---
 

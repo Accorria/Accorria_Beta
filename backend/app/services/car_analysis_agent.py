@@ -1,5 +1,5 @@
 """
-Car Analysis Agent for QuickFlip AI MVP
+Car Analysis Agent for Plazoria MVP
 Simplified agent for analyzing car images and providing pricing insights
 """
 

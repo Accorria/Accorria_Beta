@@ -1,7 +1,7 @@
 """
-QuickFlip AI - Main FastAPI Application
+Plazoria - Main FastAPI Application
 
-Entry point for the QuickFlip AI backend API.
+Entry point for the Plazoria backend API.
 """
 
 from contextlib import asynccontextmanager
@@ -44,7 +44,7 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """Application lifespan manager"""
     # Startup
-    print("🚀 Starting QuickFlip AI...")
+    print("🚀 Starting Plazoria...")
     
     # Start rate limit cleanup task
     cleanup_task = asyncio.create_task(cleanup_rate_limits())
@@ -52,7 +52,7 @@ async def lifespan(app: FastAPI):
     yield
     
     # Shutdown
-    print("🛑 Shutting down QuickFlip AI...")
+    print("🛑 Shutting down Plazoria...")
     cleanup_task.cancel()
     try:
         await cleanup_task
@@ -60,7 +60,7 @@ async def lifespan(app: FastAPI):
         pass
 
 app = FastAPI(
-    title="QuickFlip AI API",
+    title="Plazoria API",
     description="Car selling co-pilot platform API",
     version="1.0.0",
     lifespan=lifespan
@@ -90,7 +90,7 @@ async def health_check():
     """Health check endpoint"""
     return {
         "status": "healthy",
-        "service": "QuickFlip AI Backend",
+        "service": "Plazoria Backend",
         "version": "1.0.0",
         "apis": {
             "google_vision": "configured",
@@ -139,7 +139,7 @@ app.include_router(debug_status_router, prefix="/api/v1", tags=["Debug"])
 async def root():
     """Health check endpoint"""
     return {
-        "message": "QuickFlip AI API",
+        "message": "Plazoria API",
         "version": "1.0.0",
         "status": "healthy"
     }

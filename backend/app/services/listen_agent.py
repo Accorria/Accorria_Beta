@@ -1,5 +1,5 @@
 """
-QuickFlip AI - Listening Agent
+Plazoria - Listening Agent
 Combines patterns from Google ADK samples:
 - Marketing Agency: Multi-tool orchestration
 - RAG: Knowledge retrieval and content generation
@@ -51,7 +51,7 @@ class ListingDraft:
 
 class ListenAgent:
     """
-    Listening Agent for QuickFlip AI
+    Listening Agent for Plazoria
     Analyzes cars and generates optimized listing drafts
     """
     

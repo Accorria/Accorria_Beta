@@ -4,37 +4,37 @@ services:
   # PostgreSQL Database
   postgres:
     image: postgres:15
-    container_name: quickflip-postgres
+    container_name: plazoria-postgres
     environment:
-      POSTGRES_DB: quickflip
-      POSTGRES_USER: quickflip_user
-      POSTGRES_PASSWORD: quickflip_password
+      POSTGRES_DB: plazoria
+      POSTGRES_USER: plazoria_user
+      POSTGRES_PASSWORD: plazoria_password
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - quickflip-network
+      - plazoria-network
 
   # Redis for caching and sessions
   redis:
     image: redis:7-alpine
-    container_name: quickflip-redis
+    container_name: plazoria-redis
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
     networks:
-      - quickflip-network
+      - plazoria-network
 
   # Backend API
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: quickflip-backend
+    container_name: plazoria-backend
     environment:
-      - DATABASE_URL=postgresql://quickflip_user:quickflip_password@postgres:5432/quickflip
+      - DATABASE_URL=postgresql://plazoria_user:plazoria_password@postgres:5432/plazoria
       - REDIS_URL=redis://redis:6379
       - SECRET_KEY=your-secret-key-here-change-in-production
       - DEBUG=true
@@ -47,7 +47,7 @@ services:
       - ./backend:/app
       - /app/venv
     networks:
-      - quickflip-network
+      - plazoria-network
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
   # Frontend
@@ -55,7 +55,7 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: quickflip-frontend
+    container_name: plazoria-frontend
     ports:
       - "3000:3000"
     environment:
@@ -63,7 +63,7 @@ services:
     depends_on:
       - backend
     networks:
-      - quickflip-network
+      - plazoria-network
     command: npm run start
 
   # Celery worker for background tasks
@@ -71,9 +71,9 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: quickflip-celery-worker
+    container_name: plazoria-celery-worker
     environment:
-      - DATABASE_URL=postgresql://quickflip_user:quickflip_password@postgres:5432/quickflip
+      - DATABASE_URL=postgresql://plazoria_user:plazoria_password@postgres:5432/plazoria
       - REDIS_URL=redis://redis:6379
       - SECRET_KEY=your-secret-key-here-change-in-production
     depends_on:
@@ -82,7 +82,7 @@ services:
     volumes:
       - ./backend:/app
     networks:
-      - quickflip-network
+      - plazoria-network
     command: celery -A app.celery:celery_app worker --loglevel=info
 
   # Celery beat for scheduled tasks
@@ -90,9 +90,9 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: quickflip-celery-beat
+    container_name: plazoria-celery-beat
     environment:
-      - DATABASE_URL=postgresql://quickflip_user:quickflip_password@postgres:5432/quickflip
+      - DATABASE_URL=postgresql://plazoria_user:plazoria_password@postgres:5432/plazoria
       - REDIS_URL=redis://redis:6379
       - SECRET_KEY=your-secret-key-here-change-in-production
     depends_on:
@@ -101,7 +101,7 @@ services:
     volumes:
       - ./backend:/app
     networks:
-      - quickflip-network
+      - plazoria-network
     command: celery -A app.celery:celery_app beat --loglevel=info
 
 volumes:
@@ -109,5 +109,5 @@ volumes:
   redis_data:
 
 networks:
-  quickflip-network:
+  plazoria-network:
     driver: bridge 

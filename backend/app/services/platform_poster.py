@@ -224,7 +224,7 @@ class CraigslistPoster:
                 condition=listing_data.condition,
                 images=listing_data.images,
                 location=listing_data.location,
-                email="quickflip@example.com",  # TODO: Get from user settings
+                email="plazoria@example.com",  # TODO: Get from user settings
                 phone=""  # TODO: Get from user settings
             )
             

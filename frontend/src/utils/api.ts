@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://quickflip-ai-backend-691352445702.us-central1.run.app';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://plazoria-backend-691352445702.us-central1.run.app';
 
 export const api = {
   async get(endpoint: string, options?: RequestInit) {

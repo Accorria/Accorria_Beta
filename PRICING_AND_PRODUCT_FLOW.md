@@ -1,6 +1,6 @@
-# 🚗 QuickFlips AI — Pricing & Product Flow (FINAL, LOCKED)
+# 🚗 Plazoria — Pricing & Product Flow (FINAL, LOCKED)
 
-> **Purpose:** This doc defines the **official pricing**, **feature entitlements**, and the **end-to-end user flow** used by QuickFlips AI.  
+> **Purpose:** This doc defines the **official pricing**, **feature entitlements**, and the **end-to-end user flow** used by Plazoria.  
 > **Note:** Anywhere you see "analysts," replace with **"posts."** We do **not** sell "scans" or "analysts."
 
 ---

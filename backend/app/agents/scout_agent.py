@@ -1,5 +1,5 @@
 """
-Scout Agent for QuickFlip AI
+Scout Agent for Plazoria
 
 This agent specializes in:
 1. Scraping Facebook Marketplace, Craigslist, OfferUp for car deals

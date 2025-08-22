@@ -1,5 +1,5 @@
 """
-Supabase Configuration for QuickFlip AI
+Supabase Configuration for Plazoria
 Simplified database and auth setup using Supabase
 """
 

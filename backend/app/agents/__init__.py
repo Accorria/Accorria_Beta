@@ -1,5 +1,5 @@
 """
-QuickFlip AI - Agent System
+Plazoria - Agent System
 
 This module contains all AI agents for the car flipping platform.
 """

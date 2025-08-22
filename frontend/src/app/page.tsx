@@ -15,7 +15,7 @@ export default function Home() {
             <div className="flex items-center">
               <div className="flex-shrink-0">
                 <h1 className="text-2xl font-bold text-gray-900">
-                  🚗 QuickFlips AI
+                  🚗 Plazoria
                 </h1>
               </div>
             </div>
@@ -404,7 +404,7 @@ export default function Home() {
           <div className="xl:grid xl:grid-cols-3 xl:gap-8">
             <div className="space-y-8 xl:col-span-1">
               <span className="text-2xl font-bold text-white">
-                🚗 QuickFlips AI
+                🚗 Plazoria
               </span>
               <p className="text-gray-300 text-base">
                 Upload photos. We'll flip the rest.
@@ -456,7 +456,7 @@ export default function Home() {
           </div>
           <div className="mt-12 border-t border-gray-700 pt-8">
             <p className="text-base text-gray-400 xl:text-center">
-              &copy; 2025 QuickFlips AI. All rights reserved.
+              &copy; 2025 Plazoria. All rights reserved.
             </p>
           </div>
         </div>

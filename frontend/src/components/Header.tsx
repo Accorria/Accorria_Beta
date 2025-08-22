@@ -18,7 +18,7 @@ export default function Header({ darkMode = false, onToggleDarkMode }: HeaderPro
             QF
           </div>
           <div>
-            <h1 className="text-xl font-bold text-gray-900 dark:text-white">QuickFlip AI</h1>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white">Plazoria</h1>
           </div>
         </div>
 

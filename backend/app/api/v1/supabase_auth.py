@@ -1,5 +1,5 @@
 """
-Supabase Authentication API for QuickFlip AI MVP
+Supabase Authentication API for Plazoria MVP
 Simplified auth endpoints using Supabase
 """
 

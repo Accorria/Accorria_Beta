@@ -1,5 +1,5 @@
 """
-Middleware package for QuickFlip AI API
+Middleware package for Plazoria API
 
 Provides security and performance middleware components.
 """

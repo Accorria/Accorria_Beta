@@ -1,5 +1,5 @@
 """
-Image Analysis Agent for QuickFlip AI
+Image Analysis Agent for Plazoria
 
 This agent specializes in:
 1. Analyzing car photos using Google Vision API

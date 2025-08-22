@@ -1,8 +1,8 @@
 """
-Google Vision API Integration for QuickFlip AI
+Google Vision API Integration for Plazoria
 Uses Application Default Credentials (ADC) - no JSON key files needed
 
-This service provides car image analysis capabilities for the QuickFlip AI backend.
+This service provides car image analysis capabilities for the Plazoria backend.
 """
 
 import logging

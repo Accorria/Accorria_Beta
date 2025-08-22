@@ -2,7 +2,7 @@
 
 ## 🎯 **What We've Built**
 
-We have successfully implemented a **revolutionary AI-powered car analysis system** for QuickFlip AI that transforms the car listing creation process. This system combines advanced image analysis with market intelligence to provide comprehensive car insights and pricing recommendations.
+We have successfully implemented a **revolutionary AI-powered car analysis system** for Plazoria that transforms the car listing creation process. This system combines advanced image analysis with market intelligence to provide comprehensive car insights and pricing recommendations.
 
 ---
 
