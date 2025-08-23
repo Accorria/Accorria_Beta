@@ -3,7 +3,7 @@
 
 import React, { useState, useRef } from 'react';
 import { api } from '../utils/api';
-import FacebookIntegration from './FacebookIntegration';
+import FacebookAuth from './FacebookAuth';
 import { 
   Box, 
   Button, 
@@ -330,7 +330,7 @@ const AIListingGenerator: React.FC = () => {
       )}
 
       {/* Facebook Integration */}
-      <FacebookIntegration 
+      <FacebookAuth 
         listingContent={facebookListingContent}
         onPostSuccess={(postId) => {
           console.log('Successfully posted to Facebook:', postId);

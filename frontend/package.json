@@ -17,10 +17,10 @@
     "@supabase/supabase-js": "^2.55.0",
     "framer-motion": "^12.23.3",
     "next": "15.3.5",
+    "next-auth": "^4.24.11",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-dropzone": "^14.3.8",
-    "react-facebook-login": "^4.1.1"
+    "react-dropzone": "^14.3.8"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

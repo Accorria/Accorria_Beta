@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import FacebookLogin from 'react-facebook-login';
+import React, { useState } from 'react';
+import { signIn, signOut, useSession } from 'next-auth/react';
 import { 
   Box, 
   Button, 
@@ -15,11 +15,11 @@ import {
 import { 
   Facebook as FacebookIcon,
   CheckCircle,
-  Error,
-  Share
+  Share,
+  ContentCopy
 } from '@mui/icons-material';
 
-interface FacebookIntegrationProps {
+interface FacebookAuthProps {
   listingContent?: {
     title: string;
     description: string;
@@ -30,50 +30,47 @@ interface FacebookIntegrationProps {
   onPostError?: (error: string) => void;
 }
 
-const FacebookIntegration: React.FC<FacebookIntegrationProps> = ({
+const FacebookAuth: React.FC<FacebookAuthProps> = ({
   listingContent,
   onPostSuccess,
   onPostError
 }) => {
-  const [isConnected, setIsConnected] = useState(false);
-  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const { data: session, status } = useSession();
   const [isPosting, setIsPosting] = useState(false);
   const [postStatus, setPostStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const [copied, setCopied] = useState(false);
 
-  // Facebook App ID - You'll need to create a Facebook App
-  const FACEBOOK_APP_ID = process.env.NEXT_PUBLIC_FACEBOOK_APP_ID || 'your-facebook-app-id';
-
-  useEffect(() => {
-    // Check if user is already logged in
-    const savedToken = localStorage.getItem('facebook_access_token');
-    if (savedToken) {
-      setAccessToken(savedToken);
-      setIsConnected(true);
-    }
-  }, []);
-
-  const handleFacebookLogin = (response: any) => {
-    if (response.accessToken) {
-      setAccessToken(response.accessToken);
-      setIsConnected(true);
-      localStorage.setItem('facebook_access_token', response.accessToken);
-      console.log('Facebook login successful:', response);
-    } else {
-      console.log('Facebook login failed:', response);
-    }
+  const handleFacebookLogin = () => {
+    signIn('facebook', { callbackUrl: window.location.href });
   };
 
   const handleFacebookLogout = () => {
-    setAccessToken(null);
-    setIsConnected(false);
-    localStorage.removeItem('facebook_access_token');
+    signOut();
     setPostStatus('idle');
     setErrorMessage('');
   };
 
-  const postToFacebookMarketplace = async () => {
-    if (!listingContent || !accessToken) {
+  const copyToClipboard = async () => {
+    if (!listingContent) return;
+    
+    const listingText = `${listingContent.title}\n\n${listingContent.description}\n\nPrice: $${listingContent.price.toLocaleString()}`;
+    
+    try {
+      await navigator.clipboard.writeText(listingText);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy to clipboard:', err);
+    }
+  };
+
+  const openFacebookMarketplace = () => {
+    window.open('https://www.facebook.com/marketplace/create/vehicle', '_blank');
+  };
+
+  const postToFacebook = async () => {
+    if (!listingContent || !session) {
       setErrorMessage('Please connect Facebook and generate a listing first');
       setPostStatus('error');
       return;
@@ -84,25 +81,11 @@ const FacebookIntegration: React.FC<FacebookIntegrationProps> = ({
     setErrorMessage('');
 
     try {
-      // For now, we'll simulate posting and provide instructions
-      // In production, you'd use Facebook Graph API
-      
-      const postData = {
-        title: listingContent.title,
-        description: listingContent.description,
-        price: listingContent.price,
-        accessToken: accessToken
-      };
-
-      // Simulate API call
+      // For demo purposes, simulate posting
       await new Promise(resolve => setTimeout(resolve, 2000));
-
-      // For demo purposes, we'll show success
-      // In real implementation, you'd call Facebook Graph API
+      
       setPostStatus('success');
       onPostSuccess?.('demo-post-id');
-      
-      console.log('Posting to Facebook:', postData);
       
     } catch (error) {
       console.error('Error posting to Facebook:', error);
@@ -114,10 +97,18 @@ const FacebookIntegration: React.FC<FacebookIntegrationProps> = ({
     }
   };
 
-  const openFacebookMarketplace = () => {
-    // Open Facebook Marketplace in new tab
-    window.open('https://www.facebook.com/marketplace/create/vehicle', '_blank');
-  };
+  if (status === 'loading') {
+    return (
+      <Card sx={{ mb: 3 }}>
+        <CardContent>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', py: 2 }}>
+            <CircularProgress size={24} sx={{ mr: 2 }} />
+            <Typography>Loading...</Typography>
+          </Box>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card sx={{ mb: 3 }}>
@@ -127,24 +118,26 @@ const FacebookIntegration: React.FC<FacebookIntegrationProps> = ({
           Facebook Integration
         </Typography>
 
-        {!isConnected ? (
+        {!session ? (
           <Box>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
               Connect your Facebook account to post listings directly to Facebook Marketplace
             </Typography>
             
-            <FacebookLogin
-              appId={FACEBOOK_APP_ID}
-              autoLoad={false}
-              fields="name,email,picture"
-              scope="public_profile,email,publish_actions"
-              callback={handleFacebookLogin}
-              cssClass="facebook-login-button"
-              textButton="Connect Facebook Account"
-              icon={<FacebookIcon />}
-            />
+            <Button
+              variant="contained"
+              startIcon={<FacebookIcon />}
+              onClick={handleFacebookLogin}
+              sx={{ 
+                bgcolor: '#1877F2',
+                '&:hover': { bgcolor: '#166FE5' },
+                mb: 2
+              }}
+            >
+              Connect Facebook Account
+            </Button>
             
-            <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
               We'll only post to your Facebook Marketplace with your permission
             </Typography>
           </Box>
@@ -153,7 +146,7 @@ const FacebookIntegration: React.FC<FacebookIntegrationProps> = ({
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
               <CheckCircle color="success" sx={{ mr: 1 }} />
               <Typography variant="body2" color="success.main">
-                Facebook Connected
+                Connected as {session.user?.name || 'Facebook User'}
               </Typography>
               <Button 
                 size="small" 
@@ -182,11 +175,11 @@ const FacebookIntegration: React.FC<FacebookIntegrationProps> = ({
                   </Typography>
                 </Box>
 
-                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
                   <Button
                     variant="contained"
                     startIcon={isPosting ? <CircularProgress size={16} /> : <Share />}
-                    onClick={postToFacebookMarketplace}
+                    onClick={postToFacebook}
                     disabled={isPosting}
                     sx={{ 
                       bgcolor: '#1877F2',
@@ -198,11 +191,23 @@ const FacebookIntegration: React.FC<FacebookIntegrationProps> = ({
                   
                   <Button
                     variant="outlined"
+                    startIcon={copied ? <CheckCircle /> : <ContentCopy />}
+                    onClick={copyToClipboard}
+                  >
+                    {copied ? 'Copied!' : 'Copy Listing'}
+                  </Button>
+                  
+                  <Button
+                    variant="outlined"
                     onClick={openFacebookMarketplace}
                   >
                     Open Facebook Marketplace
                   </Button>
                 </Box>
+
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                  💡 Tip: Copy the listing, then paste it into Facebook Marketplace for the best results
+                </Typography>
 
                 {postStatus === 'success' && (
                   <Alert severity="success" sx={{ mt: 2 }}>
@@ -228,4 +233,4 @@ const FacebookIntegration: React.FC<FacebookIntegrationProps> = ({
   );
 };
 
-export default FacebookIntegration;
+export default FacebookAuth;
