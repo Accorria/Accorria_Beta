@@ -3,6 +3,7 @@
 
 import React, { useState, useRef } from 'react';
 import { api } from '../utils/api';
+import FacebookIntegration from './FacebookIntegration';
 import { 
   Box, 
   Button, 
@@ -61,6 +62,12 @@ const AIListingGenerator: React.FC = () => {
   const [result, setResult] = useState<ListingResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copiedPlatform, setCopiedPlatform] = useState<string | null>(null);
+  const [facebookListingContent, setFacebookListingContent] = useState<{
+    title: string;
+    description: string;
+    price: number;
+    images?: string[];
+  } | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -119,6 +126,22 @@ const AIListingGenerator: React.FC = () => {
       }
 
       setResult(data);
+      
+      // Extract Facebook listing content for integration
+      if (data.formatted_listings?.facebook) {
+        const facebookContent = data.formatted_listings.facebook as string;
+        const lines = facebookContent.split('\n');
+        const title = lines[0] || 'Car Listing';
+        const description = lines.slice(1).join('\n');
+        const price = data.pricing_recommendations?.market_price?.price || 0;
+        
+        setFacebookListingContent({
+          title,
+          description,
+          price,
+          images: images.map(img => URL.createObjectURL(img))
+        });
+      }
     } catch (err: any) {
       setError(err?.message || 'An error occurred');
     } finally {
@@ -305,6 +328,17 @@ const AIListingGenerator: React.FC = () => {
           {error}
         </Alert>
       )}
+
+      {/* Facebook Integration */}
+      <FacebookIntegration 
+        listingContent={facebookListingContent}
+        onPostSuccess={(postId) => {
+          console.log('Successfully posted to Facebook:', postId);
+        }}
+        onPostError={(error) => {
+          console.error('Facebook posting error:', error);
+        }}
+      />
 
       {/* Results Section */}
       {result && (
