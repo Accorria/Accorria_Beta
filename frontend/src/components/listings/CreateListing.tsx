@@ -400,14 +400,30 @@ export default function CreateListing({ onClose }: CreateListingProps) {
         endpoint: '/api/v1/enhanced-analyze'
       });
       
-      const result = await api.postFormData('/api/v1/enhanced-analyze', formData);
+      const result = await api.postFormData('/api/v1/debug-analyze', formData);
       console.log('Analysis result:', result);
       setAnalysisResult(result);
       setShowAnalysis(true);
       
       // Generate AI description based on enhanced analysis
       if (result.success) {
-        const generatedDescription = generateAIDescription(result, carDetails);
+        // Use AI-generated content from backend if available, otherwise fallback to local generation
+        let generatedDescription;
+        
+        if (result.data?.formatted_listings?.facebook_marketplace) {
+          // Use the AI-generated listing from backend
+          generatedDescription = result.data.formatted_listings.facebook_marketplace;
+          console.log('Using AI-generated listing from backend:', generatedDescription);
+        } else if (result.data?.listing_description) {
+          // Use alternative AI description field
+          generatedDescription = result.data.listing_description;
+          console.log('Using AI description from backend:', generatedDescription);
+        } else {
+          // Fallback to local generation
+          generatedDescription = generateAIDescription(result, carDetails);
+          console.log('Using fallback local generation');
+        }
+        
         setCarDetails(prev => ({ ...prev, finalDescription: generatedDescription }));
         setShowAnalysis(false); // Hide the analysis results section
       }
