@@ -70,6 +70,62 @@ async def enhanced_analyze_car(
         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
 
 
+@router.post("/debug-analyze")
+async def debug_analyze_car(
+    images: List[UploadFile] = File(...),
+    make: Optional[str] = Form(None),
+    model: Optional[str] = Form(None),
+    year: Optional[str] = Form(None),
+    mileage: Optional[str] = Form(None),
+    price: Optional[str] = Form(None),
+    lowestPrice: Optional[str] = Form(None),
+    titleStatus: Optional[str] = Form(None),
+    aboutVehicle: Optional[str] = Form(None)
+):
+    """
+    Debug endpoint to see exactly what the AI is detecting
+    """
+    try:
+        logger.info(f"DEBUG: Analysis request received for {len(images)} images")
+        
+        # Prepare car details
+        car_details = {
+            "make": make or "Unknown",
+            "model": model or "Unknown", 
+            "year": year or "Unknown",
+            "mileage": mileage or "Unknown",
+            "price": price or "15000",
+            "lowestPrice": lowestPrice or "12000",
+            "titleStatus": titleStatus or "clean",
+            "aboutVehicle": aboutVehicle or ""
+        }
+        
+        # Convert images to bytes
+        image_bytes = []
+        for image in images:
+            content = await image.read()
+            image_bytes.append(content)
+        
+        # Perform smart analysis
+        analysis_result = await smart_analyzer.analyze_car_images_smart(image_bytes, car_details)
+        
+        logger.info(f"DEBUG: Analysis completed - {analysis_result}")
+        return JSONResponse(content={
+            "success": True,
+            "debug": True,
+            "raw_analysis": analysis_result,
+            "message": "Check the raw_analysis field to see what AI detected"
+        }, status_code=200)
+        
+    except Exception as e:
+        logger.error(f"DEBUG: Analysis failed: {e}")
+        return JSONResponse(content={
+            "success": False,
+            "error": str(e),
+            "debug": True
+        }, status_code=500)
+
+
 @router.get("/enhanced-test")
 async def enhanced_test():
     """
