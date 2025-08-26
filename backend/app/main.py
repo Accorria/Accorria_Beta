@@ -137,20 +137,11 @@ app.include_router(debug_status_router, prefix="/api/v1", tags=["Debug"])
 
 @app.get("/")
 async def root():
-    """Health check endpoint"""
+    """Root endpoint"""
     return {
         "message": "Plazoria API",
         "version": "1.0.0",
         "status": "healthy"
-    }
-
-@app.get("/health")
-async def health_check():
-    """Detailed health check"""
-    return {
-        "status": "healthy",
-        "version": "1.0.0",
-        "timestamp": "2024-01-01T00:00:00Z"
     }
 
 @app.exception_handler(Exception)
