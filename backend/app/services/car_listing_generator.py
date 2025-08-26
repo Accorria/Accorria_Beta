@@ -13,6 +13,7 @@ import os
 import base64
 import json
 import logging
+import random
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 import httpx
@@ -123,24 +124,43 @@ class CarListingGenerator:
                 }
             })
         
-        # Create the analysis prompt
+        # Create the analysis prompt with more detailed instructions
         prompt = f"""
-        Analyze these car images and provide detailed information about the vehicle.
+        Analyze these car images and provide comprehensive, detailed information about the vehicle.
         
         Known details: {json.dumps(car_details, indent=2)}
         
-        Please analyze the images and provide:
-        1. Make and model (with confidence)
-        2. Year estimate
-        3. Color
-        4. Body style (sedan, SUV, truck, etc.)
-        5. Condition assessment (excellent, good, fair, poor)
-        6. Visible features (leather seats, sunroof, navigation, etc.)
-        7. Any visible damage or issues
-        8. Mileage estimate (if visible)
-        9. Overall quality score (1-10)
+        Please provide a thorough analysis including:
         
-        Format your response as JSON with these fields:
+        BASIC IDENTIFICATION:
+        1. Make and model (with confidence level 1-10)
+        2. Year estimate (with reasoning)
+        3. Color (primary and any secondary colors)
+        4. Body style (sedan, SUV, truck, hatchback, coupe, convertible, etc.)
+        
+        CONDITION ASSESSMENT:
+        5. Overall condition (excellent, very good, good, fair, poor)
+        6. Exterior condition (paint, body panels, glass, wheels/tires)
+        7. Interior condition (seats, dashboard, controls, cleanliness)
+        8. Mechanical condition (engine bay, undercarriage if visible)
+        
+        FEATURES & EQUIPMENT:
+        9. Visible features (leather seats, sunroof, navigation, backup camera, etc.)
+        10. Technology features (infotainment, safety systems, etc.)
+        11. Performance features (sport package, special trim, etc.)
+        
+        ISSUES & CONCERNS:
+        12. Any visible damage (scratches, dents, rust, etc.)
+        13. Wear and tear indicators
+        14. Potential maintenance needs
+        
+        DETAILS:
+        15. Mileage estimate (if visible on odometer)
+        16. Overall quality score (1-10 with explanation)
+        17. Unique selling points
+        18. Areas of concern for buyers
+        
+        Format your response as detailed JSON with these fields:
         {{
             "make": "string",
             "model": "string", 
@@ -148,11 +168,20 @@ class CarListingGenerator:
             "color": "string",
             "body_style": "string",
             "condition": "string",
+            "exterior_condition": "string",
+            "interior_condition": "string",
+            "mechanical_condition": "string",
             "features": ["array of features"],
+            "technology_features": ["array of tech features"],
+            "performance_features": ["array of performance features"],
             "damage_issues": ["array of issues"],
+            "wear_indicators": ["array of wear items"],
+            "maintenance_needs": ["array of maintenance items"],
             "mileage_estimate": "number or null",
             "quality_score": "number",
-            "confidence_score": "number"
+            "confidence_score": "number",
+            "unique_selling_points": ["array of selling points"],
+            "buyer_concerns": ["array of concerns"]
         }}
         """
         
@@ -180,8 +209,8 @@ class CarListingGenerator:
                 json={
                     "model": "gpt-4o",
                     "messages": messages,
-                    "max_tokens": 1000,
-                    "temperature": 0.1
+                    "max_tokens": 1500,
+                    "temperature": 0.7
                 },
                 timeout=60.0
             )
@@ -474,10 +503,22 @@ class CarListingGenerator:
     ) -> str:
         """Generate formatted listing content"""
         
-        prompt = f"""
-        Create a professional car listing for a {year} {make} {model}.
+        # Create varied prompts for different listing styles
+        listing_styles = [
+            "professional and detailed",
+            "casual and friendly",
+            "urgent sale focused",
+            "luxury and premium",
+            "family-oriented",
+            "enthusiast-focused"
+        ]
         
-        Details:
+        selected_style = random.choice(listing_styles)
+        
+        prompt = f"""
+        Create a {selected_style} car listing for a {year} {make} {model}.
+        
+        Car Details:
         - Year: {year}
         - Make: {make}
         - Model: {model}
@@ -486,14 +527,30 @@ class CarListingGenerator:
         - Features: {', '.join(features)}
         - Asking Price: ${pricing['listing_price']:,}
         
-        Create a listing that includes:
-        1. Attention-grabbing title
-        2. Detailed description highlighting features
-        3. Professional tone
-        4. Call to action
-        5. Contact information placeholder
+        Style Guidelines for {selected_style}:
+        - Professional: Use formal language, emphasize reliability and value
+        - Casual: Use friendly, conversational tone with emojis
+        - Urgent: Create urgency, mention quick sale benefits
+        - Luxury: Emphasize premium features, quality, and exclusivity
+        - Family: Focus on safety, reliability, and practicality
+        - Enthusiast: Highlight performance, features, and driving experience
         
-        Format for Craigslist/Facebook Marketplace style.
+        Requirements:
+        1. Create an attention-grabbing title (max 60 characters)
+        2. Write a compelling description (150-300 words)
+        3. Include relevant emojis for visual appeal
+        4. Add a strong call to action
+        5. Make it unique and different from generic listings
+        6. Include specific details about this particular car
+        7. Add personality and character to the listing
+        
+        Format the response as:
+        TITLE: [Your catchy title here]
+        
+        DESCRIPTION:
+        [Your detailed description here]
+        
+        Make this listing stand out and feel authentic to the {selected_style} approach.
         """
         
         async with httpx.AsyncClient() as client:
@@ -506,8 +563,8 @@ class CarListingGenerator:
                 json={
                     "model": "gpt-4o",
                     "messages": [{"role": "user", "content": prompt}],
-                    "max_tokens": 800,
-                    "temperature": 0.7
+                    "max_tokens": 1200,
+                    "temperature": 0.8
                 },
                 timeout=30.0
             )
