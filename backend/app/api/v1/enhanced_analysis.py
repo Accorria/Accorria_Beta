@@ -59,10 +59,11 @@ async def enhanced_analyze_car(
             content = await image.read()
             image_bytes.append(content)
         
-        # Perform smart analysis (prioritizes key images for token efficiency)
-        analysis_result = await smart_analyzer.analyze_car_images_smart(image_bytes, car_details)
+        # Use the new two-pass system
+        from app.services.enhanced_image_analysis import enhanced_analyzer
+        analysis_result = await enhanced_analyzer.analyze_car_images(image_bytes, car_details)
         
-        logger.info("Enhanced analysis completed successfully")
+        logger.info("Two-pass analysis completed successfully")
         return JSONResponse(content=analysis_result, status_code=200)
         
     except Exception as e:
@@ -106,15 +107,18 @@ async def debug_analyze_car(
             content = await image.read()
             image_bytes.append(content)
         
-        # Perform smart analysis
-        analysis_result = await smart_analyzer.analyze_car_images_smart(image_bytes, car_details)
+        # Use the new two-pass system
+        from app.services.enhanced_image_analysis import enhanced_analyzer
+        analysis_result = await enhanced_analyzer.analyze_car_images(image_bytes, car_details)
         
-        logger.info(f"DEBUG: Analysis completed - {analysis_result}")
+        logger.info(f"DEBUG: Two-pass analysis completed - {analysis_result}")
         return JSONResponse(content={
             "success": True,
             "debug": True,
             "raw_analysis": analysis_result,
-            "message": "Check the raw_analysis field to see what AI detected"
+            "message": "Two-pass analysis completed. Check raw_analysis for AI output.",
+            "post_text": analysis_result.get("post_text", "No post text generated"),
+            "extracted_features": analysis_result.get("extracted", {}).get("detected", {}).get("features", {})
         }, status_code=200)
         
     except Exception as e:

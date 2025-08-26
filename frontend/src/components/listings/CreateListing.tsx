@@ -400,7 +400,7 @@ export default function CreateListing({ onClose }: CreateListingProps) {
         endpoint: '/api/v1/enhanced-analyze'
       });
       
-      const result = await api.postFormData('/api/v1/debug-analyze', formData);
+               const result = await api.postFormData('/api/v1/enhanced-analyze', formData);
       console.log('Analysis result:', result);
       setAnalysisResult(result);
       setShowAnalysis(true);
