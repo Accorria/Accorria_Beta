@@ -14,9 +14,11 @@ export default function Home() {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <h1 className="text-2xl font-bold text-gray-900">
-                  🚗 Accorria
-                </h1>
+                <img 
+                  src="/AccorriaYwLOGO.png" 
+                  alt="Accorria" 
+                  className="h-8 w-auto"
+                />
               </div>
             </div>
             <div className="hidden md:block">
@@ -440,9 +442,11 @@ export default function Home() {
         <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:py-16 lg:px-8">
           <div className="xl:grid xl:grid-cols-3 xl:gap-8">
             <div className="space-y-8 xl:col-span-1">
-              <span className="text-2xl font-bold text-white">
-                🚗 Accorria
-              </span>
+              <img 
+                src="/AccorriaYwLOGO.png" 
+                alt="Accorria" 
+                className="h-8 w-auto brightness-0 invert"
+              />
               <p className="text-gray-300 text-base">
                 Upload photos. We'll flip the rest.
               </p>

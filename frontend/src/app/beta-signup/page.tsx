@@ -63,7 +63,11 @@ export default function BetaSignup() {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
               <Link href="/" className="flex-shrink-0">
-                <h1 className="text-2xl font-bold text-gray-900">🚗 Accorria</h1>
+                <img 
+                  src="/AccorriaYwLOGO.png" 
+                  alt="Accorria" 
+                  className="h-8 w-auto"
+                />
               </Link>
             </div>
           </div>
