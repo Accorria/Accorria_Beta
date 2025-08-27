@@ -35,7 +35,7 @@ export default function Demo() {
                 <img 
                   src="/AccorriaYwLOGO.png" 
                   alt="Accorria" 
-                  className="h-16 w-auto"
+                  className="h-[175px] w-auto"
                 />
               </Link>
             </div>
