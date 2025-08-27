@@ -33,6 +33,7 @@ class Settings(BaseSettings):
         "https://accorria.vercel.app",
         "https://accorria.com",
         "https://www.accorria.com",
+        "https://quickflip-ai.vercel.app",
         "*"  # Allow all origins for mobile testing
     ]
     
