@@ -87,15 +87,18 @@ export default function Home() {
       {/* NAV */}
       <header className="sticky top-0 z-30 backdrop-blur supports-[backdrop-filter]:bg-slate-900/70">
         <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4">
-          <div className="text-2xl font-semibold tracking-tight">
-            <span className="text-amber-300">Acc</span>
-            <span className="text-white">o</span>
-            <span className="text-amber-300">rr</span>
-            <span className="text-white">ia</span>
+          <div className="flex items-center gap-3">
+            <img 
+              src="/AccorriaYwLOGO.png" 
+              alt="Accorria" 
+              className="h-[175px] w-auto"
+            />
           </div>
           <div className="hidden gap-6 text-sm text-slate-200/80 md:flex">
-            <a href="#how" className="hover:text-white">How it works</a>
+            <Link href="/" className="hover:text-white">Home</Link>
+            <Link href="/how-it-works" className="hover:text-white">How it works</Link>
             <Link href="/demo" className="hover:text-white">Demo</Link>
+            <Link href="/get-paid" className="hover:text-white">Get Paid</Link>
             <a href="#pricing" className="hover:text-white">Pricing</a>
             <a href="#faq" className="hover:text-white">FAQ</a>
           </div>
@@ -110,7 +113,7 @@ export default function Home() {
         <div className="mx-auto grid max-w-7xl grid-cols-1 items-center gap-10 px-4 py-16 md:grid-cols-2 md:py-24">
           <div>
             <h1 className="text-3xl font-extrabold leading-tight md:text-5xl">
-              Accorria — your AI deal agent for <span className="text-amber-300">cars</span> & <span className="text-amber-300">homes</span>.
+              Accorria your AI deal agent for <span className="text-amber-300">cars</span> & <span className="text-amber-300">homes</span>.
             </h1>
             <p className="mt-4 max-w-xl text-slate-300">
               Create the listing, prep the post for Facebook, coach the negotiation, and (soon) escrow—without giving up control.
@@ -121,20 +124,7 @@ export default function Home() {
               <Link href="/demo" className="rounded-lg border border-white/20 px-4 py-2 font-semibold text-white/90 hover:bg-white/5">Watch 60‑sec Demo</Link>
             </div>
 
-            {/* Try the generator */}
-            <div className="mt-8 max-w-xl rounded-xl border border-white/10 bg-white/5 p-2 backdrop-blur">
-              <div className="flex items-center gap-2">
-                <input
-                  placeholder="Try: 2018 Jeep Cherokee, 85k miles • or paste a home address"
-                  className="flex-1 bg-transparent px-3 py-2 text-sm text-white placeholder:text-slate-400 focus:outline-none"
-                />
-                <button className="rounded-lg bg-white/90 px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-white">Generate</button>
-              </div>
-              <div className="mt-2 flex gap-2">
-                <Pill><Icon name="bolt" className="w-3.5 h-3.5"/> Faster listings</Pill>
-                <Pill><Icon name="shield" className="w-3.5 h-3.5"/> Safer closings</Pill>
-              </div>
-            </div>
+
           </div>
 
           {/* Hero carousel with swoop motion */}
@@ -183,13 +173,52 @@ export default function Home() {
         </div>
       </section>
 
-      {/* TRUST */}
-      <section className="bg-slate-100">
-        <div className="mx-auto max-w-7xl px-4 py-14">
-          <h3 className="text-xl font-semibold">Escrow you can trust</h3>
-          <p className="mt-2 max-w-2xl text-slate-700">
-            We partner with regulated providers; smart contracts lock terms & deposits so buyers and sellers move confidently. Optional. Transparent. Auditable.
-          </p>
+      {/* GET PAID TEASER SECTION */}
+      <section className="bg-gradient-to-r from-amber-50 to-orange-50">
+        <div className="mx-auto max-w-7xl px-4 py-16">
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 rounded-full bg-amber-100 px-4 py-2 text-sm font-semibold text-amber-800 mb-4">
+              💰 Coming Soon
+            </div>
+            <h2 className="text-3xl font-bold text-slate-900 mb-4">
+              A New Way to Get Paid
+            </h2>
+            <p className="text-xl text-slate-600 max-w-3xl mx-auto">
+              Skip the bank delays. Skip the scams. Get paid instantly when deals close — cars, homes, rentals. Blockchain-powered settlements in 23 hours.
+            </p>
+          </div>
+          
+          <div className="grid md:grid-cols-3 gap-8 mb-8">
+            <div className="text-center">
+              <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-2xl">⚡</span>
+              </div>
+              <h3 className="font-semibold text-slate-900 mb-2">23-Hour Payments</h3>
+              <p className="text-slate-600">No more waiting weeks for bank transfers</p>
+            </div>
+            <div className="text-center">
+              <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-2xl">🔐</span>
+              </div>
+              <h3 className="font-semibold text-slate-900 mb-2">Funds Locked</h3>
+              <p className="text-slate-600">Smart contracts hold payment until deal closes</p>
+            </div>
+            <div className="text-center">
+              <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-2xl">🛡️</span>
+              </div>
+              <h3 className="font-semibold text-slate-900 mb-2">No Scams</h3>
+              <p className="text-slate-600">Blockchain verification prevents fraud</p>
+            </div>
+          </div>
+          
+          <div className="text-center">
+            <Link href="/get-paid" className="inline-flex items-center gap-2 rounded-lg bg-amber-500 px-6 py-3 font-semibold text-white hover:bg-amber-600 transition-colors">
+              <span>Learn How It Works</span>
+              <span className="text-sm">→</span>
+            </Link>
+            <p className="text-sm text-slate-500 mt-3">See how blockchain makes deals safer and faster</p>
+          </div>
         </div>
       </section>
 
@@ -210,11 +239,36 @@ export default function Home() {
       <section id="faq" className="bg-slate-50">
         <div className="mx-auto max-w-7xl px-4 py-16">
           <h2 className="text-2xl font-bold md:text-3xl">FAQ</h2>
-          <ul className="mt-6 space-y-4 text-slate-700">
-            <li><b>Does it work on mobile?</b> Yes — the entire flow is built mobile‑first.</li>
-            <li><b>Can I post to multiple marketplaces?</b> Yes — Facebook now, others next.</li>
-            <li><b>Is escrow required?</b> No — it's optional and rolls out for cars first.</li>
-          </ul>
+          <div className="mt-8 grid md:grid-cols-2 gap-8">
+            <div className="space-y-6">
+              <div>
+                <h3 className="font-semibold text-slate-900 mb-2">Do I need a dealer license?</h3>
+                <p className="text-slate-600">No — Accorria works for individual sellers, flippers, and dealers. We help anyone sell faster.</p>
+              </div>
+              <div>
+                <h3 className="font-semibold text-slate-900 mb-2">Is this a new marketplace?</h3>
+                <p className="text-slate-600">No — we enhance existing platforms like Facebook Marketplace and Craigslist with AI tools.</p>
+              </div>
+              <div>
+                <h3 className="font-semibold text-slate-900 mb-2">Does it work on mobile?</h3>
+                <p className="text-slate-600">Yes — the entire flow is built mobile‑first and works perfectly on phones.</p>
+              </div>
+            </div>
+            <div className="space-y-6">
+              <div>
+                <h3 className="font-semibold text-slate-900 mb-2">What about homes?</h3>
+                <p className="text-slate-600">Homes are coming next! We're starting with cars, then expanding to real estate.</p>
+              </div>
+              <div>
+                <h3 className="font-semibold text-slate-900 mb-2">What about escrow?</h3>
+                <p className="text-slate-600">Escrow is launching soon! Join our beta waitlist to be first in line for secure deal closing.</p>
+              </div>
+              <div>
+                <h3 className="font-semibold text-slate-900 mb-2">Can I post to multiple marketplaces?</h3>
+                <p className="text-slate-600">Yes — Facebook now, Craigslist and OfferUp coming next.</p>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 

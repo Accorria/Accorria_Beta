@@ -100,11 +100,15 @@ export default function Chatbot() {
             transition={{ duration: 0.2 }}
             className="fixed bottom-20 right-5 z-40 w-[92vw] max-w-sm overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
           >
-            <div className="flex items-center justify-between border-b px-4 py-3 bg-gradient-to-r from-amber-50 to-white">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                <div className="text-sm font-semibold text-slate-800">Accorria Agent</div>
-              </div>
+                               <div className="flex items-center justify-between border-b px-4 py-3 bg-gradient-to-r from-amber-50 to-white">
+                     <div className="flex items-center gap-2">
+                       <img 
+                         src="/AccorriaYwLOGO.png" 
+                         alt="Accorria" 
+                         className="w-6 h-6 rounded-full"
+                       />
+                       <div className="text-sm font-semibold text-slate-800">Accorria Agent</div>
+                     </div>
               <button 
                 className="text-slate-500 hover:text-slate-800 transition-colors" 
                 onClick={() => setOpen(false)}
@@ -113,36 +117,48 @@ export default function Chatbot() {
               </button>
             </div>
 
-            <div 
-              ref={boxRef} 
-              className="h-72 space-y-3 overflow-y-auto bg-slate-50 p-4 text-sm text-slate-800"
-            >
-              {msgs.map((m, i) => (
-                <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-                  <div className={`${
-                    m.role === "user" 
-                      ? "bg-amber-500 text-white" 
-                      : "bg-white border border-slate-200"
-                    } max-w-[85%] rounded-xl px-3 py-2 shadow-sm`}
-                  >
-                    {m.content}
-                  </div>
-                </div>
-              ))}
-              {isLoading && (
-                <div className="flex justify-start">
-                  <div className="bg-white border border-slate-200 max-w-[85%] rounded-xl px-3 py-2 shadow-sm">
-                    <div className="flex items-center gap-2">
-                      <div className="flex space-x-1">
-                        <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce"></div>
-                        <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                        <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                      </div>
-                      <span className="text-slate-500">Accorria is typing...</span>
-                    </div>
-                  </div>
-                </div>
-              )}
+                               <div 
+                     ref={boxRef} 
+                     className="h-80 space-y-4 overflow-y-auto bg-slate-50 p-6 text-sm text-slate-800"
+                   >
+                                   {msgs.map((m, i) => (
+                       <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"} mb-4`}>
+                         {m.role === "assistant" && (
+                           <img 
+                             src="/AccorriaYwLOGO.png" 
+                             alt="Accorria" 
+                             className="w-6 h-6 rounded-full mr-3 mt-1 flex-shrink-0"
+                           />
+                         )}
+                         <div className={`${
+                           m.role === "user" 
+                             ? "bg-amber-500 text-white" 
+                             : "bg-white border border-slate-200"
+                           } max-w-[80%] rounded-2xl px-4 py-3 shadow-sm leading-relaxed`}
+                         >
+                           {m.content}
+                         </div>
+                       </div>
+                     ))}
+                                   {isLoading && (
+                       <div className="flex justify-start mb-4">
+                         <img 
+                           src="/AccorriaYwLOGO.png" 
+                           alt="Accorria" 
+                           className="w-6 h-6 rounded-full mr-3 mt-1 flex-shrink-0"
+                         />
+                         <div className="bg-white border border-slate-200 max-w-[80%] rounded-2xl px-4 py-3 shadow-sm">
+                           <div className="flex items-center gap-2">
+                             <div className="flex space-x-1">
+                               <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce"></div>
+                               <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                               <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                             </div>
+                             <span className="text-slate-500">Accorria is typing...</span>
+                           </div>
+                         </div>
+                       </div>
+                     )}
             </div>
 
             <div className="flex items-center gap-2 border-t bg-white p-3">
