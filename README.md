@@ -1,4 +1,4 @@
-# Plazoria MVP
+# Accorria MVP
 
 AI-powered car selling assistant that helps car owners create professional listings, get optimal pricing, and handle buyer communication automatically.
 

@@ -37,8 +37,8 @@ def test_flip_car():
             print(f"Agent: {data.get('agent', 'Unknown')}")
             print(f"Confidence: {data.get('confidence', 'Unknown')}")
             print(f"Status: {data.get('status', 'Unknown')}")
-                    if 'supabase' in data:
-            print(f"Supabase: {data['supabase']}")
+            if 'supabase' in data:
+                print(f"Supabase: {data['supabase']}")
         else:
             print(f"❌ Flip car test failed: {response.text}")
     except Exception as e:

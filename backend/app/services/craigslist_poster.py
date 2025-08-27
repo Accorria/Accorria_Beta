@@ -204,7 +204,7 @@ class CraigslistPoster:
             'mileage': str(listing_data.mileage),
             'email': listing_data.email,
             'phone': listing_data.phone,
-            'contact_name': 'Plazoria',
+            'contact_name': 'Accorria',
             'posting_title': listing_data.title,
             'fromemail': listing_data.email,
             'show_contact_name': '1',

@@ -14,7 +14,7 @@ def scrape_ebay_motors(search_term: str, max_results: int = 10):
         '_sop': '12',  # Sort by newly listed
     }
     headers = {
-        'User-Agent': 'Mozilla/5.0 (compatible; Plazoria/1.0)'
+        'User-Agent': 'Mozilla/5.0 (compatible; Accorria/1.0)'
     }
     resp = requests.get(base_url, params=params, headers=headers)
     resp.raise_for_status()

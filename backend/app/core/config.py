@@ -5,7 +5,7 @@ import os
 
 class Settings(BaseSettings):
     # Application
-    APP_NAME: str = "Plazoria"
+    APP_NAME: str = "Accorria"
     VERSION: str = "1.0.0"
     DEBUG: bool = False
     
@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     SUPABASE_SERVICE_ROLE_KEY: str = ""
     
     # Database (fallback for local development)
-    DATABASE_URL: str = "sqlite:///./plazoria.db"
+    DATABASE_URL: str = "sqlite:///./accorria.db"
     
     # Redis (optional for caching)
     REDIS_URL: str = "redis://localhost:6379"
@@ -30,9 +30,9 @@ class Settings(BaseSettings):
         "http://localhost:3000",
         "http://localhost:3001",
         "http://localhost:5173",
-        "https://plazoria.vercel.app",
-        "https://plazoria-git-main-prestoneaton.vercel.app",
-        "https://plazoria-git-main-prestoneaton.vercel.app",
+        "https://accorria.vercel.app",
+        "https://accorria.com",
+        "https://www.accorria.com",
         "*"  # Allow all origins for mobile testing
     ]
     

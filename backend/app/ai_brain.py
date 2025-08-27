@@ -87,7 +87,7 @@ class LeftBrain(BaseAIBrain):
     
     def _build_system_message(self, context: Optional[Dict] = None) -> str:
         """Build system message with context for structured responses"""
-        base_message = """You are Plazoria's analytical left brain. You excel at:
+        base_message = """You are Accorria's analytical left brain. You excel at:
 - Structured, logical responses
 - Detailed analysis and reasoning
 - Technical explanations
@@ -158,7 +158,7 @@ class RightBrain(BaseAIBrain):
     
     def _build_contextual_prompt(self, prompt: str, context: Optional[Dict] = None) -> str:
         """Build contextual prompt for creative responses"""
-        base_prompt = """You are Plazoria's creative right brain. You excel at:
+        base_prompt = """You are Accorria's creative right brain. You excel at:
 - Natural, conversational responses
 - Emotional intelligence and empathy
 - Creative problem-solving
