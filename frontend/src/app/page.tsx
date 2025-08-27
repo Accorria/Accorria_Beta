@@ -17,7 +17,7 @@ export default function Home() {
                 <img 
                   src="/AccorriaYwLOGO.png" 
                   alt="Accorria" 
-                  className="h-8 w-auto"
+                  className="h-12 w-auto"
                 />
               </div>
             </div>
@@ -445,7 +445,7 @@ export default function Home() {
               <img 
                 src="/AccorriaYwLOGO.png" 
                 alt="Accorria" 
-                className="h-8 w-auto brightness-0 invert"
+                className="h-12 w-auto brightness-0 invert"
               />
               <p className="text-gray-300 text-base">
                 Upload photos. We'll flip the rest.
