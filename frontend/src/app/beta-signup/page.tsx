@@ -66,7 +66,7 @@ export default function BetaSignup() {
                 <img 
                   src="/AccorriaYwLOGO.png" 
                   alt="Accorria" 
-                  className="h-12 w-auto"
+                  className="h-16 w-auto"
                 />
               </Link>
             </div>
