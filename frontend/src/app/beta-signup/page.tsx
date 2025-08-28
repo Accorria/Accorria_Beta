@@ -2,12 +2,14 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 export default function BetaSignup() {
+  const router = useRouter();
   const [formData, setFormData] = useState({
     email: '',
     role: '',
-    state: '',
+    source: '',
     focus: 'cars'
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -43,13 +45,19 @@ export default function BetaSignup() {
               </svg>
             </div>
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">You're in!</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Welcome to Accorria!</h2>
           <p className="text-gray-600 mb-6">
-            Thanks for joining the Accorria beta. We'll send you an invite link as soon as we're ready to onboard new users.
+            Thanks for joining the beta. You'll get early access to our AI deal agent as soon as we're ready.
           </p>
-          <Link href="/" className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
-            Back to Home
-          </Link>
+          <button 
+            onClick={() => {
+              console.log('Navigating to /app');
+              router.push('/app');
+            }}
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+          >
+            Go to App
+          </button>
         </div>
       </div>
     );
@@ -114,36 +122,36 @@ export default function BetaSignup() {
                   required
                   value={formData.role}
                   onChange={handleChange}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900"
                 >
-                  <option value="">Select your role</option>
-                  <option value="individual">Individual seller</option>
-                  <option value="dealer">Dealer</option>
-                  <option value="flipper">Car flipper</option>
-                  <option value="realtor">Realtor</option>
-                  <option value="investor">Real estate investor</option>
-                  <option value="other">Other</option>
+                  <option value="" className="text-gray-500">Select your role</option>
+                  <option value="individual" className="text-gray-900">Individual seller</option>
+                  <option value="dealer" className="text-gray-900">Dealer</option>
+                  <option value="flipper" className="text-gray-900">Car flipper</option>
+                  <option value="realtor" className="text-gray-900">Realtor</option>
+                  <option value="investor" className="text-gray-900">Real estate investor</option>
+                  <option value="other" className="text-gray-900">Other</option>
                 </select>
               </div>
 
               <div>
-                <label htmlFor="state" className="block text-sm font-medium text-gray-700">
-                  State
+                <label htmlFor="source" className="block text-sm font-medium text-gray-700">
+                  How did you find out about us?
                 </label>
                 <select
-                  id="state"
-                  name="state"
+                  id="source"
+                  name="source"
                   required
-                  value={formData.state}
+                  value={formData.source}
                   onChange={handleChange}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900"
                 >
-                  <option value="">Select your state</option>
-                  <option value="MI">Michigan</option>
-                  <option value="OH">Ohio</option>
-                  <option value="IL">Illinois</option>
-                  <option value="PA">Pennsylvania</option>
-                  <option value="other">Other</option>
+                  <option value="" className="text-gray-500">Select an option</option>
+                  <option value="social" className="text-gray-900">Social media</option>
+                  <option value="search" className="text-gray-900">Google search</option>
+                  <option value="friend" className="text-gray-900">Friend referral</option>
+                  <option value="ad" className="text-gray-900">Online ad</option>
+                  <option value="other" className="text-gray-900">Other</option>
                 </select>
               </div>
 
@@ -173,6 +181,17 @@ export default function BetaSignup() {
                       className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
                     />
                     <span className="ml-2 text-sm text-gray-700">Homes (coming soon)</span>
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="focus"
+                      value="blockchain"
+                      checked={formData.focus === 'blockchain'}
+                      onChange={handleChange}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                    />
+                    <span className="ml-2 text-sm text-gray-700">Blockchain payments (coming soon)</span>
                   </label>
                 </div>
               </div>

@@ -29,6 +29,8 @@ class Settings(BaseSettings):
     ALLOWED_ORIGINS: List[str] = [
         "http://localhost:3000",
         "http://localhost:3001",
+        "http://10.0.0.67:3000",
+        "http://10.0.0.67:3001",
         "http://localhost:5173",
         "https://accorria.vercel.app",
         "https://accorria.com",

@@ -103,7 +103,7 @@ export default function Chatbot() {
                                <div className="flex items-center justify-between border-b px-4 py-3 bg-gradient-to-r from-amber-50 to-white">
                      <div className="flex items-center gap-2">
                        <img 
-                         src="/AccorriaYwLOGO.png" 
+                         src="/LOGOSYMBLOYBLUE.png" 
                          alt="Accorria" 
                          className="w-6 h-6 rounded-full"
                        />
@@ -125,7 +125,7 @@ export default function Chatbot() {
                        <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"} mb-4`}>
                          {m.role === "assistant" && (
                            <img 
-                             src="/AccorriaYwLOGO.png" 
+                             src="/LOGOSYMBLOYBLUE.png" 
                              alt="Accorria" 
                              className="w-6 h-6 rounded-full mr-3 mt-1 flex-shrink-0"
                            />
@@ -134,7 +134,7 @@ export default function Chatbot() {
                            m.role === "user" 
                              ? "bg-amber-500 text-white" 
                              : "bg-white border border-slate-200"
-                           } max-w-[80%] rounded-2xl px-4 py-3 shadow-sm leading-relaxed`}
+                           } max-w-[80%] rounded-2xl px-4 py-3 shadow-sm leading-relaxed whitespace-pre-wrap`}
                          >
                            {m.content}
                          </div>
@@ -143,7 +143,7 @@ export default function Chatbot() {
                                    {isLoading && (
                        <div className="flex justify-start mb-4">
                          <img 
-                           src="/AccorriaYwLOGO.png" 
+                           src="/LOGOSYMBLOYBLUE.png" 
                            alt="Accorria" 
                            className="w-6 h-6 rounded-full mr-3 mt-1 flex-shrink-0"
                          />
