@@ -4,6 +4,8 @@ import React, { useMemo, useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from 'next/link';
 import Chatbot from '@/components/Chatbot';
+import { useAuth } from '@/contexts/AuthContext';
+import { AuthModal } from '@/components/AuthModal';
 
 /**
  * Accorria Landing v2 (single-file mock)
@@ -81,6 +83,14 @@ function Pill({ children }: { children: React.ReactNode }) {
 export default function Home() {
   const idx = useCarousel(IMAGES.length);
   const hero = IMAGES[idx];
+  const { user } = useAuth();
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
+
+  const handleAuthSuccess = () => {
+    // User successfully logged in or registered
+    console.log('Authentication successful');
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-900 to-slate-50 text-slate-100">
@@ -102,7 +112,23 @@ export default function Home() {
             <a href="#pricing" className="hover:text-white">Pricing</a>
             <a href="#faq" className="hover:text-white">FAQ</a>
           </div>
-          <Link href="/beta-signup" className="rounded-lg bg-amber-400 px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-amber-300">Get early access</Link>
+          {user ? (
+            <div className="flex items-center gap-4">
+              <Link href="/app" className="rounded-lg bg-amber-400 px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-amber-300">
+                Go to App
+              </Link>
+            </div>
+          ) : (
+            <button
+              onClick={() => {
+                setAuthMode('login');
+                setIsAuthModalOpen(true);
+              }}
+              className="rounded-lg bg-amber-400 px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-amber-300"
+            >
+              Sign In
+            </button>
+          )}
         </nav>
       </header>
 
@@ -120,7 +146,30 @@ export default function Home() {
             </p>
 
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-              <Link href="/beta-signup" className="rounded-lg bg-amber-400 px-4 py-2 font-semibold text-slate-900 hover:bg-amber-300">Get Early Access</Link>
+              {user ? (
+                <Link href="/app" className="rounded-lg bg-amber-400 px-4 py-2 font-semibold text-slate-900 hover:bg-amber-300">Go to App</Link>
+              ) : (
+                <>
+                  <button
+                    onClick={() => {
+                      setAuthMode('register');
+                      setIsAuthModalOpen(true);
+                    }}
+                    className="rounded-lg bg-amber-400 px-4 py-2 font-semibold text-slate-900 hover:bg-amber-300"
+                  >
+                    Get Early Access
+                  </button>
+                  <button
+                    onClick={() => {
+                      setAuthMode('login');
+                      setIsAuthModalOpen(true);
+                    }}
+                    className="rounded-lg border border-white/20 px-4 py-2 font-semibold text-white/90 hover:bg-white/5"
+                  >
+                    Sign In
+                  </button>
+                </>
+              )}
               <Link href="/demo" className="rounded-lg border border-white/20 px-4 py-2 font-semibold text-white/90 hover:bg-white/5">Watch 60‑sec Demo</Link>
             </div>
 
@@ -278,6 +327,14 @@ export default function Home() {
 
       {/* Working Chatbot */}
       <Chatbot />
+
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onSuccess={handleAuthSuccess}
+        initialMode={authMode}
+      />
     </div>
   );
 }
@@ -306,12 +363,38 @@ function Feature({ title, desc }: { title: string; desc: string }) {
 }
 
 function PriceCard({ name, price, note, cta, highlight = false }: { name: string; price: string; note: string; cta: string; highlight?: boolean }) {
+  const { user } = useAuth();
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+
+  const handleCtaClick = () => {
+    if (!user) {
+      setIsAuthModalOpen(true);
+    } else {
+      // User is logged in, redirect to app
+      window.location.href = '/app';
+    }
+  };
+
   return (
-    <div className={`rounded-2xl p-6 ring-1 ${highlight ? "bg-amber-50 ring-amber-200" : "bg-white ring-slate-200"}`}>
-      <div className="text-sm font-semibold text-slate-500">{name}</div>
-      <div className="mt-2 text-3xl font-extrabold text-slate-900">{price}</div>
-      <div className="mt-1 text-sm text-slate-600">{note}</div>
-      <Link href="/beta-signup" className={`mt-6 block w-full rounded-xl px-4 py-2 text-center font-semibold ${highlight ? "bg-amber-400 text-slate-900 hover:bg-amber-300" : "bg-slate-900 text-white hover:bg-slate-800"}`}>{cta}</Link>
-    </div>
+    <>
+      <div className={`rounded-2xl p-6 ring-1 ${highlight ? "bg-amber-50 ring-amber-200" : "bg-white ring-slate-200"}`}>
+        <div className="text-sm font-semibold text-slate-500">{name}</div>
+        <div className="mt-2 text-3xl font-extrabold text-slate-900">{price}</div>
+        <div className="mt-1 text-sm text-slate-600">{note}</div>
+        <button
+          onClick={handleCtaClick}
+          className={`mt-6 block w-full rounded-xl px-4 py-2 text-center font-semibold ${highlight ? "bg-amber-400 text-slate-900 hover:bg-amber-300" : "bg-slate-900 text-white hover:bg-slate-800"}`}
+        >
+          {user ? 'Go to App' : cta}
+        </button>
+      </div>
+
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onSuccess={() => window.location.href = '/app'}
+        initialMode="register"
+      />
+    </>
   );
 } 
