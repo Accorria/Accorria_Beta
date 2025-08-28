@@ -22,8 +22,8 @@ class SmartImageAnalysis:
     def __init__(self):
         self.enhanced_analyzer = None
         try:
-            from app.services.enhanced_image_analysis import enhanced_analyzer
-            self.enhanced_analyzer = enhanced_analyzer
+            from app.services.enhanced_image_analysis import get_enhanced_analyzer
+            self.enhanced_analyzer = get_enhanced_analyzer()
             logger.info("✅ Smart analysis initialized with enhanced analyzer")
         except Exception as e:
             logger.warning(f"⚠️ Enhanced analyzer not available: {e}")
