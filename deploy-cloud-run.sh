@@ -55,7 +55,7 @@ gcloud run deploy $SERVICE_NAME \
     --max-instances 3 \
     --timeout 300 \
     --concurrency 80 \
-    --set-env-vars="PORT=8000,PYTHONPATH=/app" \
+    --set-env-vars="PYTHONPATH=/app" \
     --quiet
 
 # Get the service URL

@@ -60,7 +60,8 @@ async def enhanced_analyze_car(
             image_bytes.append(content)
         
         # Use the new two-pass system
-        from app.services.enhanced_image_analysis import enhanced_analyzer
+        from app.services.enhanced_image_analysis import get_enhanced_analyzer
+        enhanced_analyzer = get_enhanced_analyzer()
         analysis_result = await enhanced_analyzer.analyze_car_images(image_bytes, car_details)
         
         logger.info("Two-pass analysis completed successfully")
@@ -108,7 +109,8 @@ async def debug_analyze_car(
             image_bytes.append(content)
         
         # Use the new two-pass system
-        from app.services.enhanced_image_analysis import enhanced_analyzer
+        from app.services.enhanced_image_analysis import get_enhanced_analyzer
+        enhanced_analyzer = get_enhanced_analyzer()
         analysis_result = await enhanced_analyzer.analyze_car_images(image_bytes, car_details)
         
         logger.info(f"DEBUG: Two-pass analysis completed - {analysis_result}")

@@ -306,5 +306,12 @@ TEMPLATE RULES:
         }
 
 
-# Create global instance
-enhanced_analyzer = EnhancedImageAnalyzer()
+# Create global instance (lazy initialization)
+_enhanced_analyzer = None
+
+def get_enhanced_analyzer():
+    """Get the enhanced analyzer instance (lazy initialization)"""
+    global _enhanced_analyzer
+    if _enhanced_analyzer is None:
+        _enhanced_analyzer = EnhancedImageAnalyzer()
+    return _enhanced_analyzer

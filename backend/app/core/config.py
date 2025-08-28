@@ -36,7 +36,10 @@ class Settings(BaseSettings):
         "https://accorria.com",
         "https://www.accorria.com",
         "https://quickflip-ai.vercel.app",
-        "*"  # Allow all origins for mobile testing
+        "https://quickflip-ai.vercel.app",
+        "https://accorria.com",
+        "https://www.accorria.com",
+        "*"  # Allow all origins for development and mobile testing
     ]
     
     # OpenAI

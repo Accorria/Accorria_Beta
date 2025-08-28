@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 export default function Chatbot() {
   const [open, setOpen] = useState(false);
   const [msgs, setMsgs] = useState([
-    { role: "assistant", content: "Hey! I'm your Accorria agent 👋 Ask me about listing a car or home." }
+    { role: "assistant", content: "Hey! I'm your Accorria agent 👋\n\nI can help you list your car or home. To get started, I'll need some key information:\n\n1. Location: Where is the property located?\n2. Specifications: What are the key features (bedrooms, bathrooms, square footage, etc.)?\n3. Condition: Is there anything notable about the property's condition or recent upgrades?\n4. Photos: Do you have any photos you'd like to include in the listing?\n5. Pricing: Do you have a target price in mind, or would you like pricing guidance?\n\nJust let me know what you'd like to list and I'll guide you through the process!" }
   ]);
   const [isLoading, setIsLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -136,7 +136,44 @@ export default function Chatbot() {
                              : "bg-white border border-slate-200"
                            } max-w-[80%] rounded-2xl px-4 py-3 shadow-sm leading-relaxed whitespace-pre-wrap`}
                          >
-                           {m.content}
+                           <div className="prose prose-sm max-w-none">
+                             {m.content.split('\n').map((line, index) => {
+                               // Handle numbered lists with better formatting
+                               if (/^\d+\.\s/.test(line)) {
+                                 return (
+                                   <div key={index} className="flex items-start mb-2">
+                                     <span className="font-semibold text-amber-600 mr-2 min-w-[20px]">
+                                       {line.match(/^\d+/)?.[0]}.
+                                     </span>
+                                     <span className="flex-1">{line.replace(/^\d+\.\s/, '')}</span>
+                                   </div>
+                                 );
+                               }
+                               // Handle bullet points
+                               if (line.startsWith('•') || line.startsWith('-')) {
+                                 return (
+                                   <div key={index} className="flex items-start mb-1 ml-4">
+                                     <span className="text-amber-500 mr-2">•</span>
+                                     <span className="flex-1">{line.replace(/^[•-]\s/, '')}</span>
+                                   </div>
+                                 );
+                               }
+                               // Handle headings (lines that end with :)
+                               if (line.trim().endsWith(':') && line.length < 50) {
+                                 return (
+                                   <div key={index} className="font-semibold text-slate-800 mb-2 mt-3 first:mt-0">
+                                     {line}
+                                   </div>
+                                 );
+                               }
+                               // Regular text
+                               return (
+                                 <div key={index} className="mb-1">
+                                   {line}
+                                 </div>
+                               );
+                             })}
+                           </div>
                          </div>
                        </div>
                      ))}
