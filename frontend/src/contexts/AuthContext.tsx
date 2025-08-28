@@ -4,15 +4,12 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { api } from '@/utils/api';
 
 interface User {
-  user_id: string;
+  id: string;
   email: string;
-  first_name?: string;
-  last_name?: string;
+  name?: string;
   phone?: string;
-  user_type: string;
-  is_active: boolean;
   created_at: string;
-  last_login?: string;
+  subscription_tier?: string;
 }
 
 interface AuthContextType {
@@ -65,7 +62,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           'Authorization': `Bearer ${authToken}`
         }
       });
-      setUser(response.user);
+      setUser(response);
     } catch (err) {
       console.error('Token verification failed:', err);
       // Token is invalid, clear it
@@ -112,8 +109,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const response = await api.post('/auth/register', {
         email,
         password,
-        first_name: firstName,
-        last_name: lastName,
+        name: `${firstName || ''} ${lastName || ''}`.trim(),
         phone
       });
 

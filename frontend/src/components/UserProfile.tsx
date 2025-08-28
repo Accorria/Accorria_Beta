@@ -19,16 +19,16 @@ export const UserProfile: React.FC<UserProfileProps> = ({ className = '' }) => {
   };
 
   const getUserInitials = () => {
-    const firstName = user.first_name || '';
-    const lastName = user.last_name || '';
-    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase() || user.email.charAt(0).toUpperCase();
+    const name = user.name || '';
+    const nameParts = name.split(' ');
+    if (nameParts.length >= 2) {
+      return `${nameParts[0].charAt(0)}${nameParts[1].charAt(0)}`.toUpperCase();
+    }
+    return name.charAt(0).toUpperCase() || user.email.charAt(0).toUpperCase();
   };
 
   const getUserDisplayName = () => {
-    if (user.first_name && user.last_name) {
-      return `${user.first_name} ${user.last_name}`;
-    }
-    return user.email;
+    return user.name || user.email;
   };
 
   return (
