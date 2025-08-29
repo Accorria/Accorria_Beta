@@ -14,6 +14,7 @@ import logging
 from typing import Any, Dict, List, Optional
 from datetime import datetime, timedelta
 import json
+import openai
 from .base_agent import BaseAgent, AgentOutput
 
 logger = logging.getLogger(__name__)
@@ -33,6 +34,9 @@ class MarketIntelligenceAgent(BaseAgent):
     
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         super().__init__("market_intelligence_agent", config)
+        
+        # Initialize OpenAI client for web search
+        self.openai_client = openai.OpenAI()
         
         # Market data sources (in production, these would be real APIs)
         self.market_data_sources = {
@@ -252,6 +256,57 @@ class MarketIntelligenceAgent(BaseAgent):
         
         return comprehensive_report
     
+    async def _web_search(self, query: str) -> Optional[str]:
+        """Perform web search using OpenAI's web search capabilities."""
+        try:
+            response = self.openai_client.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are a market research assistant. Search the web for current market information and provide a concise summary."
+                    },
+                    {
+                        "role": "user",
+                        "content": f"Search the web for: {query}. Provide a brief summary of current market trends and data."
+                    }
+                ],
+                tools=[{"type": "web_search"}],
+                tool_choice={"type": "function", "function": {"name": "web_search"}},
+                max_tokens=500
+            )
+            
+            # Extract web search results
+            if response.choices[0].message.tool_calls:
+                tool_call = response.choices[0].message.tool_calls[0]
+                if tool_call.function.name == "web_search":
+                    # Get the web search results
+                    web_search_response = self.openai_client.chat.completions.create(
+                        model="gpt-4o",
+                        messages=[
+                            {
+                                "role": "system",
+                                "content": "Summarize the web search results in 2-3 sentences."
+                            },
+                            {
+                                "role": "user",
+                                "content": f"Summarize these web search results for: {query}"
+                            },
+                            {
+                                "role": "assistant",
+                                "content": tool_call.function.arguments
+                            }
+                        ],
+                        max_tokens=200
+                    )
+                    return web_search_response.choices[0].message.content
+            
+            return None
+            
+        except Exception as e:
+            logger.error(f"Web search failed: {e}")
+            return None
+    
     def _calculate_make_score(self, make: str) -> float:
         """Calculate popularity score for a make."""
         if make in self.popular_makes:
@@ -266,19 +321,46 @@ class MarketIntelligenceAgent(BaseAgent):
     
     async def _analyze_market_demand(self, make: str, model: str, location: str) -> Dict[str, Any]:
         """Analyze market demand for a make/model combination."""
-        # Simulate market demand analysis
-        base_demand = 0.7
-        if make in self.popular_makes:
-            base_demand += 0.2
-        if make in self.high_demand_models and model in self.high_demand_models[make]:
-            base_demand += 0.1
-        
-        return {
-            "demand_level": base_demand,
-            "demand_category": "high" if base_demand > 0.8 else "medium" if base_demand > 0.6 else "low",
-            "seasonal_variation": 0.1,
-            "trend_direction": "stable"
-        }
+        try:
+            # Use web search to get real market data
+            search_query = f"{make} {model} market demand {location} 2024"
+            web_search_result = await self._web_search(search_query)
+            
+            # Combine web search with existing logic
+            base_demand = 0.7
+            if make in self.popular_makes:
+                base_demand += 0.2
+            if make in self.high_demand_models and model in self.high_demand_models[make]:
+                base_demand += 0.1
+            
+            # Adjust based on web search results
+            if web_search_result and "high demand" in web_search_result.lower():
+                base_demand += 0.1
+            elif web_search_result and "low demand" in web_search_result.lower():
+                base_demand -= 0.1
+            
+            return {
+                "demand_level": min(1.0, max(0.0, base_demand)),
+                "demand_category": "high" if base_demand > 0.8 else "medium" if base_demand > 0.6 else "low",
+                "seasonal_variation": 0.1,
+                "trend_direction": "stable",
+                "web_search_data": web_search_result[:200] + "..." if web_search_result else None
+            }
+        except Exception as e:
+            logger.error(f"Web search failed for market demand: {e}")
+            # Fallback to original logic
+            base_demand = 0.7
+            if make in self.popular_makes:
+                base_demand += 0.2
+            if make in self.high_demand_models and model in self.high_demand_models[make]:
+                base_demand += 0.1
+            
+            return {
+                "demand_level": base_demand,
+                "demand_category": "high" if base_demand > 0.8 else "medium" if base_demand > 0.6 else "low",
+                "seasonal_variation": 0.1,
+                "trend_direction": "stable"
+            }
     
     async def _analyze_profit_potential(self, make: str, model: str, location: str) -> Dict[str, Any]:
         """Analyze profit potential for a make/model."""
@@ -366,23 +448,53 @@ class MarketIntelligenceAgent(BaseAgent):
     
     async def _get_market_prices(self, make: str, model: str, year: Optional[int], mileage: Optional[int], location: str) -> Dict[str, Any]:
         """Get market pricing data from various sources."""
-        # Simulate market price data
-        base_price = 15000
-        if year:
-            base_price += (year - 2015) * 500
-        if mileage:
-            base_price -= (mileage - 50000) * 0.1
-        
-        return {
-            "kbb_value": base_price * 0.95,
-            "edmunds_value": base_price * 1.02,
-            "cargurus_value": base_price * 0.98,
-            "market_average": base_price,
-            "price_range": {
-                "low": base_price * 0.85,
-                "high": base_price * 1.15
+        try:
+            # Use web search for current market prices
+            search_query = f"{make} {model} {year} price market value {location} Kelley Blue Book Edmunds"
+            web_search_result = await self._web_search(search_query)
+            
+            # Base pricing logic
+            base_price = 15000
+            if year:
+                base_price += (year - 2015) * 500
+            if mileage:
+                base_price -= (mileage - 50000) * 0.1
+            
+            # Adjust based on web search results if available
+            if web_search_result:
+                # Could add price extraction logic here
+                pass
+            
+            return {
+                "kbb_value": base_price * 0.95,
+                "edmunds_value": base_price * 1.02,
+                "cargurus_value": base_price * 0.98,
+                "market_average": base_price,
+                "price_range": {
+                    "low": base_price * 0.85,
+                    "high": base_price * 1.15
+                },
+                "web_search_data": web_search_result[:200] + "..." if web_search_result else None
             }
-        }
+        except Exception as e:
+            logger.error(f"Web search failed for market prices: {e}")
+            # Fallback to original logic
+            base_price = 15000
+            if year:
+                base_price += (year - 2015) * 500
+            if mileage:
+                base_price -= (mileage - 50000) * 0.1
+            
+            return {
+                "kbb_value": base_price * 0.95,
+                "edmunds_value": base_price * 1.02,
+                "cargurus_value": base_price * 0.98,
+                "market_average": base_price,
+                "price_range": {
+                    "low": base_price * 0.85,
+                    "high": base_price * 1.15
+                }
+            }
     
     async def _analyze_price_trends(self, make: str, model: str, location: str) -> Dict[str, Any]:
         """Analyze price trends over time."""
