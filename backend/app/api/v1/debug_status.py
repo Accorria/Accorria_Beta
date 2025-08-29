@@ -138,4 +138,56 @@ async def test_openai():
             "error": str(e),
             "timestamp": datetime.now().isoformat()
         }
+
+
+@router.get("/debug/test-web-search")
+async def test_web_search():
+    """
+    Test OpenAI Web Search functionality
+    """
+    try:
+        import openai
+        
+        if not os.getenv("OPENAI_API_KEY"):
+            return {
+                "status": "error",
+                "web_search_working": False,
+                "error": "OPENAI_API_KEY not set",
+                "timestamp": datetime.now().isoformat()
+            }
+        
+        # Test web search with a simple query
+        client = openai.OpenAI()
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are a helpful assistant. Use web search to find current information."
+                },
+                {
+                    "role": "user",
+                    "content": "What is the current market price for a 2020 Toyota Camry?"
+                }
+            ],
+            tools=[{"type": "web_search"}],
+            tool_choice={"type": "function", "function": {"name": "web_search"}},
+            max_tokens=200
+        )
+        
+        return {
+            "status": "success",
+            "web_search_working": True,
+            "response": "Web search functionality available",
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Web search test failed: {e}")
+        return {
+            "status": "error",
+            "web_search_working": False,
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }
 # Test comment
