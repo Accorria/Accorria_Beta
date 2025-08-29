@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { UserProfile } from '@/components/UserProfile';
 import Chatbot from '@/components/Chatbot';
 import Link from 'next/link';
+import { getHomeUrl } from '@/utils/urls';
 
 export default function AppPage() {
   const { user, loading } = useAuth();
@@ -12,7 +13,7 @@ export default function AppPage() {
   // Redirect to home if not authenticated
   useEffect(() => {
     if (!loading && !user) {
-      window.location.href = '/';
+      window.location.href = getHomeUrl();
     }
   }, [user, loading]);
 

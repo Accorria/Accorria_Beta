@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabaseBrowser } from '../../lib/supabaseBrowser';
 import { User, Session } from '@supabase/supabase-js';
+import { getAppUrl, getHomeUrl } from '../utils/urls';
 
 interface AuthContextType {
   user: User | null;
@@ -79,7 +80,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             last_name: lastName,
             phone: phone,
             full_name: `${firstName || ''} ${lastName || ''}`.trim()
-          }
+          },
+          emailRedirectTo: getAppUrl()
         }
       });
 
@@ -135,7 +137,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setError(null);
       // Redirect to homepage after sign out
       if (typeof window !== 'undefined') {
-        window.location.href = '/';
+        window.location.href = getHomeUrl();
       }
     } catch (err: any) {
       setError('Logout failed');
