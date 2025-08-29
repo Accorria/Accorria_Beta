@@ -37,7 +37,9 @@ steps:
       - '--concurrency'
       - '80'
       - '--set-env-vars'
-      - 'PORT=8080,CLOUDBUILD=true'
+      - 'PORT=8080,CLOUDBUILD=true,SECRET_KEY=your-secret-key-here'
+      - '--service-account'
+      - '691352445702-compute@developer.gserviceaccount.com'
 
 images:
   - 'us-central1-docker.pkg.dev/$PROJECT_ID/quickflip-ai-backend/quickflip-ai-backend' 
