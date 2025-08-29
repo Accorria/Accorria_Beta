@@ -25,13 +25,13 @@ const IMAGES = [
   {
     title: "List a car in minutes",
     caption: "Upload photos, VIN, or specs — we prep the post.",
-    url: "https://images.unsplash.com/photo-1517940310602-22521b3e44c0?q=80&w=1600&auto=format&fit=crop",
+    url: "/Car in garage.png",
     alt: "Car in a modern garage"
   },
   {
     title: "Price your home with guidance",
     caption: "Guided copy + comps to post confidently.",
-    url: "https://images.unsplash.com/photo-1505692794403-34d4982f88aa?q=80&w=1600&auto=format&fit=crop",
+    url: "/ModernHome.png",
     alt: "Modern home exterior"
   },
   {
