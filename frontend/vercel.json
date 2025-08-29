@@ -4,7 +4,7 @@
   "installCommand": "npm install",
   "framework": "nextjs",
   "env": {
-    "NEXT_PUBLIC_API_URL": "https://quickflip-ai-backend-w6jnqqf33q-uc.a.run.app",
+    "NEXT_PUBLIC_API_URL": "https://quickflip-ai-backend-691352445702.us-central1.run.app",
     "NEXT_PUBLIC_ENABLE_AI_FEATURES": "true",
     "NEXT_PUBLIC_ENABLE_NOTIFICATIONS": "true",
     "NEXT_PUBLIC_APP_NAME": "Accorria",
