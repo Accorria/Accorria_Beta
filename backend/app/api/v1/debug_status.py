@@ -115,8 +115,9 @@ async def test_openai():
                 "timestamp": datetime.now().isoformat()
             }
         
-        # Test with a simple completion
-        response = openai.ChatCompletion.create(
+        # Test with a simple completion using new OpenAI API
+        client = openai.OpenAI()
+        response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[{"role": "user", "content": "Say 'Hello World'"}],
             max_tokens=10
