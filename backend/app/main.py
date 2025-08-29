@@ -13,7 +13,7 @@ import logging
 import asyncio
 
 from app.core.config import settings
-from app.core.database import engine, Base
+from app.core.database import async_engine, Base
 from app.api.v1 import (
     auth as auth_router,
     flip_car as flip_car_router,
