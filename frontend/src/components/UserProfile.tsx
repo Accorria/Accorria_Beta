@@ -8,18 +8,18 @@ interface UserProfileProps {
 }
 
 export const UserProfile: React.FC<UserProfileProps> = ({ className = '' }) => {
-  const { user, logout } = useAuth();
+  const { user, signOut } = useAuth();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   if (!user) return null;
 
   const handleLogout = () => {
-    logout();
+    signOut();
     setIsDropdownOpen(false);
   };
 
   const getUserInitials = () => {
-    const name = user.name || '';
+    const name = user.user_metadata?.full_name || '';
     const nameParts = name.split(' ');
     if (nameParts.length >= 2) {
       return `${nameParts[0].charAt(0)}${nameParts[1].charAt(0)}`.toUpperCase();
@@ -28,7 +28,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ className = '' }) => {
   };
 
   const getUserDisplayName = () => {
-    return user.name || user.email;
+    return user.user_metadata?.full_name || user.email;
   };
 
   return (
@@ -59,8 +59,8 @@ export const UserProfile: React.FC<UserProfileProps> = ({ className = '' }) => {
           <div className="px-4 py-3 border-b border-gray-100">
             <p className="text-sm font-medium text-gray-900">{getUserDisplayName()}</p>
             <p className="text-xs text-gray-500">{user.email}</p>
-            {user.phone && (
-              <p className="text-xs text-gray-500 mt-1">{user.phone}</p>
+            {user.user_metadata?.phone && (
+              <p className="text-xs text-gray-500 mt-1">{user.user_metadata.phone}</p>
             )}
           </div>
           
