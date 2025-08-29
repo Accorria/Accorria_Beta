@@ -1,26 +1,19 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { api } from '@/utils/api';
-
-interface User {
-  id: string;
-  email: string;
-  name?: string;
-  phone?: string;
-  created_at: string;
-  subscription_tier?: string;
-}
+import { supabaseBrowser } from '../../lib/supabaseBrowser';
+import { User, Session } from '@supabase/supabase-js';
 
 interface AuthContextType {
   user: User | null;
-  token: string | null;
-  login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, firstName?: string, lastName?: string, phone?: string) => Promise<void>;
-  logout: () => void;
+  session: Session | null;
+  signUp: (email: string, password: string, firstName?: string, lastName?: string, phone?: string) => Promise<{ error: any }>;
+  signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signOut: () => Promise<void>;
   loading: boolean;
   error: string | null;
   clearError: () => void;
+  isEmailVerified: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -39,102 +32,114 @@ interface AuthProviderProps {
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isEmailVerified, setIsEmailVerified] = useState(false);
 
-  // Load token from localStorage on mount
+  const supabase = supabaseBrowser();
+
+  // Check for existing session on mount
   useEffect(() => {
-    const savedToken = localStorage.getItem('auth_token');
-    if (savedToken) {
-      setToken(savedToken);
-      // Verify token and get user info
-      verifyToken(savedToken);
-    } else {
+    const getSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setSession(session);
+      setUser(session?.user ?? null);
+      setIsEmailVerified(session?.user?.email_confirmed_at ? true : false);
       setLoading(false);
-    }
+    };
+
+    getSession();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        setIsEmailVerified(session?.user?.email_confirmed_at ? true : false);
+        setLoading(false);
+      }
+    );
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const verifyToken = async (authToken: string) => {
+  const signUp = async (email: string, password: string, firstName?: string, lastName?: string, phone?: string) => {
     try {
-      const response = await api.get('/auth/me', {
-        headers: {
-          'Authorization': `Bearer ${authToken}`
+      setLoading(true);
+      setError(null);
+
+      // Sign up with Supabase
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            first_name: firstName,
+            last_name: lastName,
+            phone: phone,
+            full_name: `${firstName || ''} ${lastName || ''}`.trim()
+          }
         }
       });
-      setUser(response);
-    } catch (err) {
-      console.error('Token verification failed:', err);
-      // Token is invalid, clear it
-      localStorage.removeItem('auth_token');
-      setToken(null);
-      setUser(null);
+
+      if (error) {
+        setError(error.message);
+        return { error };
+      }
+
+      // User will need to verify email before accessing dashboard
+      return { error: null };
+
+    } catch (err: any) {
+      const errorMessage = err.message || 'Registration failed';
+      setError(errorMessage);
+      return { error: { message: errorMessage } };
     } finally {
       setLoading(false);
     }
   };
 
-  const login = async (email: string, password: string) => {
+  const signIn = async (email: string, password: string) => {
     try {
       setLoading(true);
       setError(null);
-      
-      const response = await api.post('/auth/login', {
+
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
       });
 
-      const { access_token, user: userData } = response;
-      
-      // Save token to localStorage
-      localStorage.setItem('auth_token', access_token);
-      
-      setToken(access_token);
-      setUser(userData);
-      
+      if (error) {
+        setError(error.message);
+        return { error };
+      }
+
+      return { error: null };
+
     } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Login failed';
+      const errorMessage = err.message || 'Login failed';
       setError(errorMessage);
-      throw new Error(errorMessage);
+      return { error: { message: errorMessage } };
     } finally {
       setLoading(false);
     }
   };
 
-  const register = async (email: string, password: string, firstName?: string, lastName?: string, phone?: string) => {
+  const signOut = async () => {
     try {
-      setLoading(true);
+      await supabase.auth.signOut();
+      setUser(null);
+      setSession(null);
+      setIsEmailVerified(false);
       setError(null);
-      
-      const response = await api.post('/auth/register', {
-        email,
-        password,
-        name: `${firstName || ''} ${lastName || ''}`.trim(),
-        phone
-      });
-
-      const { access_token, user: userData } = response;
-      
-      // Save token to localStorage
-      localStorage.setItem('auth_token', access_token);
-      
-      setToken(access_token);
-      setUser(userData);
-      
+      // Redirect to homepage after sign out
+      if (typeof window !== 'undefined') {
+        window.location.href = '/';
+      }
     } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Registration failed';
-      setError(errorMessage);
-      throw new Error(errorMessage);
-    } finally {
-      setLoading(false);
+      setError('Logout failed');
     }
-  };
-
-  const logout = () => {
-    localStorage.removeItem('auth_token');
-    setToken(null);
-    setUser(null);
-    setError(null);
   };
 
   const clearError = () => {
@@ -143,13 +148,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const value: AuthContextType = {
     user,
-    token,
-    login,
-    register,
-    logout,
+    session,
+    signUp,
+    signIn,
+    signOut,
     loading,
     error,
-    clearError
+    clearError,
+    isEmailVerified
   };
 
   return (

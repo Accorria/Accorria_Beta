@@ -18,7 +18,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   
-  const { login, error, clearError } = useAuth();
+  const { signIn, error, clearError } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,8 +26,10 @@ export const LoginForm: React.FC<LoginFormProps> = ({
     clearError();
 
     try {
-      await login(email, password);
-      onSuccess?.();
+      const { error: signInError } = await signIn(email, password);
+      if (!signInError) {
+        onSuccess?.();
+      }
     } catch (err) {
       // Error is handled by the auth context
     } finally {
@@ -60,7 +62,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-colors"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-colors text-gray-900"
               placeholder="Enter your email"
             />
           </div>
@@ -69,15 +71,15 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
               Password
             </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-colors"
-              placeholder="Enter your password"
-            />
+                          <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-colors text-gray-900"
+                placeholder="Enter your password"
+              />
           </div>
 
           <button

@@ -24,6 +24,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const handleSuccess = () => {
     onSuccess?.();
     onClose();
+    // Auto redirect to dashboard after successful login
+    if (typeof window !== 'undefined') {
+      window.location.href = '/dashboard';
+    }
   };
 
   const handleSwitchToRegister = () => setMode('register');

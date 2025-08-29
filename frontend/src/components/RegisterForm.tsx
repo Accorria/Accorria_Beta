@@ -24,7 +24,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
   });
   const [isLoading, setIsLoading] = useState(false);
   
-  const { register, error, clearError } = useAuth();
+  const { signUp, error, clearError } = useAuth();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({
@@ -45,14 +45,16 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
     }
 
     try {
-      await register(
+      const { error: signUpError } = await signUp(
         formData.email, 
         formData.password, 
         formData.firstName, 
         formData.lastName, 
         formData.phone
       );
-      onSuccess?.();
+      if (!signUpError) {
+        onSuccess?.();
+      }
     } catch (err) {
       // Error is handled by the auth context
     } finally {
@@ -88,7 +90,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
                 type="text"
                 value={formData.firstName}
                 onChange={handleChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-colors"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-colors text-gray-900"
                 placeholder="First name"
               />
             </div>
@@ -102,7 +104,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
                 type="text"
                 value={formData.lastName}
                 onChange={handleChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-colors"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-colors text-gray-900"
                 placeholder="Last name"
               />
             </div>
@@ -119,7 +121,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
               value={formData.email}
               onChange={handleChange}
               required
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-colors"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-colors text-gray-900"
               placeholder="Enter your email"
             />
           </div>
@@ -134,7 +136,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
               type="tel"
               value={formData.phone}
               onChange={handleChange}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-colors"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-colors text-gray-900"
               placeholder="Enter your phone number"
             />
           </div>
@@ -143,16 +145,16 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
               Password
             </label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              value={formData.password}
-              onChange={handleChange}
-              required
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-colors"
-              placeholder="Create a password"
-            />
+                          <input
+                id="password"
+                name="password"
+                type="password"
+                value={formData.password}
+                onChange={handleChange}
+                required
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-colors text-gray-900"
+                placeholder="Create a password"
+              />
           </div>
 
           <div>
@@ -166,7 +168,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
               value={formData.confirmPassword}
               onChange={handleChange}
               required
-              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-colors ${
+              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-colors text-gray-900 ${
                 isPasswordMismatch ? 'border-red-300' : 'border-gray-300'
               }`}
               placeholder="Confirm your password"

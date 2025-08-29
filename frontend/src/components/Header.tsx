@@ -1,13 +1,12 @@
 'use client';
 
 import React from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
 
-interface HeaderProps {
-  darkMode?: boolean;
-  onToggleDarkMode?: () => void;
-}
-
-export default function Header({ darkMode = false, onToggleDarkMode }: HeaderProps) {
+export default function Header() {
+  const { user, signOut } = useAuth();
+  const { isDarkMode, toggleDarkMode } = useTheme();
   return (
     <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-4">
       <div className="flex items-center justify-between">
@@ -25,16 +24,28 @@ export default function Header({ darkMode = false, onToggleDarkMode }: HeaderPro
         <div className="flex items-center space-x-3">
           <button
             className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:scale-105 active:scale-95 transition-transform"
-            onClick={onToggleDarkMode}
+            onClick={toggleDarkMode}
             aria-label="Toggle dark mode"
           >
-            {darkMode ? '☀️' : '🌙'}
+            {isDarkMode ? '☀️' : '🌙'}
           </button>
+          
+          <div className="flex items-center space-x-3">
+            <span className="text-sm text-gray-600 dark:text-gray-300">
+              {user?.email}
+            </span>
+            <button
+              onClick={signOut}
+              className="text-sm text-red-600 hover:text-red-700 font-medium"
+            >
+              Sign Out
+            </button>
+          </div>
           
           <div 
             className="w-8 h-8 bg-gradient-to-r from-green-400 to-blue-500 rounded-full flex items-center justify-center text-white text-sm font-semibold hover:scale-105 active:scale-95 transition-transform cursor-pointer"
           >
-            JD
+            {user?.email?.charAt(0).toUpperCase() || 'U'}
           </div>
         </div>
       </div>

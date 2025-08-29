@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://quickflip-ai-backend-w6jnqqf33q-uc.a.run.app';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://quickflip-ai-backend-691352445702.us-central1.run.app';
 
 // Debug logging
 console.log('API_BASE_URL:', API_BASE_URL);

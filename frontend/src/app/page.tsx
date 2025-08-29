@@ -6,6 +6,7 @@ import Link from 'next/link';
 import Chatbot from '@/components/Chatbot';
 import { useAuth } from '@/contexts/AuthContext';
 import { AuthModal } from '@/components/AuthModal';
+import { SupabaseTest } from '@/components/SupabaseTest';
 
 /**
  * Accorria Landing v2 (single-file mock)
@@ -109,13 +110,13 @@ export default function Home() {
             <Link href="/how-it-works" className="hover:text-white">How it works</Link>
             <Link href="/demo" className="hover:text-white">Demo</Link>
             <Link href="/get-paid" className="hover:text-white">Get Paid</Link>
-            <a href="#pricing" className="hover:text-white">Pricing</a>
-            <a href="#faq" className="hover:text-white">FAQ</a>
+            <Link href="/pricing" className="hover:text-white">Pricing</Link>
+            <Link href="/qa" className="hover:text-white">Q&A</Link>
           </div>
           {user ? (
             <div className="flex items-center gap-4">
-              <Link href="/app" className="rounded-lg bg-amber-400 px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-amber-300">
-                Go to App
+              <Link href="/dashboard" className="rounded-lg bg-amber-400 px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-amber-300">
+                Dashboard
               </Link>
             </div>
           ) : (
@@ -139,15 +140,15 @@ export default function Home() {
         <div className="mx-auto grid max-w-7xl grid-cols-1 items-center gap-10 px-4 py-16 md:grid-cols-2 md:py-24">
           <div>
             <h1 className="text-3xl font-extrabold leading-tight md:text-5xl">
-              Accorria your AI deal agent for <span className="text-amber-300">cars</span> & <span className="text-amber-300">homes</span>.
+              The First Trust-Native Listing Platform
             </h1>
-            <p className="mt-4 max-w-xl text-slate-300">
-              Create the listing, prep the post for Facebook, coach the negotiation, and (soon) escrow—without giving up control.
+            <p className="mt-4 max-w-xl text-slate-300 text-xl font-medium">
+              🚀 The Future of Selling Starts Here.
             </p>
 
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
               {user ? (
-                <Link href="/app" className="rounded-lg bg-amber-400 px-4 py-2 font-semibold text-slate-900 hover:bg-amber-300">Go to App</Link>
+                <Link href="/dashboard" className="rounded-lg bg-amber-400 px-4 py-2 font-semibold text-slate-900 hover:bg-amber-300">Dashboard</Link>
               ) : (
                 <>
                   <button
@@ -157,17 +158,11 @@ export default function Home() {
                     }}
                     className="rounded-lg bg-amber-400 px-4 py-2 font-semibold text-slate-900 hover:bg-amber-300"
                   >
-                    Get Early Access
+                    Get Started Free
                   </button>
-                  <button
-                    onClick={() => {
-                      setAuthMode('login');
-                      setIsAuthModalOpen(true);
-                    }}
-                    className="rounded-lg border border-white/20 px-4 py-2 font-semibold text-white/90 hover:bg-white/5"
-                  >
-                    Sign In
-                  </button>
+                  <Link href="/how-it-works" className="rounded-lg border border-white/20 px-4 py-2 font-semibold text-white/90 hover:bg-white/5">
+                    Learn How It Works
+                  </Link>
                 </>
               )}
               <Link href="/demo" className="rounded-lg border border-white/20 px-4 py-2 font-semibold text-white/90 hover:bg-white/5">Watch 60‑sec Demo</Link>
@@ -266,7 +261,7 @@ export default function Home() {
               <span>Learn How It Works</span>
               <span className="text-sm">→</span>
             </Link>
-            <p className="text-sm text-slate-500 mt-3">See how blockchain makes deals safer and faster</p>
+            <p className="text-sm text-slate-700 mt-3">See how blockchain makes deals safer and faster</p>
           </div>
         </div>
       </section>
@@ -321,9 +316,49 @@ export default function Home() {
         </div>
       </section>
 
-      <footer className="bg-slate-900 py-10 text-center text-sm text-slate-400">
-        © {new Date().getFullYear()} Accorria. All rights reserved.
-      </footer>
+                      <footer className="bg-slate-900 py-10 text-center text-sm text-slate-300">
+          <div className="max-w-7xl mx-auto px-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+              <div>
+                <h3 className="font-semibold text-white mb-4">Product</h3>
+                <ul className="space-y-2">
+                  <li><Link href="/how-it-works" className="hover:text-amber-300">How it Works</Link></li>
+                  <li><Link href="/pricing" className="hover:text-amber-300">Pricing</Link></li>
+                  <li><Link href="/demo" className="hover:text-amber-300">Demo</Link></li>
+                </ul>
+              </div>
+              <div>
+                <h3 className="font-semibold text-white mb-4">Company</h3>
+                <ul className="space-y-2">
+                  <li><Link href="/about" className="hover:text-amber-300">About</Link></li>
+                  <li><Link href="/contact" className="hover:text-amber-300">Contact</Link></li>
+                  <li><Link href="/careers" className="hover:text-amber-300">Careers</Link></li>
+                </ul>
+              </div>
+              <div>
+                <h3 className="font-semibold text-white mb-4">Support</h3>
+                <ul className="space-y-2">
+                  <li><Link href="/help" className="hover:text-amber-300">Help Center</Link></li>
+                  <li><Link href="/qa" className="hover:text-amber-300">FAQ</Link></li>
+                  <li><Link href="/status" className="hover:text-amber-300">Status</Link></li>
+                </ul>
+              </div>
+              <div>
+                <h3 className="font-semibold text-white mb-4">Legal</h3>
+                <ul className="space-y-2">
+                  <li><Link href="/privacy" className="hover:text-amber-300">Privacy Policy</Link></li>
+                  <li><Link href="/terms" className="hover:text-amber-300">Terms of Service</Link></li>
+                  <li><Link href="/cookies" className="hover:text-amber-300">Cookie Policy</Link></li>
+                </ul>
+              </div>
+            </div>
+            <div className="border-t border-slate-700 pt-8">
+              <p>© {new Date().getFullYear()} Accorria. All rights reserved. | <a href="https://acoria.com" className="hover:text-amber-300">acoria.com</a></p>
+            </div>
+          </div>
+        </footer>
+
+      
 
       {/* Working Chatbot */}
       <Chatbot />
@@ -378,7 +413,7 @@ function PriceCard({ name, price, note, cta, highlight = false }: { name: string
   return (
     <>
       <div className={`rounded-2xl p-6 ring-1 ${highlight ? "bg-amber-50 ring-amber-200" : "bg-white ring-slate-200"}`}>
-        <div className="text-sm font-semibold text-slate-500">{name}</div>
+                      <div className="text-sm font-semibold text-slate-700">{name}</div>
         <div className="mt-2 text-3xl font-extrabold text-slate-900">{price}</div>
         <div className="mt-1 text-sm text-slate-600">{note}</div>
         <button

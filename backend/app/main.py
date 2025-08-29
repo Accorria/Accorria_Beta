@@ -32,7 +32,9 @@ from app.api.v1 import (
     demo_test,
     public_analysis,
     enhanced_analysis,
-    debug_status_router
+    debug_status_router,
+    data_test_router,
+    analytics
 )
 from app.middleware import rate_limit_middleware, cleanup_rate_limits
 
@@ -122,7 +124,10 @@ async def add_security_headers(request: Request, call_next):
     response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     # More permissive CSP for API access
-    response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self' https: http:; img-src 'self' data: https:; font-src 'self' data:;"
+    response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self'
+    
+    
+     https: http:; img-src 'self' data: https:; font-src 'self' data:;"
     
     return response
 
@@ -145,6 +150,8 @@ app.include_router(demo_test.router, prefix="/api/v1", tags=["Demo Testing"])
 app.include_router(public_analysis.router, prefix="/api/v1", tags=["Public Analysis"])
 app.include_router(enhanced_analysis.router, prefix="/api/v1", tags=["Enhanced Analysis"])
 app.include_router(debug_status_router, prefix="/api/v1", tags=["Debug"])
+app.include_router(data_test_router, prefix="/api/v1", tags=["Data Testing"])
+app.include_router(analytics.router, prefix="/api/v1", tags=["Analytics"])
 
 @app.get("/")
 async def root():

@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { EmailVerification } from '@/components/EmailVerification';
 import CreateListing from '@/components/listings/CreateListing';
 import MessagesView from '@/components/MessagesView';
 import MarketIntelligence from '@/components/MarketIntelligence';
@@ -10,6 +12,7 @@ import Analytics from '@/components/Analytics';
 import Header from '@/components/Header';
 
 export default function Home() {
+  const { user, loading, isEmailVerified } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showCreateListing, setShowCreateListing] = useState(false);
   const [showMarketIntelligence, setShowMarketIntelligence] = useState(false);
@@ -98,6 +101,41 @@ export default function Home() {
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
   };
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-slate-900 to-slate-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500 mx-auto mb-4"></div>
+          <p className="text-white">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show email verification if user is not verified
+  if (user && !isEmailVerified) {
+    return <EmailVerification email={user.email || ''} />;
+  }
+
+  // Show login prompt if no user
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-slate-900 to-slate-50 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 border border-gray-100 text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Access Required</h1>
+          <p className="text-gray-600 mb-6">Please sign in to access your dashboard.</p>
+          <a 
+            href="/" 
+            className="inline-block bg-amber-500 text-white py-3 px-6 rounded-lg font-semibold hover:bg-amber-600 transition-colors"
+          >
+            Go to Homepage
+          </a>
+        </div>
+      </div>
+    );
+  }
 
   // Clear handlers
   const handleClearActivities = async () => {

@@ -11,6 +11,13 @@ export default function Chatbot() {
   const inputRef = useRef<HTMLInputElement>(null);
   const boxRef = useRef<HTMLDivElement>(null);
 
+  // Clear messages when component mounts (page loads)
+  useEffect(() => {
+    setMsgs([
+      { role: "assistant", content: "Hey! I'm your Accorria agent 👋\n\nI can help you list your car or home. To get started, I'll need some key information:\n\n1. Location: Where is the property located?\n2. Specifications: What are the key features (bedrooms, bathrooms, square footage, etc.)?\n3. Condition: Is there anything notable about the property's condition or recent upgrades?\n4. Photos: Do you have any photos you'd like to include in the listing?\n5. Pricing: Do you have a target price in mind, or would you like pricing guidance?\n\nJust let me know what you'd like to list and I'll guide you through the process!" }
+    ]);
+  }, []);
+
   useEffect(() => {
     boxRef.current?.scrollTo({ top: boxRef.current.scrollHeight, behavior: "smooth" });
   }, [msgs]);
