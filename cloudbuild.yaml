@@ -37,7 +37,7 @@ steps:
       - '--concurrency'
       - '80'
       - '--set-env-vars'
-      - 'PORT=8080,CLOUDBUILD=true,SECRET_KEY=your-secret-key-here'
+      - 'CLOUDBUILD=true,SECRET_KEY=your-secret-key-here'
       - '--service-account'
       - '691352445702-compute@developer.gserviceaccount.com'
 
