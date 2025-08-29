@@ -138,3 +138,4 @@ async def test_openai():
             "error": str(e),
             "timestamp": datetime.now().isoformat()
         }
+# Test comment
