@@ -70,18 +70,21 @@ settings = Settings()
 # Validate required settings
 def validate_settings():
     """Validate that all required settings are present"""
-    required_settings = [
-        "SECRET_KEY"
-    ]
-    
-    missing_settings = []
-    for setting in required_settings:
-        if not getattr(settings, setting):
-            missing_settings.append(setting)
-    
-    if missing_settings:
-        raise ValueError(f"Missing required settings: {', '.join(missing_settings)}")
+    # Only validate in production or when explicitly required
+    if os.getenv("ENVIRONMENT") == "production":
+        required_settings = [
+            "SECRET_KEY"
+        ]
+        
+        missing_settings = []
+        for setting in required_settings:
+            if not getattr(settings, setting):
+                missing_settings.append(setting)
+        
+        if missing_settings:
+            raise ValueError(f"Missing required settings: {', '.join(missing_settings)}")
 
 
-# Validate on import
-validate_settings() 
+# Validate on import only if not in build environment
+if not os.getenv("CLOUDBUILD"):
+    validate_settings() 

@@ -37,7 +37,7 @@ steps:
       - '--concurrency'
       - '80'
       - '--set-env-vars'
-      - 'PORT=8080'
+      - 'PORT=8080,CLOUDBUILD=true'
 
 images:
   - 'us-central1-docker.pkg.dev/$PROJECT_ID/quickflip-ai-backend/quickflip-ai-backend' 
