@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 from app.agents import VisualAgent, MarketIntelligenceAgent
-from app.core.database import get_db
+from app.core.database import get_sync_db as get_db
 from sqlalchemy.orm import Session
 from app.api.v1.auth import get_current_user
 

@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 import json
 import os
 
-from ...core.database import get_db
+from ...core.database import get_sync_db as get_db
 from ...services.ai_brain import AIBrain
 from ...services.real_scraper import real_scraper
 from ...services.real_valuation_service import real_valuation_service

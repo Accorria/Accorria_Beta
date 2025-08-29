@@ -15,7 +15,7 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime
 from sqlalchemy.orm import Session
 from app.services.car_listing_generator import CarListingGenerator
-from app.core.database import get_db
+from app.core.database import get_sync_db as get_db
 import logging
 
 logger = logging.getLogger(__name__)

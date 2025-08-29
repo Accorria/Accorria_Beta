@@ -1,7 +1,7 @@
 from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.services.listen_agent import ListenerAgent
-from app.core.database import get_db
+from app.core.database import get_sync_db as get_db
 
 router = APIRouter()
 

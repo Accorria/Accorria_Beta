@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from typing import Dict, Any, Optional
 from datetime import datetime
 import logging
-from app.core.database import get_db
+from app.core.database import get_sync_db as get_db
 from sqlalchemy.orm import Session
 from app.api.v1.auth import get_current_user
 

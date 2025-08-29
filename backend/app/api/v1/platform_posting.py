@@ -14,7 +14,7 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 from app.services.listen_agent import ListenerAgent
 from app.services.platform_poster import ListingData, post_listing_to_platforms
-from app.core.database import get_db
+from app.core.database import get_sync_db as get_db
 
 router = APIRouter()
 
