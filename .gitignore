@@ -8,10 +8,48 @@ __pycache__/
 *.log
 *.env
 venv/
+.venv/
 .env.*
 .pytest_cache/
 .coverage
 htmlcov/
+
+# Virtual Environments (CRITICAL SECURITY)
+.venv/
+venv/
+env/
+ENV/
+backend/.venv/
+backend/venv/
+frontend/.venv/
+frontend/venv/
+
+# Environment files (CRITICAL SECURITY)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.staging
+.env.backup
+*.env
+
+# API Keys and Secrets (CRITICAL SECURITY)
+secrets.json
+credentials.json
+service-account-key.json
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+# Database files (CRITICAL SECURITY)
+*.db
+*.sqlite
+*.sqlite3
+accorria.db
+quickflip.db
 
 # VS Code
 .vscode/
@@ -25,13 +63,6 @@ yarn-error.log*
 out/
 build/
 dist/
-
-# Environment files
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
 
 # IDE
 .idea/
@@ -49,3 +80,22 @@ Thumbs.db
 # Logs
 logs/
 *.log
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Test files
+test_venv/
+test_*.py
+*_test.py
+
+# Security files
+setup_secure_env.sh
+secure-env-setup.sh
