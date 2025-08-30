@@ -196,7 +196,7 @@ class EnhancedDataCollectionService {
     
     this.session = {
       sessionId,
-      userId: this.getUserId(),
+              userId: this.getUserIdFromStorage(),
       startTime: now,
       lastActivity: now,
       pageViews: 0,
@@ -224,7 +224,7 @@ class EnhancedDataCollectionService {
     return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
 
-  private getUserId(): string | undefined {
+  private getUserIdFromStorage(): string | undefined {
     // Get user ID from authentication context
     const user = localStorage.getItem('user');
     return user ? JSON.parse(user).id : undefined;
