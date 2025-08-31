@@ -1,0 +1,8 @@
+bindings:
+- members:
+  - allUsers
+  role: roles/run.invoker
+  condition:
+    title: "allow_from_accorria_domain"
+    description: "Allow access only from Accorria domain"
+    expression: "request.headers[\"origin\"] == \"https://accorria.com\" || request.headers[\"origin\"] == \"https://www.accorria.com\""

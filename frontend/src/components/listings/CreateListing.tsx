@@ -366,7 +366,7 @@ export default function CreateListing({ onClose }: CreateListingProps) {
       // Test API connectivity first
       try {
         const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-        const healthCheck = await fetch(`${backendUrl}/health`);
+        const healthCheck = await api.authenticatedFetch(`${backendUrl}/health`);
         if (!healthCheck.ok) {
           throw new Error(`Backend health check failed: ${healthCheck.status}`);
         }
@@ -433,23 +433,22 @@ export default function CreateListing({ onClose }: CreateListingProps) {
       }
       // Run market analysis in background
       if (carDetails.make && carDetails.model) {
-        fetch('/api/v1/market-intelligence/analyze', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            make: carDetails.make,
-            model: carDetails.model,
-            year: carDetails.year ? parseInt(carDetails.year) : undefined,
-            mileage: carDetails.mileage ? parseInt(carDetails.mileage) : undefined,
-            location: 'United States',
-            analysis_type: 'comprehensive',
-          }),
+        const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+        api.post(`${backendUrl}/api/v1/market-intelligence/analyze`, {
+          make: carDetails.make,
+          model: carDetails.model,
+          year: carDetails.year ? parseInt(carDetails.year) : undefined,
+          mileage: carDetails.mileage ? parseInt(carDetails.mileage) : undefined,
+          location: 'United States',
+          analysis_type: 'comprehensive',
         })
-          .then(res => res.ok ? res.json() : null)
           .then(marketResult => {
             if (marketResult && result) {
               setAnalysisResult((prev: any) => ({ ...prev, market_intelligence: marketResult.data }));
             }
+          })
+          .catch(error => {
+            console.error('Market intelligence error:', error);
           });
       }
       // 6. Generate 2-3 AI description suggestions (mock for now)
