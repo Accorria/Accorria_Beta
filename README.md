@@ -12,3 +12,4 @@ AI-powered car selling assistant that helps car owners create professional listi
 
 See the development plan for setup instructions and deployment guide.
 # Accorria Beta - Ready for deployment
+# Accorria Beta - Deployment Test
