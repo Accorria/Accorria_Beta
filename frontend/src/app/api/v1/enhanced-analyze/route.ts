@@ -6,18 +6,24 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.formData();
     
-    // Forward the request to the backend
+    // Forward the request to the backend with minimal headers
     const response = await fetch(`${BACKEND_URL}/api/v1/enhanced-analyze`, {
       method: 'POST',
       body: body,
-      headers: {
-        // Don't set Content-Type for FormData, let the browser set it with boundary
-        ...Object.fromEntries(request.headers.entries()),
-      },
+      // Don't forward headers - let the browser set Content-Type for FormData
     });
 
+    if (!response.ok) {
+      console.error('Backend response error:', response.status, response.statusText);
+      const errorText = await response.text();
+      console.error('Backend error details:', errorText);
+      return NextResponse.json(
+        { error: `Backend error: ${response.status} ${response.statusText}` },
+        { status: response.status }
+      );
+    }
+
     const data = await response.json();
-    
     return NextResponse.json(data, { status: response.status });
   } catch (error) {
     console.error('Proxy error:', error);
