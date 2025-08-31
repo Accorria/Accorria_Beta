@@ -114,7 +114,7 @@ async def health_check():
         "service": "Accorria Backend",
         "version": "1.0.0",
         "apis": {
-            "google_vision": "configured",
+            "openai_vision": "configured",
             "openai": "configured", 
             "supabase": "configured"
         }

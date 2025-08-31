@@ -396,15 +396,17 @@ export default function CreateListing({ onClose }: CreateListingProps) {
       formData.append('titleStatus', carDetails.titleStatus || '');
       formData.append('aboutVehicle', carDetails.aboutVehicle || '');
       
-      console.log('Sending analysis request with:', {
+            console.log('Sending analysis request with:', {
         files: files.length,
         make: carDetails.make,
         model: carDetails.model,
         year: carDetails.year,
-        endpoint: '/api/v1/enhanced-analyze'
+        endpoint: 'Direct backend call'
       });
       
-               const result = await api.postFormData('/api/v1/enhanced-analyze', formData);
+      // Call backend directly instead of going through frontend API route
+      const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const result = await api.postFormData(`${backendUrl}/api/v1/enhanced-analyze`, formData);
       console.log('Analysis result:', result);
       setAnalysisResult(result);
       setShowAnalysis(true);
