@@ -61,7 +61,8 @@ class Settings(BaseSettings):
     ALLOWED_HOSTS: List[str] = [
         "localhost",
         "127.0.0.1",
-        "accorria-backend-*.run.app",
+        "accorria-backend-tv2qihivdq-uc.a.run.app",
+        "accorria-backend-19949436301.us-central1.run.app",
         "*.accorria.com"
     ]
     
