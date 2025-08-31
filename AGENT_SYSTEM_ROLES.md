@@ -1,12 +1,12 @@
-# 🚗 QuickFlips.ai - 8-Agent System Roles & Responsibilities
+# 🚗 Aquaria - 8-Agent System Roles & Responsibilities
 
-**Purpose:** This document defines the complete roles, responsibilities, and workflows for all 8 AI agents in the QuickFlips.ai system.
+**Purpose:** This document defines the complete roles, responsibilities, and workflows for all 8 AI agents in the Aquaria system.
 
 ---
 
 ## 🎯 **Agent Overview**
 
-QuickFlips.ai uses a sophisticated **8-agent AI system** to provide comprehensive car selling assistance while maintaining user control and approval at every step.
+Aquaria uses a sophisticated **8-agent AI system** to provide comprehensive car selling assistance while maintaining user control and approval at every step.
 
 ### **Agent List:**
 1. **Vision Agent** 👁️ - Image Analysis Specialist
@@ -289,4 +289,4 @@ Learning Agent (Continuous Improvement)
 
 ---
 
-*This document serves as the definitive reference for the QuickFlips.ai 8-agent system architecture and should be updated as the system evolves.*
+*This document serves as the definitive reference for the Aquaria 8-agent system architecture and should be updated as the system evolves.*

@@ -2,11 +2,10 @@
 Market Intelligence API endpoints
 
 Provides endpoints for:
-- Make/Model analysis
+- Market analysis and intelligence
 - Competitor research
-- Pricing analysis
-- Profit threshold setting
-- Comprehensive market intelligence
+- Pricing recommendations
+- Demand analysis
 """
 
 from fastapi import APIRouter, HTTPException, Depends
@@ -16,21 +15,21 @@ from datetime import datetime
 from app.agents import MarketIntelligenceAgent
 from app.core.database import get_sync_db as get_db
 from sqlalchemy.orm import Session
-from app.api.v1.auth import get_current_user
+from app.utils.auth import get_current_user
 
 router = APIRouter()
 
 class MarketIntelligenceRequest(BaseModel):
     """Request model for market intelligence analysis"""
-    make: str = Field(..., description="Car make (e.g., Toyota, Honda)")
-    model: str = Field(..., description="Car model (e.g., Camry, Civic)")
+    make: str = Field(..., description="Car make")
+    model: str = Field(..., description="Car model")
     year: Optional[int] = Field(None, description="Car year")
     mileage: Optional[int] = Field(None, description="Car mileage")
     location: str = Field("United States", description="Location for analysis")
-    radius_miles: int = Field(50, description="Radius for competitor search")
+    radius_miles: int = Field(50, description="Search radius in miles")
     target_profit: float = Field(2000, description="Target profit amount")
-    risk_tolerance: str = Field("medium", description="Risk tolerance: low, medium, high")
-    analysis_type: str = Field("comprehensive", description="Type of analysis: make_model_analysis, competitor_research, pricing_analysis, threshold_setting, comprehensive")
+    risk_tolerance: str = Field("medium", description="Risk tolerance level")
+    analysis_type: str = Field("comprehensive", description="Type of analysis")
 
 class MarketIntelligenceResponse(BaseModel):
     """Response model for market intelligence analysis"""
@@ -59,6 +58,10 @@ async def analyze_market_intelligence(
     - Risk assessment and mitigation strategies
     """
     try:
+        # Log the authenticated user
+        user_email = current_user.get("email", "unknown")
+        print(f"Market intelligence analysis requested by: {user_email}")
+        
         # Initialize the market intelligence agent
         agent = MarketIntelligenceAgent()
         
@@ -140,9 +143,9 @@ async def quick_market_analysis(
     current_user: dict = Depends(get_current_user)
 ):
     """
-    Quick market analysis for a make/model combination.
+    Quick market analysis for a specific make and model.
     
-    Provides a simplified analysis focusing on key metrics.
+    Provides rapid market insights without comprehensive analysis.
     """
     try:
         agent = MarketIntelligenceAgent()
@@ -158,9 +161,6 @@ async def quick_market_analysis(
         
         return {
             "success": result.success,
-            "make": make,
-            "model": model,
-            "location": location,
             "data": result.data,
             "processing_time": result.processing_time
         }
@@ -169,7 +169,7 @@ async def quick_market_analysis(
         raise HTTPException(status_code=500, detail=f"Quick analysis failed: {str(e)}")
 
 @router.post("/market-intelligence/competitor-search")
-async def search_competitors(
+async def competitor_search(
     make: str,
     model: str,
     location: str = "United States",
@@ -177,9 +177,9 @@ async def search_competitors(
     current_user: dict = Depends(get_current_user)
 ):
     """
-    Search for competitors in the local area.
+    Search for competitors in the local market.
     
-    Finds and analyzes competing listings for the specified make/model.
+    Analyzes similar vehicles for sale in the specified area.
     """
     try:
         agent = MarketIntelligenceAgent()
@@ -189,29 +189,17 @@ async def search_competitors(
             "model": model,
             "location": location,
             "radius_miles": radius_miles,
-            "analysis_type": "competitor_research"
+            "analysis_type": "competitor_search"
         }
         
         result = await agent.execute(input_data)
         
-        if result.success:
-            research = result.data.get("competitor_research", {})
-            return {
-                "success": True,
-                "location": location,
-                "radius_miles": radius_miles,
-                "competitors_found": research.get("competitors_found", 0),
-                "competitors": research.get("competitors", []),
-                "pricing_analysis": research.get("pricing_analysis", {}),
-                "market_position": research.get("market_position", {}),
-                "recommendations": research.get("recommendations", [])
-            }
-        else:
-            return {
-                "success": False,
-                "error": result.error_message
-            }
-            
+        return {
+            "success": result.success,
+            "competitors": result.data.get("competitors", []),
+            "market_insights": result.data.get("market_insights", {})
+        }
+        
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Competitor search failed: {str(e)}")
 
@@ -219,14 +207,15 @@ async def search_competitors(
 async def calculate_profit_thresholds(
     make: str,
     model: str,
-    target_profit: float = 2000,
-    risk_tolerance: str = "medium",
+    purchase_price: float,
+    target_profit: float,
+    location: str = "United States",
     current_user: dict = Depends(get_current_user)
 ):
     """
-    Calculate profit thresholds for car flipping.
+    Calculate profit thresholds and recommendations.
     
-    Determines acquisition and selling price thresholds based on target profit and risk tolerance.
+    Provides pricing strategy based on market data and profit goals.
     """
     try:
         agent = MarketIntelligenceAgent()
@@ -234,31 +223,19 @@ async def calculate_profit_thresholds(
         input_data = {
             "make": make,
             "model": model,
+            "purchase_price": purchase_price,
             "target_profit": target_profit,
-            "risk_tolerance": risk_tolerance,
-            "analysis_type": "threshold_setting"
+            "location": location,
+            "analysis_type": "profit_analysis"
         }
         
         result = await agent.execute(input_data)
         
-        if result.success:
-            thresholds = result.data.get("profit_thresholds", {})
-            return {
-                "success": True,
-                "make": make,
-                "model": model,
-                "target_profit": target_profit,
-                "risk_tolerance": risk_tolerance,
-                "acquisition_thresholds": thresholds.get("acquisition_thresholds", {}),
-                "selling_thresholds": thresholds.get("selling_thresholds", {}),
-                "risk_analysis": thresholds.get("risk_analysis", {}),
-                "recommendations": thresholds.get("recommendations", [])
-            }
-        else:
-            return {
-                "success": False,
-                "error": result.error_message
-            }
-            
+        return {
+            "success": result.success,
+            "profit_analysis": result.data.get("profit_analysis", {}),
+            "pricing_recommendations": result.data.get("pricing_recommendations", [])
+        }
+        
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Threshold calculation failed: {str(e)}") 
+        raise HTTPException(status_code=500, detail=f"Profit analysis failed: {str(e)}") 

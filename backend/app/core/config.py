@@ -25,6 +25,46 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     
+    # JWT Configuration
+    JWT_SECRET_KEY: str = "your-jwt-secret-key-here"
+    JWT_ALGORITHM: str = "HS256"
+    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+    
+    # Password Security
+    PASSWORD_MIN_LENGTH: int = 12
+    PASSWORD_REQUIRE_UPPERCASE: bool = True
+    PASSWORD_REQUIRE_LOWERCASE: bool = True
+    PASSWORD_REQUIRE_DIGITS: bool = True
+    PASSWORD_REQUIRE_SPECIAL_CHARS: bool = True
+    
+    # Rate Limiting
+    RATE_LIMIT_DEFAULT: int = 100
+    RATE_LIMIT_AUTH: int = 5
+    RATE_LIMIT_UPLOAD: int = 10
+    RATE_LIMIT_CHAT: int = 20
+    
+    # Redis Configuration
+    REDIS_HOST: str = "localhost"
+    REDIS_PORT: int = 6379
+    REDIS_PASSWORD: Optional[str] = None
+    REDIS_DB: int = 0
+    
+    # Security Headers
+    ENABLE_ADVANCED_SECURITY: bool = True
+    ENABLE_RATE_LIMITING: bool = True
+    ENABLE_AUDIT_LOGGING: bool = True
+    ENABLE_PII_ENCRYPTION: bool = True
+    ENABLE_ANOMALY_DETECTION: bool = True
+    
+    # Trusted Hosts
+    ALLOWED_HOSTS: List[str] = [
+        "localhost",
+        "127.0.0.1",
+        "accorria-backend-*.run.app",
+        "*.accorria.com"
+    ]
+    
     # CORS
     ALLOWED_ORIGINS: List[str] = [
         "http://localhost:3000",
@@ -33,10 +73,6 @@ class Settings(BaseSettings):
         "http://10.0.0.67:3001",
         "http://localhost:5173",
         "https://accorria.vercel.app",
-        "https://accorria.com",
-        "https://www.accorria.com",
-        "https://quickflip-ai.vercel.app",
-        "https://quickflip-ai.vercel.app",
         "https://accorria.com",
         "https://www.accorria.com",
         "*"  # Allow all origins for development and mobile testing

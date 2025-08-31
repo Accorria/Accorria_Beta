@@ -1,5 +1,5 @@
 """
-Middleware package for Plazoria API
+Middleware package for Aquaria API
 
 Provides security and performance middleware components.
 """

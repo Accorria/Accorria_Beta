@@ -1,12 +1,12 @@
 steps:
   # Build the container image from backend directory only
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['build', '-t', 'us-central1-docker.pkg.dev/$PROJECT_ID/quickflip-ai-backend/quickflip-ai-backend', '.']
+    args: ['build', '-t', 'us-central1-docker.pkg.dev/$PROJECT_ID/accorria-backend/accorria-backend', '.']
     dir: './backend'
   
   # Push the container image to Artifact Registry
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'us-central1-docker.pkg.dev/$PROJECT_ID/quickflip-ai-backend/quickflip-ai-backend']
+    args: ['push', 'us-central1-docker.pkg.dev/$PROJECT_ID/accorria-backend/accorria-backend']
   
   # Deploy container image to Cloud Run
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
@@ -14,9 +14,9 @@ steps:
     args:
       - 'run'
       - 'deploy'
-      - 'quickflip-ai-backend'
+      - 'accorria-backend'
       - '--image'
-      - 'us-central1-docker.pkg.dev/$PROJECT_ID/quickflip-ai-backend/quickflip-ai-backend'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/accorria-backend/accorria-backend'
       - '--region'
       - 'us-central1'
       - '--platform'
@@ -42,4 +42,4 @@ steps:
       - '691352445702-compute@developer.gserviceaccount.com'
 
 images:
-  - 'us-central1-docker.pkg.dev/$PROJECT_ID/quickflip-ai-backend/quickflip-ai-backend' 
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/accorria-backend/accorria-backend' 

@@ -1,17 +1,17 @@
 #!/bin/bash
 
-# QuickFlip AI - Cloud Run Deployment Script
+# Accorria - Cloud Run Deployment Script
 # Usage: ./deploy-cloud-run.sh [PROJECT_ID]
 
 set -e
 
 # Configuration
 PROJECT_ID=${1:-"your-project-id"}
-SERVICE_NAME="quickflip-ai-backend"
+SERVICE_NAME="accorria-backend"
 REGION="us-central1"
 IMAGE_NAME="gcr.io/$PROJECT_ID/$SERVICE_NAME"
 
-echo "🚀 Deploying QuickFlip AI Backend to Cloud Run"
+echo "🚀 Deploying Accorria Backend to Cloud Run"
 echo "Project: $PROJECT_ID"
 echo "Service: $SERVICE_NAME"
 echo "Region: $REGION"

@@ -1,5 +1,5 @@
 """
-Supabase Service for Plazoria
+Supabase Service for Aquaria
 
 Handles database operations using Supabase instead of Firestore
 """

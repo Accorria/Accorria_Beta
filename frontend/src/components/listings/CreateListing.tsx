@@ -365,8 +365,12 @@ export default function CreateListing({ onClose }: CreateListingProps) {
     try {
       // Test API connectivity first
       try {
-        const healthCheck = await api.get('/health');
-        console.log('✅ Backend health check:', healthCheck.data);
+        const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+        const healthCheck = await fetch(`${backendUrl}/health`);
+        if (!healthCheck.ok) {
+          throw new Error(`Backend health check failed: ${healthCheck.status}`);
+        }
+        console.log('✅ Backend health check passed');
       } catch (healthError) {
         console.error('❌ Backend health check failed:', healthError);
         setAnalysisError('Backend service unavailable. Please try again later.');

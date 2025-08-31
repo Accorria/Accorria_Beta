@@ -5,12 +5,17 @@ Entry point for the Accorria backend API.
 """
 
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 import logging
 import asyncio
+import time
 
 from app.core.config import settings
 from app.core.database import async_engine, Base
@@ -34,13 +39,26 @@ from app.api.v1 import (
     enhanced_analysis,
     debug_status_router,
     data_test_router,
-    analytics
+    analytics,
+    chat as chat_router
 )
 from app.middleware import rate_limit_middleware, cleanup_rate_limits
+from app.core.security import (
+    SecurityConfig, 
+    AuthenticationManager, 
+    AuthorizationManager,
+    RateLimitManager,
+    SecurityAudit,
+    InputValidation,
+    SECURITY_HEADERS
+)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Rate limiting
+limiter = Limiter(key_func=get_remote_address)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -68,29 +86,20 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Security middleware
-app.add_middleware(
-    TrustedHostMiddleware,
-    allowed_hosts=["*"]  # Configure for production
-)
+# Add rate limiting exception handler
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# CORS middleware
+# Security middleware stack
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.ALLOWED_HOSTS)
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://localhost:3001",
-        "http://127.0.0.1:3000",
-        "https://accorria.vercel.app",
-        "https://accorria.com",
-        "https://www.accorria.com",
-        "https://quickflip-ai.vercel.app",
-        "https://quickflip-ai-git-main-prestoneaton.vercel.app",
-        "*"  # Allow all origins for development
-    ],
+    allow_origins=settings.ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["*"],
+    expose_headers=["X-Total-Count", "X-Rate-Limit-Remaining"]
 )
 
 # Rate limiting middleware
@@ -111,21 +120,65 @@ async def health_check():
         }
     }
 
-# Security headers middleware
+# Enhanced security headers middleware
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next):
-    """Add security headers to all responses"""
+    """Add comprehensive security headers to all responses"""
     response = await call_next(request)
     
-    # Security headers
-    response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["X-Frame-Options"] = "DENY"
-    response.headers["X-XSS-Protection"] = "1; mode=block"
-    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-    # More permissive CSP for API access
-    response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self' https: http:; img-src 'self' data: https:; font-src 'self' data:;"
+    # Add all security headers from configuration
+    for header, value in SECURITY_HEADERS.items():
+        response.headers[header] = value
     
+    return response
+
+@app.middleware("http")
+async def security_audit_middleware(request: Request, call_next):
+    """Audit all API access for security monitoring"""
+    start_time = time.time()
+    
+    # Get user ID from request state (set by auth middleware)
+    user_id = getattr(request.state, 'user_id', 'anonymous')
+    
+    # Process request
+    response = await call_next(request)
+    
+    # Calculate processing time
+    process_time = time.time() - start_time
+    
+    # Log API access for security audit
+    SecurityAudit.log_api_access(
+        user_id=user_id,
+        endpoint=request.url.path,
+        method=request.method,
+        status_code=response.status_code
+    )
+    
+    # Add processing time header
+    response.headers["X-Process-Time"] = str(process_time)
+    
+    return response
+
+@app.middleware("http")
+async def input_validation_middleware(request: Request, call_next):
+    """Validate and sanitize input data"""
+    # For POST/PUT requests, validate input
+    if request.method in ["POST", "PUT"]:
+        try:
+            # Get request body
+            body = await request.body()
+            if body:
+                # Basic input validation (more sophisticated validation in endpoints)
+                body_str = body.decode('utf-8')
+                if len(body_str) > 1000000:  # 1MB limit
+                    return Response(
+                        content="Request body too large",
+                        status_code=413
+                    )
+        except Exception as e:
+            logger.warning(f"Input validation error: {e}")
+    
+    response = await call_next(request)
     return response
 
 # Include routers
@@ -149,6 +202,31 @@ app.include_router(enhanced_analysis.router, prefix="/api/v1", tags=["Enhanced A
 app.include_router(debug_status_router, prefix="/api/v1", tags=["Debug"])
 app.include_router(data_test_router, prefix="/api/v1", tags=["Data Testing"])
 app.include_router(analytics.router, prefix="/api/v1", tags=["Analytics"])
+
+# Test endpoint
+@app.get("/test")
+async def test_endpoint():
+    return {"message": "Test endpoint working!"}
+
+# Chat endpoint
+@app.post("/chat/enhanced")
+async def enhanced_chat(request: Request):
+    """
+    Enhanced chat endpoint for Accorria AI agent
+    """
+    try:
+        body = await request.json()
+        messages = body.get("messages", [])
+        
+        # Simple response for testing
+        return {
+            "response": "Hello! I'm Accorria's AI agent. I'm here to help you list cars and homes for sale. How can I assist you today?",
+            "success": True
+        }
+        
+    except Exception as e:
+        print(f"Chat error: {str(e)}")
+        return {"error": f"Chat service error: {str(e)}", "success": False}
 
 @app.get("/")
 async def root():

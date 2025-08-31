@@ -1,4 +1,4 @@
-# 🤖 QuickFlips AI - Messenger Bot Rate Limiting Strategy
+# 🤖 Aquaria - Messenger Bot Rate Limiting Strategy
 
 > **Purpose:** Define how to limit Messenger Bot usage across different subscription tiers while maintaining value for all users.
 

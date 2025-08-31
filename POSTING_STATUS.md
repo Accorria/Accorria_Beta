@@ -1,4 +1,4 @@
-# QuickFlip AI Posting Functionality Status
+# Aquaria Posting Functionality Status
 
 ## ✅ What's Working
 

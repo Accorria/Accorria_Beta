@@ -1,5 +1,5 @@
 """
-Market Intelligence Agent for Plazoria
+Market Intelligence Agent for Aquaria
 
 This agent specializes in:
 1. Analyzing car makes and models for market opportunities

@@ -1,4 +1,4 @@
-# 🚀 QuickFlip AI API Setup Guide
+# 🚀 Aquaria API Setup Guide
 
 This guide will help you set up the necessary API keys to enable AI-powered car listing generation.
 

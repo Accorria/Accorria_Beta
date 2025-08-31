@@ -1,4 +1,4 @@
-# 🚀 QuickFlip AI - Production Readiness Checklist
+# 🚀 Aquaria - Production Readiness Checklist
 
 ## ✅ SECURITY CONFIRMATION
 

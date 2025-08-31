@@ -1,5 +1,5 @@
 """
-Supabase Configuration for Plazoria
+Supabase Configuration for Aquaria
 Simplified database and auth setup using Supabase
 """
 

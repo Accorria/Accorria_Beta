@@ -1,5 +1,5 @@
 """
-Scout Agent for Plazoria
+Scout Agent for Aquaria
 
 This agent specializes in:
 1. Scraping Facebook Marketplace, Craigslist, OfferUp for car deals

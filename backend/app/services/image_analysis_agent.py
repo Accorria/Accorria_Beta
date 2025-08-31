@@ -1,5 +1,5 @@
 """
-Image Analysis Agent for Plazoria
+Image Analysis Agent for Aquaria
 
 This agent specializes in:
 1. Analyzing car photos using Google Vision API

@@ -1,4 +1,4 @@
-# 🚀 QuickFlip AI - Deployment Readiness Checklist
+# 🚀 Aquaria - Deployment Readiness Checklist
 
 ## ✅ **READY FOR DEPLOYMENT**
 

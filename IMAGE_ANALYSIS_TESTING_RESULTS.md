@@ -1,4 +1,4 @@
-# 🖼️ QuickFlip AI - Image Analysis Testing Results
+# 🖼️ Aquaria - Image Analysis Testing Results
 **Real Image Testing Report**  
 *Generated: January 15, 2025*
 

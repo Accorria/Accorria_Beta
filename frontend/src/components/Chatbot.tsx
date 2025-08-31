@@ -4,23 +4,22 @@ import { motion, AnimatePresence } from "framer-motion";
 
 export default function Chatbot() {
   const [open, setOpen] = useState(false);
-  const [msgs, setMsgs] = useState([
-    { role: "assistant", content: "Hey! I'm your Accorria agent 👋\n\nI can help you list your car or home. To get started, I'll need some key information:\n\n1. Location: Where is the property located?\n2. Specifications: What are the key features (bedrooms, bathrooms, square footage, etc.)?\n3. Condition: Is there anything notable about the property's condition or recent upgrades?\n4. Photos: Do you have any photos you'd like to include in the listing?\n5. Pricing: Do you have a target price in mind, or would you like pricing guidance?\n\nJust let me know what you'd like to list and I'll guide you through the process!" }
-  ]);
+  const [msgs, setMsgs] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [useWebSearch, setUseWebSearch] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const boxRef = useRef<HTMLDivElement>(null);
 
-  // Clear messages when component mounts (page loads)
+  // Don't add initial message - start with clean slate
   useEffect(() => {
-    setMsgs([
-      { role: "assistant", content: "Hey! I'm your Accorria agent 👋\n\nI can help you list your car or home. To get started, I'll need some key information:\n\n1. Location: Where is the property located?\n2. Specifications: What are the key features (bedrooms, bathrooms, square footage, etc.)?\n3. Condition: Is there anything notable about the property's condition or recent upgrades?\n4. Photos: Do you have any photos you'd like to include in the listing?\n5. Pricing: Do you have a target price in mind, or would you like pricing guidance?\n\nJust let me know what you'd like to list and I'll guide you through the process!" }
-    ]);
+    setMsgs([]);
   }, []);
 
   useEffect(() => {
     boxRef.current?.scrollTo({ top: boxRef.current.scrollHeight, behavior: "smooth" });
   }, [msgs]);
+
+
 
   const send = async () => {
     const text = inputRef.current?.value?.trim();
@@ -33,46 +32,29 @@ export default function Chatbot() {
     setMsgs(next);
 
     try {
-      // Stream from our API
-      const res = await fetch("/api/chat", { 
+      // Use enhanced API with web search and image analysis
+      const res = await fetch("/api/chat/enhanced", { 
         method: "POST", 
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: next }) 
+        body: JSON.stringify({ 
+          messages: next,
+          useWebSearch: useWebSearch
+        }) 
       });
       
       if (!res.ok) {
         throw new Error(`API error: ${res.status}`);
       }
       
-      const reader = res.body!.getReader();
-      const decoder = new TextDecoder("utf-8");
-      let buff = "";
-      let assistant = { role: "assistant", content: "" } as any;
-      setMsgs((m) => [...m, assistant]);
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buff += decoder.decode(value, { stream: true });
-
-        // Parse SSE: lines like "data: {choices:[{delta:{content:\"...\"}}]}"
-        for (const line of buff.split("\n")) {
-          if (!line.startsWith("data:")) continue;
-          const json = line.replace("data: ", "").trim();
-          if (json === "[DONE]") break;
-          try {
-            const chunk = JSON.parse(json);
-            const piece = chunk.choices?.[0]?.delta?.content ?? "";
-            if (piece) {
-              assistant.content += piece;
-              setMsgs((m) => [...m.slice(0, -1), { ...assistant }]);
-            }
-          } catch {}
-        }
-        // keep only the last (incomplete) line in buff
-        const lastNL = buff.lastIndexOf("\n");
-        if (lastNL >= 0) buff = buff.slice(lastNL + 1);
+      const data = await res.json();
+      
+      if (data.success && data.response) {
+        setMsgs((m) => [...m, { role: "assistant", content: data.response }]);
+      } else {
+        throw new Error(data.error || 'Failed to get response');
       }
+
+
     } catch (error) {
       console.error("Chat error:", error);
       setMsgs((m) => [...m, { 
@@ -107,15 +89,15 @@ export default function Chatbot() {
             transition={{ duration: 0.2 }}
             className="fixed bottom-20 right-5 z-40 w-[92vw] max-w-sm overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
           >
-                               <div className="flex items-center justify-between border-b px-4 py-3 bg-gradient-to-r from-amber-50 to-white">
-                     <div className="flex items-center gap-2">
-                       <img 
-                         src="/LOGOSYMBLOYBLUE.png" 
-                         alt="Accorria" 
-                         className="w-6 h-6 rounded-full"
-                       />
-                       <div className="text-sm font-semibold text-slate-800">Accorria Agent</div>
-                     </div>
+            <div className="flex items-center justify-between border-b px-4 py-3 bg-gradient-to-r from-amber-50 to-white">
+              <div className="flex items-center gap-2">
+                <img 
+                  src="/LOGOSYMBLOYBLUE.png" 
+                  alt="Accorria" 
+                  className="w-6 h-6 rounded-full"
+                />
+                <div className="text-sm font-semibold text-slate-800">Accorria Agent</div>
+              </div>
               <button 
                 className="text-slate-500 hover:text-slate-800 transition-colors" 
                 onClick={() => setOpen(false)}
@@ -124,85 +106,110 @@ export default function Chatbot() {
               </button>
             </div>
 
-                               <div 
-                     ref={boxRef} 
-                     className="h-80 space-y-4 overflow-y-auto bg-slate-50 p-6 text-sm text-slate-800"
-                   >
-                                   {msgs.map((m, i) => (
-                       <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"} mb-4`}>
-                         {m.role === "assistant" && (
-                           <img 
-                             src="/LOGOSYMBLOYBLUE.png" 
-                             alt="Accorria" 
-                             className="w-6 h-6 rounded-full mr-3 mt-1 flex-shrink-0"
-                           />
-                         )}
-                         <div className={`${
-                           m.role === "user" 
-                             ? "bg-amber-500 text-white" 
-                             : "bg-white border border-slate-200"
-                           } max-w-[80%] rounded-2xl px-4 py-3 shadow-sm leading-relaxed whitespace-pre-wrap`}
-                         >
-                           <div className="prose prose-sm max-w-none">
-                             {m.content.split('\n').map((line, index) => {
-                               // Handle numbered lists with better formatting
-                               if (/^\d+\.\s/.test(line)) {
-                                 return (
-                                   <div key={index} className="flex items-start mb-2">
-                                     <span className="font-semibold text-amber-600 mr-2 min-w-[20px]">
-                                       {line.match(/^\d+/)?.[0]}.
-                                     </span>
-                                     <span className="flex-1">{line.replace(/^\d+\.\s/, '')}</span>
-                                   </div>
-                                 );
-                               }
-                               // Handle bullet points
-                               if (line.startsWith('•') || line.startsWith('-')) {
-                                 return (
-                                   <div key={index} className="flex items-start mb-1 ml-4">
-                                     <span className="text-amber-500 mr-2">•</span>
-                                     <span className="flex-1">{line.replace(/^[•-]\s/, '')}</span>
-                                   </div>
-                                 );
-                               }
-                               // Handle headings (lines that end with :)
-                               if (line.trim().endsWith(':') && line.length < 50) {
-                                 return (
-                                   <div key={index} className="font-semibold text-slate-800 mb-2 mt-3 first:mt-0">
-                                     {line}
-                                   </div>
-                                 );
-                               }
-                               // Regular text
-                               return (
-                                 <div key={index} className="mb-1">
-                                   {line}
-                                 </div>
-                               );
-                             })}
-                           </div>
-                         </div>
-                       </div>
-                     ))}
-                                   {isLoading && (
-                       <div className="flex justify-start mb-4">
-                         <img 
-                           src="/LOGOSYMBLOYBLUE.png" 
-                           alt="Accorria" 
-                           className="w-6 h-6 rounded-full mr-3 mt-1 flex-shrink-0"
-                         />
-                         <div className="bg-white border border-slate-200 max-w-[80%] rounded-2xl px-4 py-3 shadow-sm">
-                           <div className="flex items-center gap-2">
-                             <div className="flex space-x-1">
-                               <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce"></div>
-                               <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                               <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                             </div>
-                             <span className="text-slate-500">Accorria is typing...</span>
-                           </div>
-                         </div>
-                       </div>
-                     )}
+            <div 
+              ref={boxRef} 
+              className="h-80 space-y-4 overflow-y-auto bg-slate-50 p-6 text-sm text-slate-800"
+            >
+              {msgs.length === 0 && (
+                <div className="text-center text-slate-500 py-8">
+                  <div className="text-lg mb-2">👋</div>
+                  <div className="text-sm">Ask me about listing your car or home!</div>
+                  <div className="text-xs mt-2 text-slate-400">
+                    I can analyze photos and search current market data
+                  </div>
+                </div>
+              )}
+              
+              {msgs.map((m, i) => (
+                <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"} mb-4`}>
+                  {m.role === "assistant" && (
+                    <img 
+                      src="/LOGOSYMBLOYBLUE.png" 
+                      alt="Accorria" 
+                      className="w-6 h-6 rounded-full mr-3 mt-1 flex-shrink-0"
+                    />
+                  )}
+                  <div className={`${
+                    m.role === "user" 
+                      ? "bg-amber-500 text-white" 
+                      : "bg-white border border-slate-200"
+                    } max-w-[80%] rounded-2xl px-4 py-3 shadow-sm leading-relaxed whitespace-pre-wrap`}
+                  >
+                    <div className="prose prose-sm max-w-none">
+                      {m.content.split('\n').map((line, index) => {
+                        // Handle numbered lists with better formatting
+                        if (/^\d+\.\s/.test(line)) {
+                          return (
+                            <div key={index} className="flex items-start mb-2">
+                              <span className="font-semibold text-amber-600 mr-2 min-w-[20px]">
+                                {line.match(/^\d+/)?.[0]}.
+                              </span>
+                              <span className="flex-1">{line.replace(/^\d+\.\s/, '')}</span>
+                            </div>
+                          );
+                        }
+                        // Handle bullet points
+                        if (line.startsWith('•') || line.startsWith('-')) {
+                          return (
+                            <div key={index} className="flex items-start mb-1 ml-4">
+                              <span className="text-amber-500 mr-2">•</span>
+                              <span className="flex-1">{line.replace(/^[•-]\s/, '')}</span>
+                            </div>
+                          );
+                        }
+                        // Handle headings (lines that end with :)
+                        if (line.trim().endsWith(':') && line.length < 50) {
+                          return (
+                            <div key={index} className="font-semibold text-slate-800 mb-2 mt-3 first:mt-0">
+                              {line}
+                            </div>
+                          );
+                        }
+                        // Regular text
+                        return (
+                          <div key={index} className="mb-1">
+                            {line}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              ))}
+              
+              {isLoading && (
+                <div className="flex justify-start mb-4">
+                  <img 
+                    src="/LOGOSYMBLOYBLUE.png" 
+                    alt="Accorria" 
+                    className="w-6 h-6 rounded-full mr-3 mt-1 flex-shrink-0"
+                  />
+                  <div className="bg-white border border-slate-200 max-w-[80%] rounded-2xl px-4 py-3 shadow-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="flex space-x-1">
+                        <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce"></div>
+                        <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                        <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                      </div>
+                      <span className="text-slate-500">Accorria is typing...</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Feature toggles */}
+            <div className="flex items-center gap-2 border-t bg-slate-50 px-3 py-2 text-xs">
+              <label className="flex items-center gap-1">
+                <input
+                  type="checkbox"
+                  checked={useWebSearch}
+                  onChange={(e) => setUseWebSearch(e.target.checked)}
+                  className="rounded"
+                />
+                <span>Web Search</span>
+              </label>
+
             </div>
 
             <div className="flex items-center gap-2 border-t bg-white p-3">
@@ -211,7 +218,7 @@ export default function Chatbot() {
                 onKeyDown={(e) => e.key === "Enter" && !isLoading && send()}
                 placeholder="Ask about listing your car or home..."
                 disabled={isLoading}
-                className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-amber-300 focus:border-transparent disabled:opacity-50"
+                className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder-slate-500 outline-none focus:ring-2 focus:ring-amber-300 focus:border-transparent disabled:opacity-50 bg-white"
               />
               <button 
                 onClick={send} 

@@ -1,5 +1,5 @@
 """
-Plazoria - Listening Agent
+Aquaria - Listening Agent
 Combines patterns from Google ADK samples:
 - Marketing Agency: Multi-tool orchestration
 - RAG: Knowledge retrieval and content generation
@@ -51,7 +51,7 @@ class ListingDraft:
 
 class ListenAgent:
     """
-    Listening Agent for Plazoria
+    Listening Agent for Aquaria
     Analyzes cars and generates optimized listing drafts
     """
     

@@ -1,4 +1,4 @@
-# 🔐 QuickFlip AI - Security Assessment & Production Readiness
+# 🔐 Aquaria - Security Assessment & Production Readiness
 
 ## 🚨 CRITICAL SECURITY ISSUES FOUND
 

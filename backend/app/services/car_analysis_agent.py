@@ -1,5 +1,5 @@
 """
-Car Analysis Agent for Plazoria MVP
+Car Analysis Agent for Aquaria MVP
 Simplified agent for analyzing car images and providing pricing insights
 """
 
