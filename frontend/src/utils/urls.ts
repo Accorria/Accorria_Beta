@@ -11,7 +11,7 @@ export const getBaseUrl = (): string => {
 };
 
 export const getAppUrl = (): string => {
-  return `${getBaseUrl()}/app`;
+  return `${getBaseUrl()}/dashboard`;
 };
 
 export const getHomeUrl = (): string => {
@@ -23,5 +23,5 @@ export const getLoginUrl = (): string => {
 };
 
 export const getDashboardUrl = (): string => {
-  return `${getBaseUrl()}/app`;
+  return `${getBaseUrl()}/dashboard`;
 };

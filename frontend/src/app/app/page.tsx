@@ -52,7 +52,7 @@ export default function AppPage() {
             
             <div className="flex items-center space-x-4">
               <nav className="hidden md:flex space-x-8">
-                <Link href="/app" className="text-gray-900 hover:text-amber-600 px-3 py-2 text-sm font-medium">
+                <Link href="/dashboard" className="text-gray-900 hover:text-amber-600 px-3 py-2 text-sm font-medium">
                   Dashboard
                 </Link>
                 <Link href="/app/listings" className="text-gray-500 hover:text-amber-600 px-3 py-2 text-sm font-medium">
