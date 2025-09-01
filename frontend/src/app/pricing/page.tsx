@@ -14,12 +14,12 @@ export default function PricingPage() {
       name: "Starter",
       price: "$29",
       duration: "per month",
-      subtitle: "For one-off sellers & new flippers",
-      posts: "5 listings / month",
+      subtitle: "For one-off sellers & first flips",
+      posts: "5 car listings / month",
       features: [
-        "Assist-to-Post (guided, compliant)",
+        "Assist-to-Post (guided)",
         "Smart Inbox (1 user) + quick-reply templates",
-        "1 active escrow at a time (0.9% vehicles / 0.5% homes, $25 min)",
+        "1 active vehicle escrow (0.9% fee, $25 min)",
         "Email support"
       ],
       cta: "Get Starter",
@@ -29,25 +29,25 @@ export default function PricingPage() {
       name: "Pro",
       price: "$79",
       duration: "per month",
-      subtitle: "For active flippers & side-hustle sellers",
-      posts: "Unlimited listings",
+      subtitle: "For active flippers",
+      posts: "Unlimited car listings",
       features: [
         "Smart Inbox (1 user) with saved templates",
-        "Up to 3 active escrows",
+        "Up to 3 active vehicle escrows",
         "Priority chat support"
       ],
       cta: "Upgrade to Pro",
       popular: true
     },
     {
-      name: "Dealer (Beta)",
+      name: "Dealer (Auto)",
       price: "$199",
       duration: "per month",
       subtitle: "For independent dealers (waitlist while we onboard)",
       posts: "Unlimited listings",
       features: [
-        "Smart Inbox (team access up to 3 seats during beta)",
-        "Up to 10 active escrows",
+        "Team access (up to 3 seats during beta)",
+        "Up to 10 active vehicle escrows",
         "Priority chat & phone support"
       ],
       cta: "Join Dealer Waitlist",
@@ -113,13 +113,13 @@ export default function PricingPage() {
       <div className="max-w-7xl mx-auto px-4 py-16">
         <div className="text-center mb-16">
           <h1 className="text-5xl font-bold text-slate-900 mb-6">
-            Simple pricing. Start in minutes.
+            Accorria — #1 Trust-Native Listing Platform
           </h1>
-          <p className="text-xl text-slate-700 max-w-3xl mx-auto font-medium mb-8">
-            Everything you need to list, post, and close safely.
-          </p>
-          <p className="text-lg text-slate-600 max-w-3xl mx-auto mb-8">
-            All plans include AI Listing Generator, Assist-to-Post (guided & ToS-compliant), Smart Inbox, SafePay escrow access, and e-sign docs.
+          <h2 className="text-3xl font-bold text-slate-800 mb-6">
+            Pricing (simplified for cars now)
+          </h2>
+          <p className="text-lg text-slate-700 max-w-3xl mx-auto mb-8">
+            All plans include AI Listing Generator, Assist-to-Post (ToS-compliant), Smart Inbox, e-sign docs, and SafePay escrow (vehicles).
           </p>
           <p className="text-slate-600 font-medium">
             Cancel anytime.
@@ -170,37 +170,46 @@ export default function PricingPage() {
           ))}
         </div>
 
-        {/* Simple Fees Section */}
+        {/* Escrow Fees Section */}
         <div className="bg-white rounded-2xl shadow-xl p-8 mb-16">
           <h2 className="text-3xl font-bold text-slate-900 mb-8 text-center">
-            Simple fees (per deal)
+            Vehicle escrow fee
           </h2>
           
-          <div className="grid md:grid-cols-2 gap-8 mb-8">
-            <div>
-              <h3 className="text-xl font-semibold text-slate-900 mb-4">Vehicles</h3>
-              <p className="text-3xl font-bold text-amber-600 mb-2">0.9%</p>
-              <p className="text-slate-700">of sale price ($25 min)</p>
-            </div>
-            <div>
-              <h3 className="text-xl font-semibold text-slate-900 mb-4">Homes</h3>
-              <p className="text-3xl font-bold text-amber-600 mb-2">0.5%</p>
-              <p className="text-slate-700">of sale price ($25 min)</p>
-            </div>
+          <div className="text-center mb-8">
+            <p className="text-2xl font-bold text-amber-600 mb-2">0.9% of sale price ($25 min)</p>
+            <p className="text-slate-700 text-lg">
+              ACH is the lowest-cost rail.
+            </p>
           </div>
           
           <div className="text-center">
             <p className="text-slate-700 text-lg">
-              ACH has the lowest cost; card rails may add standard processing fees.
+              <strong>Homes:</strong> escrow 0.5% planned — pilot, waitlist open.
             </p>
           </div>
         </div>
 
         {/* Fine Print Section */}
-        <div className="bg-slate-50 rounded-2xl p-8">
+        <div className="bg-slate-50 rounded-2xl p-8 mb-16">
           <p className="text-sm text-slate-600 text-center leading-relaxed">
-            Channel availability varies by region; we use approved feeds or <strong>guided posting</strong> to stay compliant. Escrow provided under applicable licensing/KYC/AML. Features listed are current MVP; enhancements (auto-delist, inventory import/VIN decode, dealer feeds, CRM) will be announced separately.
+            Channel availability varies by region. We use approved feeds or guided posting to stay compliant. Escrow provided under applicable licensing and KYC/AML.
           </p>
+        </div>
+
+        {/* Homes Coming Soon Section */}
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-8 border border-blue-200">
+          <div className="text-center">
+            <h3 className="text-2xl font-bold text-slate-900 mb-4">
+              Homes coming soon
+            </h3>
+            <p className="text-slate-700 mb-6">
+              Selling a home soon? We're piloting real-estate listings + escrow.
+            </p>
+            <button className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors">
+              Join the homes waitlist →
+            </button>
+          </div>
         </div>
       </div>
 

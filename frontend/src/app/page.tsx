@@ -269,15 +269,14 @@ export default function Home() {
       {/* PRICING TEASER */}
       <section id="pricing" className="bg-white">
         <div className="mx-auto max-w-7xl px-4 py-16">
-          <h2 className="text-2xl font-bold md:text-3xl">Simple pricing. Start in minutes.</h2>
-          <p className="mt-4 text-slate-700 max-w-2xl">Everything you need to list, post, and close safely.</p>
-          <p className="mt-2 text-slate-600 max-w-2xl">All plans include AI Listing Generator, Assist-to-Post (guided & ToS-compliant), Smart Inbox, SafePay escrow access, and e-sign docs.</p>
+          <h2 className="text-2xl font-bold md:text-3xl">Pricing (simplified for cars now)</h2>
+          <p className="mt-4 text-slate-700 max-w-2xl">All plans include AI Listing Generator, Assist-to-Post (ToS-compliant), Smart Inbox, e-sign docs, and SafePay escrow (vehicles).</p>
           <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            <PriceCard name="Starter" price="$29/mo" note="5 listings/month" cta="Get Starter" />
-            <PriceCard name="Pro" price="$79/mo" note="Unlimited listings" cta="Upgrade to Pro" highlight />
-            <PriceCard name="Dealer (Beta)" price="$199/mo" note="Unlimited + Team seats" cta="Join Dealer Waitlist" />
+            <PriceCard name="Starter" price="$29/mo" note="5 car listings/month" cta="Get Starter" />
+            <PriceCard name="Pro" price="$79/mo" note="Unlimited car listings" cta="Upgrade to Pro" highlight />
+            <PriceCard name="Dealer (Auto)" price="$199/mo" note="Unlimited + Team seats" cta="Join Dealer Waitlist" />
           </div>
-          <p className="mt-4 text-sm text-slate-600">Escrow fees: 0.9% vehicles / 0.5% homes ($25 min)</p>
+          <p className="mt-4 text-sm text-slate-600">Vehicle escrow: 0.9% ($25 min). Homes: 0.5% planned — pilot waitlist open.</p>
         </div>
       </section>
 
