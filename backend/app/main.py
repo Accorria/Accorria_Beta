@@ -168,13 +168,16 @@ async def input_validation_middleware(request: Request, call_next):
             # Get request body
             body = await request.body()
             if body:
-                # Basic input validation (more sophisticated validation in endpoints)
-                body_str = body.decode('utf-8')
-                if len(body_str) > 1000000:  # 1MB limit
-                    return Response(
-                        content="Request body too large",
-                        status_code=413
-                    )
+                # Skip UTF-8 validation for multipart/form-data (image uploads)
+                content_type = request.headers.get("content-type", "")
+                if "multipart/form-data" not in content_type:
+                    # Only validate text-based requests
+                    body_str = body.decode('utf-8')
+                    if len(body_str) > 1000000:  # 1MB limit
+                        return Response(
+                            content="Request body too large",
+                            status_code=413
+                        )
         except Exception as e:
             logger.warning(f"Input validation error: {e}")
     

@@ -269,13 +269,14 @@ export default function Home() {
       {/* PRICING TEASER */}
       <section id="pricing" className="bg-white">
         <div className="mx-auto max-w-7xl px-4 py-16">
-          <h2 className="text-2xl font-bold md:text-3xl">Simple, transparent pricing</h2>
+          <h2 className="text-2xl font-bold md:text-3xl">Pricing that scales with your hustle</h2>
+          <p className="mt-4 text-slate-600 max-w-2xl">All plans include: AI listing generator, Assist-to-Post (ToS-compliant), Smart Inbox, e-sign docs, SafePay escrow rails, and basic analytics.</p>
           <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            <PriceCard name="Free Trial" price="$0" note="7 days • 3 posts" cta="Start free" />
-            <PriceCard name="Starter" price="$20/mo" note="3 posts / mo" cta="Choose Starter" highlight />
-            <PriceCard name="Solo Hustler" price="$50/mo" note="Unlimited posts" cta="Go Solo" />
+            <PriceCard name="Starter" price="$29/mo" note="5 listings/month" cta="Get Starter" />
+            <PriceCard name="Solo" price="$79/mo" note="Unlimited listings" cta="Upgrade to Solo" highlight />
+            <PriceCard name="Dealer Pro" price="$199/mo" note="Unlimited + Team seats" cta="Start Dealer Pro" />
           </div>
-          <p className="mt-4 text-sm text-slate-600">Dealer Pro tier coming soon.</p>
+          <p className="mt-4 text-sm text-slate-600">Escrow fees: 0.9% vehicles / 0.5% homes ($25 min)</p>
         </div>
       </section>
 
@@ -305,7 +306,7 @@ export default function Home() {
               </div>
               <div>
                 <h3 className="font-semibold text-slate-900 mb-2">What about escrow?</h3>
-                <p className="text-slate-600">Escrow is launching soon! Join our beta waitlist to be first in line for secure deal closing.</p>
+                <p className="text-slate-600">SafePay escrow is included in all plans! Secure transactions with 0.9% for vehicles and 0.5% for homes ($25 minimum). No crypto needed - buyers pay via ACH/card.</p>
               </div>
               <div>
                 <h3 className="font-semibold text-slate-900 mb-2">Can I post to multiple marketplaces?</h3>

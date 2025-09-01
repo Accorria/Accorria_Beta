@@ -59,12 +59,14 @@ async def enhanced_analyze_car(
             content = await image.read()
             image_bytes.append(content)
         
-        # Use the new two-pass system
+        # Use simplified analysis for faster response
         from app.services.enhanced_image_analysis import get_enhanced_analyzer
         enhanced_analyzer = get_enhanced_analyzer()
-        analysis_result = await enhanced_analyzer.analyze_car_images(image_bytes, car_details)
         
-        logger.info("Two-pass analysis completed successfully")
+        # Use single-pass analysis for faster response
+        analysis_result = await enhanced_analyzer.analyze_car_images_simple(image_bytes, car_details)
+        
+        logger.info("Analysis completed successfully")
         return JSONResponse(content=analysis_result, status_code=200)
         
     except Exception as e:

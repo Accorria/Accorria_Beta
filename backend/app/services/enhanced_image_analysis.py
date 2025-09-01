@@ -46,6 +46,86 @@ class EnhancedImageAnalyzer:
             logger.error(f"Two-pass analysis failed: {e}")
             return self._get_fallback_analysis(car_details)
     
+    async def analyze_car_images_simple(self, image_bytes: List[bytes], car_details: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Simple single-pass analysis for faster response
+        """
+        try:
+            logger.info("Starting simple analysis")
+            
+            # Convert images to base64
+            image_data = []
+            for img_bytes in image_bytes:
+                base64_image = base64.b64encode(img_bytes).decode('utf-8')
+                image_data.append({
+                    "type": "image_url",
+                    "image_url": {
+                        "url": f"data:image/jpeg;base64,{base64_image}"
+                    }
+                })
+            
+            # Simple prompt for quick analysis
+            system_prompt = """You are a car listing assistant. Analyze the car images and extract key information. Return a JSON response with the following structure:
+{
+  "make": "detected make or 'Unknown'",
+  "model": "detected model or 'Unknown'", 
+  "year": "detected year or 'Unknown'",
+  "trim": "detected trim level or 'Unknown'",
+  "mileage": "detected mileage or 'Unknown'",
+  "features": ["list", "of", "detected", "features"],
+  "condition": "overall condition assessment",
+  "description": "brief description of the car"
+}"""
+            
+            user_prompt = f"""Analyze these {len(image_bytes)} car images and extract information. User provided: Make={car_details.get('make')}, Model={car_details.get('model')}, Year={car_details.get('year')}. Return only valid JSON."""
+            
+            # Make OpenAI API call
+            response = await self.client.chat.completions.acreate(
+                model="gpt-4o",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt + "\n\nImages:", "content_type": "text"},
+                    *image_data
+                ],
+                max_tokens=1000,
+                temperature=0.1
+            )
+            
+            # Parse response
+            content = response.choices[0].message.content
+            logger.info(f"OpenAI response: {content}")
+            
+            # Try to extract JSON from response
+            try:
+                # Find JSON in the response
+                json_start = content.find('{')
+                json_end = content.rfind('}') + 1
+                if json_start != -1 and json_end != 0:
+                    json_str = content[json_start:json_end]
+                    result = json.loads(json_str)
+                else:
+                    result = self._get_fallback_analysis(car_details)
+            except json.JSONDecodeError:
+                logger.warning("Failed to parse JSON from OpenAI response")
+                result = self._get_fallback_analysis(car_details)
+            
+            # Add user-provided details
+            result.update({
+                "user_make": car_details.get("make"),
+                "user_model": car_details.get("model"),
+                "user_year": car_details.get("year"),
+                "user_mileage": car_details.get("mileage"),
+                "user_price": car_details.get("price"),
+                "analysis_type": "simple"
+            })
+            
+            logger.info("Simple analysis completed successfully")
+            return result
+            
+        except Exception as e:
+            logger.error(f"Simple analysis failed: {e}")
+            return self._get_fallback_analysis(car_details)
+    
     async def _pass_1_analysis(self, image_bytes: List[bytes], car_details: Dict[str, Any]) -> Dict[str, Any]:
         """Pass 1: Analyze images and extract features with confidence scores"""
         
