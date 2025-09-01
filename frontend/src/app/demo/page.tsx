@@ -50,7 +50,7 @@ export default function Demo() {
           <h1 className="text-4xl font-extrabold text-white sm:text-5xl">
             See Accorria in Action
           </h1>
-          <p className="mt-4 text-xl text-slate-300">
+          <p className="mt-4 text-xl text-slate-700">
             Watch how AI transforms car selling from hours to minutes
           </p>
         </div>
@@ -78,7 +78,7 @@ export default function Demo() {
           <h2 className="text-3xl font-bold text-white mb-4">
             Ready to try Accorria?
           </h2>
-          <p className="text-xl text-slate-300 mb-8">
+          <p className="text-xl text-slate-700 mb-8">
             Join the beta and be among the first to experience AI-powered car selling.
           </p>
           <div className="space-x-4">

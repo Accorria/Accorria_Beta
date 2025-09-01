@@ -40,9 +40,9 @@ export default function GetPaidPage() {
             <h1 className="text-4xl font-extrabold leading-tight md:text-6xl mb-6">
               A New Way to <span className="text-amber-300">Get Paid</span>
             </h1>
-            <p className="text-xl text-slate-300 max-w-3xl mx-auto mb-8">
-              Skip the bank delays. Skip the scams. Get paid instantly when deals close — cars, homes, rentals. Blockchain-powered settlements in 23 hours.
-            </p>
+                    <p className="text-xl text-slate-700 max-w-3xl mx-auto mb-8">
+          Skip the bank delays. Skip the scams. Get paid instantly when deals close — cars, homes, rentals. Blockchain-powered settlements in 23 hours.
+        </p>
             <div className="flex flex-col gap-3 sm:flex-row justify-center">
               <Link href="/beta-signup" className="rounded-lg bg-amber-400 px-6 py-3 font-semibold text-slate-900 hover:bg-amber-300">Join Beta Waitlist</Link>
               <Link href="/demo" className="rounded-lg border border-white/20 px-6 py-3 font-semibold text-white/90 hover:bg-white/5">Watch Demo</Link>
@@ -181,7 +181,7 @@ export default function GetPaidPage() {
         </div>
       </section>
 
-      <footer className="bg-slate-900 py-10 text-center text-sm text-slate-400">
+              <footer className="bg-slate-900 py-10 text-center text-sm text-slate-200">
         © {new Date().getFullYear()} Accorria. All rights reserved.
       </footer>
     </div>

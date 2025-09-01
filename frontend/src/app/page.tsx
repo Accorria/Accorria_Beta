@@ -142,7 +142,7 @@ export default function Home() {
             <h1 className="text-3xl font-extrabold leading-tight md:text-5xl">
               The First Trust-Native Listing Platform
             </h1>
-            <p className="mt-4 max-w-xl text-slate-300 text-xl font-medium">
+            <p className="mt-4 max-w-xl text-slate-700 text-xl font-medium">
               🚀 The Future of Selling Starts Here.
             </p>
 
@@ -269,12 +269,13 @@ export default function Home() {
       {/* PRICING TEASER */}
       <section id="pricing" className="bg-white">
         <div className="mx-auto max-w-7xl px-4 py-16">
-          <h2 className="text-2xl font-bold md:text-3xl">Pricing that scales with your hustle</h2>
-          <p className="mt-4 text-slate-600 max-w-2xl">All plans include: AI listing generator, Assist-to-Post (ToS-compliant), Smart Inbox, e-sign docs, SafePay escrow rails, and basic analytics.</p>
+          <h2 className="text-2xl font-bold md:text-3xl">Simple pricing. Start in minutes.</h2>
+          <p className="mt-4 text-slate-700 max-w-2xl">Everything you need to list, post, and close safely.</p>
+          <p className="mt-2 text-slate-600 max-w-2xl">All plans include AI Listing Generator, Assist-to-Post (guided & ToS-compliant), Smart Inbox, SafePay escrow access, and e-sign docs.</p>
           <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             <PriceCard name="Starter" price="$29/mo" note="5 listings/month" cta="Get Starter" />
-            <PriceCard name="Solo" price="$79/mo" note="Unlimited listings" cta="Upgrade to Solo" highlight />
-            <PriceCard name="Dealer Pro" price="$199/mo" note="Unlimited + Team seats" cta="Start Dealer Pro" />
+            <PriceCard name="Pro" price="$79/mo" note="Unlimited listings" cta="Upgrade to Pro" highlight />
+            <PriceCard name="Dealer (Beta)" price="$199/mo" note="Unlimited + Team seats" cta="Join Dealer Waitlist" />
           </div>
           <p className="mt-4 text-sm text-slate-600">Escrow fees: 0.9% vehicles / 0.5% homes ($25 min)</p>
         </div>
@@ -317,7 +318,7 @@ export default function Home() {
         </div>
       </section>
 
-                      <footer className="bg-slate-900 py-10 text-center text-sm text-slate-300">
+                      <footer className="bg-slate-900 py-10 text-center text-sm text-slate-200">
           <div className="max-w-7xl mx-auto px-4">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
               <div>

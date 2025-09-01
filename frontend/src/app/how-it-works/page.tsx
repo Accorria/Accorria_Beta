@@ -37,7 +37,7 @@ export default function HowItWorksPage() {
             <h1 className="text-4xl font-extrabold leading-tight md:text-6xl mb-6">
               How <span className="text-amber-300">Accorria</span> Works
             </h1>
-            <p className="text-xl text-slate-300 max-w-3xl mx-auto mb-8">
+            <p className="text-xl text-slate-700 max-w-3xl mx-auto mb-8">
               From photos to posted in minutes. From listing to closed deal in days. Here's how our AI deal agent makes selling faster and safer.
             </p>
             <div className="flex flex-col gap-3 sm:flex-row justify-center">
@@ -206,7 +206,7 @@ export default function HowItWorksPage() {
         </div>
       </section>
 
-      <footer className="bg-slate-900 py-10 text-center text-sm text-slate-400">
+              <footer className="bg-slate-900 py-10 text-center text-sm text-slate-200">
         © {new Date().getFullYear()} Accorria. All rights reserved.
       </footer>
     </div>
