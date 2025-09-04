@@ -1,6 +1,6 @@
-# 🚗 Plazoria — Pricing & Product Flow (FINAL, LOCKED)
+# 🚗 Accorria — Pricing & Product Flow (FINAL, LOCKED)
 
-> **Purpose:** This doc defines the **official pricing**, **feature entitlements**, and the **end-to-end user flow** used by Plazoria.  
+> **Purpose:** This doc defines the **official pricing**, **feature entitlements**, and the **end-to-end user flow** used by Accorria.  
 > **Note:** Anywhere you see "analysts," replace with **"posts."** We do **not** sell "scans" or "analysts."
 
 ---

@@ -1,0 +1,13 @@
+{
+  "universe_domain": "googleapis.com",
+  "type": "external_account",
+  "audience": "//iam.googleapis.com/projects/19949436301/locations/global/workloadIdentityPools/accorria-vision-provider/providers/accorria-vision-provider",
+  "subject_token_type": "urn:ietf:params:oauth:token-type:jwt",
+  "token_url": "https://sts.googleapis.com/v1/token",
+  "credential_source": {
+    "file": "/tmp/oidc-token",
+    "format": {
+      "type": "text"
+    }
+  }
+}

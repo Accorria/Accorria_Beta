@@ -2,7 +2,7 @@
 Google Vision API Integration for Aquaria
 Uses Application Default Credentials (ADC) - no JSON key files needed
 
-This service provides car image analysis capabilities for the Plazoria backend.
+This service provides car image analysis capabilities for the Accorria backend.
 """
 
 import logging

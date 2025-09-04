@@ -1,5 +1,5 @@
 """
-Comprehensive SQLAlchemy models for Plazoria multi-agent system
+Comprehensive SQLAlchemy models for Accorria multi-agent system
 """
 from sqlalchemy import Column, String, Float, Integer, DateTime, Text, JSON, Boolean, Numeric, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base

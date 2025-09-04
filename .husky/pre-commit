@@ -1,1 +1,1 @@
-npm run scan:secrets
+node scripts/guard-frontend.js
