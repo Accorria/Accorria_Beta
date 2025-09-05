@@ -36,7 +36,18 @@ export async function POST(request: NextRequest) {
     console.error('Error in chat endpoint:', error);
     
     // Provide a fallback response when backend is not available
-    const fallbackResponse = "Hello! I'm Accorria's AI agent. I'm here to help you list cars and homes for sale. I can help you with pricing guidance, listing optimization, and market analysis. How can I assist you today?";
+    const fallbackResponse = `Hello! I'm Accorria's AI agent. I'm here to help you list cars and homes for sale. 
+
+🚗 **For Cars:** I can analyze photos, read odometers, detect features, and suggest optimal pricing based on market data.
+
+🏠 **For Homes:** I can help with pricing guidance, listing optimization, and market analysis.
+
+📸 **Upload photos** and I'll extract details automatically
+💰 **Get pricing options** - Quick Sale, Market Price, or Top Dollar
+📝 **Generate professional listings** with compelling descriptions
+🤖 **Handle buyer messages** automatically with your rules
+
+What would you like to list today? Upload some photos and tell me about your vehicle or property!`;
     
     return NextResponse.json(
       { 
