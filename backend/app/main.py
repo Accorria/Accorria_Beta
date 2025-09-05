@@ -205,6 +205,7 @@ app.include_router(enhanced_analysis.router, prefix="/api/v1", tags=["Enhanced A
 app.include_router(debug_status_router, prefix="/api/v1", tags=["Debug"])
 app.include_router(data_test_router, prefix="/api/v1", tags=["Data Testing"])
 app.include_router(analytics.router, prefix="/api/v1", tags=["Analytics"])
+app.include_router(chat_router.router, prefix="/api/v1/chat", tags=["Chat"])
 
 # Test endpoint
 @app.get("/test")
