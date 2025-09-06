@@ -20,6 +20,7 @@ def init_supabase():
             logger.warning("Supabase credentials not configured, skipping initialization")
             return None
             
+        # Create client without proxy parameter to avoid version conflicts
         supabase = create_client(
             settings.SUPABASE_URL,
             settings.SUPABASE_ANON_KEY

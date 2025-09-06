@@ -6,7 +6,6 @@ export default function Chatbot() {
   const [open, setOpen] = useState(false);
   const [msgs, setMsgs] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [useWebSearch, setUseWebSearch] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const boxRef = useRef<HTMLDivElement>(null);
 
@@ -37,8 +36,7 @@ export default function Chatbot() {
         method: "POST", 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
-          messages: next,
-          useWebSearch: useWebSearch
+          messages: next
         }) 
       });
       
@@ -198,19 +196,6 @@ export default function Chatbot() {
               )}
             </div>
 
-            {/* Feature toggles */}
-            <div className="flex items-center gap-2 border-t bg-slate-50 px-3 py-2 text-xs">
-              <label className="flex items-center gap-1">
-                <input
-                  type="checkbox"
-                  checked={useWebSearch}
-                  onChange={(e) => setUseWebSearch(e.target.checked)}
-                  className="rounded"
-                />
-                <span>Web Search</span>
-              </label>
-
-            </div>
 
             <div className="flex items-center gap-2 border-t bg-white p-3">
               <input

@@ -105,7 +105,6 @@ deploy_to_cloud_run() {
         --set-env-vars "SUPABASE_URL=$SUPABASE_URL,SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY,OPENAI_API_KEY=$OPENAI_API_KEY,GOOGLE_API_KEY=$GOOGLE_API_KEY,JWT_SECRET_KEY=$JWT_SECRET_KEY,ENVIRONMENT=production" \
         --set-env-vars "ENABLE_RATE_LIMITING=true,ENABLE_AUDIT_LOGGING=true,ENABLE_PII_ENCRYPTION=true" \
         --set-env-vars "RATE_LIMIT_DEFAULT=100,RATE_LIMIT_AUTH=10,RATE_LIMIT_CHAT=5" \
-        --set-env-vars "ALLOWED_ORIGINS=https://accorria.com,https://www.accorria.com,https://accorria.vercel.app" \
         --set-env-vars "APP_NAME=Accorria,APP_VERSION=1.0.0" \
         --quiet
     

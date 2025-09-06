@@ -21,25 +21,18 @@ from app.core.config import settings
 from app.core.database import async_engine, Base
 from app.api.v1 import (
     auth as auth_router,
+    user as user_router,
+    analytics,
+    car_listing_generator as car_listing_generator_router,
+    car_analysis as car_analysis_router,
+    market_intelligence as market_intelligence_router,
+    enhanced_analysis as enhanced_analysis_router,
     flip_car as flip_car_router,
     listings,
-    user as user_router,
-    market_intelligence as market_intelligence_router,
-    messages,
-    replies,
-    scheduler,
-    car_analysis as car_analysis_router,
-    platform_posting,
-    car_listing_generator as car_listing_generator_router,
-    deals,
-    vision_test,
-    supabase_auth,
-    demo_test,
-    public_analysis,
-    enhanced_analysis,
-    debug_status_router,
-    data_test_router,
-    analytics,
+    platform_posting as platform_posting_router,
+    messages as messages_router,
+    replies as replies_router,
+    deals as deals_router,
     chat as chat_router
 )
 from app.middleware import rate_limit_middleware, cleanup_rate_limits
@@ -184,27 +177,20 @@ async def input_validation_middleware(request: Request, call_next):
     response = await call_next(request)
     return response
 
-# Include routers
+# Include routers - Full version
 app.include_router(auth_router.router, prefix="/api/v1/auth", tags=["Authentication"])
-app.include_router(supabase_auth.router, prefix="/api/v1/supabase", tags=["Supabase Auth"])
+app.include_router(user_router.router, prefix="/api/v1", tags=["User"])
+app.include_router(analytics.router, prefix="/api/v1", tags=["Analytics"])
+app.include_router(car_listing_generator_router.router, prefix="/api/v1", tags=["Car Listing Generator"])
+app.include_router(car_analysis_router.router, prefix="/api/v1", tags=["Car Analysis"])
+app.include_router(market_intelligence_router.router, prefix="/api/v1", tags=["Market Intelligence"])
+app.include_router(enhanced_analysis_router.router, prefix="/api/v1", tags=["Enhanced Analysis"])
 app.include_router(flip_car_router.router, prefix="/api/v1", tags=["Flip Car"])
 app.include_router(listings.router, prefix="/api/v1/listings", tags=["Listings"])
-app.include_router(user_router.router, prefix="/api/v1", tags=["User"])
-app.include_router(market_intelligence_router.router, prefix="/api/v1", tags=["Market Intelligence"])
-app.include_router(messages.router, prefix="/api/v1/messages", tags=["Messages"])
-app.include_router(replies.router, prefix="/api/v1", tags=["AI Replies"])
-app.include_router(scheduler.router, prefix="/api/v1", tags=["Scheduler"])
-app.include_router(car_analysis_router.router, prefix="/api/v1", tags=["Car Analysis"])
-app.include_router(platform_posting.router, prefix="/api/v1", tags=["Platform Posting"])
-app.include_router(car_listing_generator_router.router, prefix="/api/v1", tags=["Car Listing Generator"])
-app.include_router(deals.router, prefix="/api/v1", tags=["Deals"])
-app.include_router(vision_test.router, prefix="/api/v1", tags=["Vision API Testing"])
-app.include_router(demo_test.router, prefix="/api/v1", tags=["Demo Testing"])
-app.include_router(public_analysis.router, prefix="/api/v1", tags=["Public Analysis"])
-app.include_router(enhanced_analysis.router, prefix="/api/v1", tags=["Enhanced Analysis"])
-app.include_router(debug_status_router, prefix="/api/v1", tags=["Debug"])
-app.include_router(data_test_router, prefix="/api/v1", tags=["Data Testing"])
-app.include_router(analytics.router, prefix="/api/v1", tags=["Analytics"])
+app.include_router(platform_posting_router.router, prefix="/api/v1", tags=["Platform Posting"])
+app.include_router(messages_router.router, prefix="/api/v1/messages", tags=["Messages"])
+app.include_router(replies_router.router, prefix="/api/v1", tags=["AI Replies"])
+app.include_router(deals_router.router, prefix="/api/v1", tags=["Deals"])
 app.include_router(chat_router.router, prefix="/api/v1/chat", tags=["Chat"])
 
 # Test endpoint
@@ -262,5 +248,5 @@ if __name__ == "__main__":
         "app.main:app",
         host="0.0.0.0",
         port=port,
-        reload=True
+        reload=False  # Disable reload in production
     ) 
