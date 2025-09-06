@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export const runtime = "edge";
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'https://accorria-backend-691352445702.us-central1.run.app';
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'https://accorria-backend-19949436301.us-central1.run.app';
 
 export async function POST(request: NextRequest) {
   try {

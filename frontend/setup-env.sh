@@ -8,7 +8,7 @@ echo "🚀 Setting up Accorria Frontend Environment Variables"
 cat > .env.local << EOF
 # Backend API Configuration
 # Cloud Run backend URL
-NEXT_PUBLIC_API_URL=https://accorria-backend-691352445702.us-central1.run.app
+NEXT_PUBLIC_API_URL=https://accorria-backend-19949436301.us-central1.run.app
 
 # Site Configuration
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
@@ -23,4 +23,4 @@ EOF
 
 echo "✅ Created .env.local file"
 echo "📝 Please update the Supabase and OpenAI API keys in .env.local"
-echo "🔗 Backend URL set to: https://accorria-backend-691352445702.us-central1.run.app"
+echo "🔗 Backend URL set to: https://accorria-backend-19949436301.us-central1.run.app"
