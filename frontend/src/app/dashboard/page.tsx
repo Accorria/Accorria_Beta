@@ -5,12 +5,14 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { EmailVerification } from '@/components/EmailVerification';
 import DashboardListing from '@/components/DashboardListing';
+import CreateListing from '@/components/listings/CreateListing';
 import Header from '@/components/Header';
 
 export default function Dashboard() {
   const { user, loading, isEmailVerified } = useAuth();
   const [testListings, setTestListings] = useState<any[]>([]);
   const [logMsg, setLogMsg] = useState<string | null>(null);
+  const [showCreateListing, setShowCreateListing] = useState(false);
 
   // State for activities
   const [activities, setActivities] = useState([
@@ -142,12 +144,12 @@ export default function Dashboard() {
         {/* Quick Actions */}
         <div className="px-4 mb-6">
           <div className="grid grid-cols-1 gap-3">
-            <Link
-              href="/app"
+            <button
+              onClick={() => setShowCreateListing(true)}
               className="w-full bg-blue-500 dark:bg-blue-700 text-white py-4 rounded-xl font-semibold shadow-lg hover:bg-blue-600 dark:hover:bg-blue-800 transition-colors duration-200 text-center"
             >
               📸 Post New Car
-            </Link>
+            </button>
           </div>
         </div>
 
@@ -269,6 +271,13 @@ export default function Dashboard() {
           </Link>
         </div>
       </nav>
+
+      {/* Create Listing Modal */}
+      {showCreateListing && (
+        <CreateListing 
+          onClose={() => setShowCreateListing(false)}
+        />
+      )}
     </div>
   );
 }
