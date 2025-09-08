@@ -1,14 +1,16 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserProfile } from '@/components/UserProfile';
 import Chatbot from '@/components/Chatbot';
+import CreateListing from '@/components/listings/CreateListing';
 import Link from 'next/link';
 import { getHomeUrl } from '@/utils/urls';
 
 export default function AppPage() {
   const { user, loading } = useAuth();
+  const [showCreateListing, setShowCreateListing] = useState(false);
 
   // Redirect to home if not authenticated
   useEffect(() => {
@@ -92,7 +94,10 @@ export default function AppPage() {
             <p className="text-gray-600 mb-4">
               Upload photos and get an AI-generated listing in minutes.
             </p>
-            <button className="w-full bg-amber-500 text-white py-2 px-4 rounded-lg font-medium hover:bg-amber-600 transition-colors">
+            <button 
+              onClick={() => setShowCreateListing(true)}
+              className="w-full bg-amber-500 text-white py-2 px-4 rounded-lg font-medium hover:bg-amber-600 transition-colors"
+            >
               Start Car Listing
             </button>
           </div>
@@ -143,6 +148,13 @@ export default function AppPage() {
 
       {/* Chatbot */}
       <Chatbot />
+
+      {/* Create Listing Modal */}
+      {showCreateListing && (
+        <CreateListing 
+          onClose={() => setShowCreateListing(false)}
+        />
+      )}
     </div>
   );
 }
