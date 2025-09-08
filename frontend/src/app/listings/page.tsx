@@ -5,11 +5,13 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { EmailVerification } from '@/components/EmailVerification';
 import DashboardListing from '@/components/DashboardListing';
+import CreateListing from '@/components/listings/CreateListing';
 import Header from '@/components/Header';
 
 export default function ListingsPage() {
   const { user, loading, isEmailVerified } = useAuth();
   const [testListings, setTestListings] = useState<any[]>([]);
+  const [showCreateListing, setShowCreateListing] = useState(false);
 
   // Load test listings from localStorage
   useEffect(() => {
@@ -94,12 +96,12 @@ export default function ListingsPage() {
               <div className="text-gray-400 text-6xl mb-4">🚗</div>
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No listings yet</h3>
               <p className="text-gray-600 dark:text-gray-400 mb-4">Create your first listing to get started</p>
-              <Link 
-                href="/app"
+              <button 
+                onClick={() => setShowCreateListing(true)}
                 className="bg-blue-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-600 transition-colors"
               >
                 Create First Listing
-              </Link>
+              </button>
             </div>
           )}
         </div>
@@ -130,6 +132,13 @@ export default function ListingsPage() {
           </Link>
         </div>
       </nav>
+
+      {/* Create Listing Modal */}
+      {showCreateListing && (
+        <CreateListing 
+          onClose={() => setShowCreateListing(false)}
+        />
+      )}
     </div>
   );
 }
