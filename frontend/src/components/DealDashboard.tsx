@@ -50,14 +50,10 @@ const DealDashboard: React.FC = () => {
     location: ''
   });
 
-  useEffect(() => {
-    loadDeals();
-  }, []);
-
   const loadDeals = async () => {
     setLoading(true);
     try {
-      const data = await api.get(`/api/v1/deals/discover?search_term=${encodeURIComponent(searchTerm)}&max_results=20`);
+      const data = await api.get(`/api/v1/deals/discover?search_term=${encodeURIComponent(searchTerm)}&max_results=20`) as { success: boolean; deals: Deal[] };
       if (data.success) {
         setDeals(data.deals);
       }
@@ -66,6 +62,11 @@ const DealDashboard: React.FC = () => {
     }
     setLoading(false);
   };
+
+  useEffect(() => {
+    loadDeals();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const searchDeals = async () => {
     setLoading(true);
@@ -78,7 +79,7 @@ const DealDashboard: React.FC = () => {
       if (filters.location) params.append('location', filters.location);
       params.append('limit', '20');
 
-      const data = await api.get(`/api/v1/deals/search?${params.toString()}`);
+      const data = await api.get(`/api/v1/deals/search?${params.toString()}`) as { success: boolean; deals: Deal[] };
       if (data.success) {
         setDeals(data.deals);
       }
@@ -90,7 +91,7 @@ const DealDashboard: React.FC = () => {
 
   const loadDealAnalysis = async (dealId: string) => {
     try {
-      const data = await api.get(`/api/v1/deals/${dealId}`);
+      const data = await api.get(`/api/v1/deals/${dealId}`) as { success: boolean; analysis: DealAnalysis };
       if (data.success) {
         setDealAnalysis(data.analysis);
       }

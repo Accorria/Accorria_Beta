@@ -36,13 +36,20 @@ JWT_REFRESH_TOKEN_EXPIRE_DAYS = 7
 # Rate Limiting
 limiter = Limiter(key_func=get_remote_address)
 
-# Redis for session management and rate limiting
-redis_client = redis.Redis(
-    host=os.getenv("REDIS_HOST", "localhost"),
-    port=int(os.getenv("REDIS_PORT", 6379)),
-    password=os.getenv("REDIS_PASSWORD"),
-    decode_responses=True
-)
+# Redis for session management and rate limiting (optional)
+try:
+    redis_client = redis.Redis(
+        host=os.getenv("REDIS_HOST", "localhost"),
+        port=int(os.getenv("REDIS_PORT", 6379)),
+        password=os.getenv("REDIS_PASSWORD"),
+        decode_responses=True
+    )
+    # Test connection
+    redis_client.ping()
+    security_logger.info("Redis connection established")
+except Exception as e:
+    security_logger.warning(f"Redis connection failed: {e}. Running without Redis.")
+    redis_client = None
 
 # Security headers
 SECURITY_HEADERS = {
@@ -190,19 +197,26 @@ class RateLimitManager:
     @staticmethod
     def check_rate_limit(request: Request, limit: int, window: int = 60):
         """Check rate limit for user"""
-        key = RateLimitManager.get_rate_limit_key(request)
-        current = redis_client.get(key)
-        
-        if current and int(current) >= limit:
-            raise HTTPException(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail=f"Rate limit exceeded. Limit: {limit} requests per {window} seconds"
-            )
-        
-        pipe = redis_client.pipeline()
-        pipe.incr(key)
-        pipe.expire(key, window)
-        pipe.execute()
+        if redis_client is None:
+            # Skip rate limiting if Redis is not available
+            return
+            
+        try:
+            key = RateLimitManager.get_rate_limit_key(request)
+            current = redis_client.get(key)
+            
+            if current and int(current) >= limit:
+                raise HTTPException(
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                    detail=f"Rate limit exceeded. Limit: {limit} requests per {window} seconds"
+                )
+            
+            pipe = redis_client.pipeline()
+            pipe.incr(key)
+            pipe.expire(key, window)
+            pipe.execute()
+        except Exception as e:
+            security_logger.warning(f"Rate limiting failed: {e}. Skipping rate limit check.")
     
     @staticmethod
     def rate_limit(limit: int, window: int = 60):
@@ -230,8 +244,9 @@ class SecurityAudit:
         
         # Store in database for compliance
         try:
-            redis_client.lpush("security_audit_logs", str(event))
-            redis_client.ltrim("security_audit_logs", 0, 9999)  # Keep last 10k events
+            if redis_client:
+                redis_client.lpush("security_audit_logs", str(event))
+                redis_client.ltrim("security_audit_logs", 0, 9999)  # Keep last 10k events
         except Exception as e:
             security_logger.error(f"Failed to store security event: {e}")
     

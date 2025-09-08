@@ -42,7 +42,7 @@ steps:
       '--set-env-vars', 'ENVIRONMENT=production,APP_NAME=Accorria,APP_VERSION=1.0.0',
       '--set-env-vars', 'ENABLE_RATE_LIMITING=true,ENABLE_AUDIT_LOGGING=true,ENABLE_PII_ENCRYPTION=true',
       '--set-env-vars', 'RATE_LIMIT_DEFAULT=100,RATE_LIMIT_AUTH=10,RATE_LIMIT_CHAT=5',
-      '--set-env-vars', 'ALLOWED_ORIGINS=https://accorria.com,https://www.accorria.com,https://accorria.vercel.app'
+      '--set-env-vars', 'ALLOWED_ORIGINS=http://localhost:3000,https://accorria.com,https://www.accorria.com,https://accorria.vercel.app'
     ]
 
   # Step 4: Health check
@@ -75,6 +75,7 @@ options:
 substitutions:
   _REGION: 'us-central1'
   _SERVICE_NAME: 'accorria-backend'
+  _PROJECT_ID: 'accorria-beta'
 
 # Timeout
 timeout: '1200s'

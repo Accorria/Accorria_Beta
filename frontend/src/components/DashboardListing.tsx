@@ -1,25 +1,32 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
+import Link from 'next/link';
+
+interface Listing {
+  id: string;
+  title: string;
+  price: number;
+  description: string;
+  images: string[];
+  mileage: string;
+  titleStatus: string;
+  postedAt: string;
+  status: string;
+  platforms?: string[];
+  messages?: number;
+  clicks?: number;
+  soldAt?: string;
+  soldFor?: number;
+  soldTo?: string;
+  detectedFeatures?: string[];
+  aiAnalysis?: string;
+  finalDescription?: string;
+}
 
 interface DashboardListingProps {
-  listing: {
-    id: string;
-    title: string;
-    price: number;
-    description: string;
-    images: string[];
-    mileage: string;
-    titleStatus: string;
-    postedAt: string;
-    status: string;
-    platforms?: string[];
-    messages?: number;
-    clicks?: number;
-    soldAt?: string;
-    soldFor?: number;
-    soldTo?: string;
-  };
+  listing: Listing;
 }
 
 export default function DashboardListing({ listing }: DashboardListingProps) {
@@ -55,16 +62,22 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
       {/* Images */}
       <div className="relative">
-        <div 
-          className="grid grid-cols-2 gap-1 h-20 sm:h-24 md:h-32 cursor-pointer"
-          onClick={() => setShowPhotoGallery(true)}
-        >
+        <Link href={`/listings/${listing.id}`}>
+          <div 
+            className="grid grid-cols-2 gap-1 h-20 sm:h-24 md:h-32 cursor-pointer"
+            onClick={(e) => {
+              e.preventDefault();
+              setShowPhotoGallery(true);
+            }}
+          >
           {listing.images.slice(0, 2).map((image, index) => (
             <div key={index} className="relative">
-              <img
+              <Image
                 src={image}
                 alt={`${listing.title} - Image ${index + 1}`}
                 className="w-full h-full object-cover rounded-lg"
+                width={200}
+                height={150}
               />
               {index === 1 && listing.images.length > 2 && (
                 <div className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center rounded-lg">
@@ -75,20 +88,23 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
               )}
             </div>
           ))}
-        </div>
-        <div className="absolute bottom-1 right-1 sm:bottom-2 sm:right-2 bg-black bg-opacity-70 text-white text-xs px-1 py-0.5 sm:px-2 sm:py-1 rounded text-xs">
+          </div>
+        </Link>
+        <div className="absolute bottom-1 right-1 sm:bottom-2 sm:right-2 bg-black bg-opacity-70 text-white text-xs px-1 py-0.5 sm:px-2 sm:py-1 rounded">
           Click to view all {listing.images.length} photos
         </div>
       </div>
 
-              {/* Content */}
-        <div className="p-4 pt-6">
+      {/* Content */}
+      <div className="p-4 pt-6">
           {/* Title and Price */}
           <div className="flex justify-between items-start mb-2">
             <div className="flex-1">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-                {listing.title}
-              </h3>
+              <Link href={`/listings/${listing.id}`} className="hover:underline">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white hover:text-blue-600 transition-colors">
+                  {listing.title}
+                </h3>
+              </Link>
               <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                 {listing.mileage} miles • {listing.titleStatus} title
               </div>
@@ -103,45 +119,20 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
             </div>
           </div>
         
-        {/* Platform Info */}
-        {listing.platforms && listing.platforms.length > 0 && (
-          <div className="mb-3">
-            <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Posted to:</div>
-            <div className="flex flex-wrap gap-1">
-              {listing.platforms.map((platform, index) => {
-                const platformInfo = {
-                  'facebook_marketplace': { name: 'Facebook Marketplace', icon: '📘', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300' },
-                  'craigslist': { name: 'Craigslist', icon: '📋', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-300' },
-                  'offerup': { name: 'OfferUp', icon: '📱', color: 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300' }
-                };
-                const info = platformInfo[platform as keyof typeof platformInfo];
-                return (
-                  <span key={index} className={`text-xs px-2 py-1 rounded-full ${info.color}`}>
-                    {info.icon} {info.name}
-                  </span>
-                );
-              })}
-            </div>
-          </div>
-        )}
 
-        {/* Description Preview */}
-        <div className="text-gray-700 dark:text-gray-300 text-sm line-clamp-3">
-          {listing.description.split('\n').slice(0, 3).join(' ')}
-        </div>
 
         {/* Enhanced Listing Stats */}
-        <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+        <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg space-y-4">
           {/* Top Row - Posted Info & Status */}
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center space-x-3 text-xs text-gray-600 dark:text-gray-400">
-              <span>🕒 {new Date(listing.postedAt).toLocaleDateString('en-US', { 
+          <div className="flex items-center justify-between">
+            <div className="text-xs text-gray-600 dark:text-gray-400">
+              🕒 {new Date(listing.postedAt).toLocaleDateString('en-US', { 
                 month: 'short', 
                 day: 'numeric' 
               })} @ {new Date(listing.postedAt).toLocaleTimeString([], { 
                 hour: '2-digit', 
                 minute: '2-digit' 
-              })}</span>
+              })}
             </div>
             <div className="flex items-center space-x-2">
               <span className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -157,37 +148,49 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
             </div>
           </div>
 
-          {/* Middle Row - Platforms & Price */}
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center space-x-2">
-              <span className="text-xs text-gray-600 dark:text-gray-400">📍</span>
-              <div className="flex space-x-1">
-                {listing.platforms?.map((platform, index) => {
-                  const platformInfo = {
-                    'facebook_marketplace': { name: 'FB', icon: '📘', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300' },
-                    'craigslist': { name: 'CL', icon: '📋', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-300' },
-                    'offerup': { name: 'OU', icon: '📱', color: 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300' }
-                  };
-                  const info = platformInfo[platform as keyof typeof platformInfo];
+          {/* Price Section */}
+          <div className="flex items-center justify-between">
+            <div className="text-lg font-bold text-green-600">
+              ${listing.price.toLocaleString()}
+            </div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">Listed Price</div>
+          </div>
+          
+          {/* Platforms Section */}
+          <div className="space-y-2">
+            <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">Posted to:</div>
+            <div className="flex flex-wrap gap-2">
+              {listing.platforms?.map((platform, index) => {
+                const platformInfo = {
+                  'facebook_marketplace': { name: 'Facebook', icon: '📘', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300' },
+                  'craigslist': { name: 'Craigslist', icon: '📋', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-300' },
+                  'offerup': { name: 'OfferUp', icon: '📱', color: 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300' },
+                  'ebay': { name: 'eBay Motors', icon: '🛒', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300' },
+                  'autotrader': { name: 'AutoTrader', icon: '🚗', color: 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300' },
+                  'cars_com': { name: 'Cars.com', icon: '🚙', color: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/20 dark:text-indigo-300' },
+                  'cargurus': { name: 'CarGurus', icon: '🔍', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300' },
+                  'vroom': { name: 'Vroom', icon: '💨', color: 'bg-pink-100 text-pink-800 dark:bg-pink-900/20 dark:text-pink-300' }
+                };
+                const info = platformInfo[platform as keyof typeof platformInfo];
+                if (!info) {
                   return (
-                    <span key={index} className={`text-xs px-2 py-1 rounded-full ${info.color}`}>
-                      {info.icon} {info.name}
+                    <span key={index} className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300 whitespace-nowrap">
+                      📱 {platform}
                     </span>
                   );
-                })}
-              </div>
-            </div>
-            <div className="text-right">
-              <div className="text-sm font-bold text-green-600">
-                ${listing.price.toLocaleString()}
-              </div>
-              <div className="text-xs text-gray-500 dark:text-gray-400">Listed Price</div>
+                }
+                return (
+                  <span key={index} className={`text-xs px-2 py-1 rounded-full ${info.color} whitespace-nowrap`}>
+                    {info.icon} {info.name}
+                  </span>
+                );
+              })}
             </div>
           </div>
 
-          {/* Bottom Row - Activity Metrics */}
-          <div className="flex items-center justify-between text-xs">
-            <div className="flex items-center space-x-3 text-gray-600 dark:text-gray-400">
+          {/* Activity Metrics */}
+          <div className="flex items-center justify-between text-xs pt-2 border-t border-gray-200 dark:border-gray-600">
+            <div className="flex items-center space-x-4 text-gray-600 dark:text-gray-400">
               <span>👁️ {listing.clicks || Math.floor(Math.random() * 50) + 10} views</span>
               <span>💬 {listing.messages || Math.floor(Math.random() * 5)} messages</span>
             </div>
@@ -202,71 +205,86 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
           </div>
         </div>
 
-        {/* Actions */}
-        <div className="flex space-x-2 mt-4">
-          <button 
-            onClick={() => {
-              const newMessages = (listing.messages || 0) + 1;
-              // Update the listing in localStorage
-              const existingListings = JSON.parse(localStorage.getItem('testListings') || '[]');
-              const updatedListings = existingListings.map((l: any) => 
-                l.id === listing.id ? { ...l, messages: newMessages } : l
-              );
-              localStorage.setItem('testListings', JSON.stringify(updatedListings));
-              // Force re-render
-              window.location.reload();
-            }}
-            className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
-          >
-            📱 Message ({listing.messages || 0})
-          </button>
-          <button 
-            onClick={() => {
-              const newClicks = (listing.clicks || 0) + 1;
-              // Update the listing in localStorage
-              const existingListings = JSON.parse(localStorage.getItem('testListings') || '[]');
-              const updatedListings = existingListings.map((l: any) => 
-                l.id === listing.id ? { ...l, clicks: newClicks } : l
-              );
-              localStorage.setItem('testListings', JSON.stringify(updatedListings));
-              // Force re-render
-              window.location.reload();
-            }}
-            className="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 py-2 px-4 rounded-lg font-semibold hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-          >
-            👁️ View ({listing.clicks || 0})
-          </button>
-        </div>
-        
         {/* Action Buttons */}
-        <div className="mt-3 space-y-2">
-          {!listing.soldAt ? (
+        <div className="mt-4 space-y-3">
+          {/* Primary Actions */}
+          <div className="grid grid-cols-2 gap-2">
             <button 
-              onClick={() => setShowSaleForm(true)}
-              className="w-full bg-green-500 text-white py-2 px-4 rounded-lg font-semibold hover:bg-green-600 transition-colors"
+              onClick={() => {
+                const newMessages = (listing.messages || 0) + 1;
+                // Update the listing in localStorage
+                const existingListings = JSON.parse(localStorage.getItem('testListings') || '[]');
+                const updatedListings = existingListings.map((l: Listing) => 
+                  l.id === listing.id ? { ...l, messages: newMessages } : l
+                );
+                localStorage.setItem('testListings', JSON.stringify(updatedListings));
+                // Force re-render
+                window.location.reload();
+              }}
+              className="bg-blue-600 text-white py-2 px-3 rounded-lg font-medium hover:bg-blue-700 transition-colors text-sm"
             >
-              🎉 Car Sold
+              📱 Message ({listing.messages || 0})
             </button>
-          ) : (
-            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
-              <div className="text-green-800 dark:text-green-200 text-sm font-semibold mb-1">
-                ✅ SOLD - ${listing.soldFor?.toLocaleString()}
-              </div>
-              <div className="text-green-600 dark:text-green-300 text-xs">
-                Sold to: {listing.soldTo} • {new Date(listing.soldAt).toLocaleDateString()}
-              </div>
-            </div>
-          )}
+            <button 
+              onClick={() => {
+                const newClicks = (listing.clicks || 0) + 1;
+                // Update the listing in localStorage
+                const existingListings = JSON.parse(localStorage.getItem('testListings') || '[]');
+                const updatedListings = existingListings.map((l: Listing) => 
+                  l.id === listing.id ? { ...l, clicks: newClicks } : l
+                );
+                localStorage.setItem('testListings', JSON.stringify(updatedListings));
+                // Force re-render
+                window.location.reload();
+              }}
+              className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 py-2 px-3 rounded-lg font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm"
+            >
+              👁️ View ({listing.clicks || 0})
+            </button>
+          </div>
           
-          <button 
-            onClick={() => {
-              console.log('Delete button clicked, showing confirmation modal');
-              setShowDeleteConfirm(true);
-            }}
-            className="w-full bg-red-500 text-white py-2 px-4 rounded-lg font-semibold hover:bg-red-600 transition-colors"
-          >
-            🗑️ Delete Listing
-          </button>
+          {/* Secondary Actions */}
+          <div className="space-y-2">
+            <button 
+              onClick={() => {
+                // TODO: Implement edit functionality
+                console.log('Edit button clicked for listing:', listing.id);
+                // For now, just show an alert
+                alert('Edit functionality coming soon!');
+              }}
+              className="w-full bg-blue-500 text-white py-2 px-4 rounded-lg font-medium hover:bg-blue-600 transition-colors text-sm"
+            >
+              ✏️ Edit Listing
+            </button>
+            
+            {!listing.soldAt ? (
+              <button 
+                onClick={() => setShowSaleForm(true)}
+                className="w-full bg-green-500 text-white py-2 px-4 rounded-lg font-medium hover:bg-green-600 transition-colors text-sm"
+              >
+                🎉 Mark as Sold
+              </button>
+            ) : (
+              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
+                <div className="text-green-800 dark:text-green-200 text-sm font-semibold mb-1">
+                  ✅ SOLD - ${listing.soldFor?.toLocaleString()}
+                </div>
+                <div className="text-green-600 dark:text-green-300 text-xs">
+                  Sold to: {listing.soldTo} • {new Date(listing.soldAt).toLocaleDateString()}
+                </div>
+              </div>
+            )}
+            
+            <button 
+              onClick={() => {
+                console.log('Delete button clicked, showing confirmation modal');
+                setShowDeleteConfirm(true);
+              }}
+              className="w-full bg-red-500 text-white py-2 px-4 rounded-lg font-medium hover:bg-red-600 transition-colors text-sm"
+            >
+              🗑️ Delete Listing
+            </button>
+          </div>
         </div>
       </div>
 
@@ -288,10 +306,12 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
             </div>
             
             {/* Main Image */}
-            <img
+            <Image
               src={listing.images[currentPhotoIndex]}
               alt={`${listing.title} - Photo ${currentPhotoIndex + 1}`}
               className="max-w-full max-h-full object-contain"
+              width={800}
+              height={600}
             />
             
             {/* Navigation Buttons */}
@@ -322,10 +342,12 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
                     index === currentPhotoIndex ? 'border-white' : 'border-gray-600'
                   }`}
                 >
-                  <img
+                  <Image
                     src={image}
                     alt={`Thumbnail ${index + 1}`}
                     className="w-full h-full object-cover"
+                    width={100}
+                    height={75}
                   />
                 </button>
               ))}
@@ -407,7 +429,7 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
                   
                   // Update the listing in localStorage
                   const existingListings = JSON.parse(localStorage.getItem('testListings') || '[]');
-                  const updatedListings = existingListings.map((l: any) => 
+                  const updatedListings = existingListings.map((l: Listing) => 
                     l.id === listing.id ? {
                       ...l,
                       soldAt: new Date().toISOString(),
@@ -477,15 +499,25 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
                     action: 'deleted'
                   };
                   
-                  const existingAnalytics = JSON.parse(localStorage.getItem('listingAnalytics') || '[]');
-                  existingAnalytics.push(deletedListing);
-                  localStorage.setItem('listingAnalytics', JSON.stringify(existingAnalytics));
-                  console.log('Analytics updated:', existingAnalytics);
+                  try {
+                    const existingAnalytics = JSON.parse(localStorage.getItem('listingAnalytics') || '[]');
+                    existingAnalytics.push(deletedListing);
+                    
+                    // Keep only last 50 analytics entries to prevent quota issues
+                    const trimmedAnalytics = existingAnalytics.slice(-50);
+                    localStorage.setItem('listingAnalytics', JSON.stringify(trimmedAnalytics));
+                    console.log('Analytics updated:', trimmedAnalytics);
+                  } catch (error) {
+                    console.warn('Could not save analytics (quota exceeded):', error);
+                    // Clear old analytics and try again
+                    localStorage.removeItem('listingAnalytics');
+                    localStorage.setItem('listingAnalytics', JSON.stringify([deletedListing]));
+                  }
                   
                   // Remove the listing from active listings
                   const existingListings = JSON.parse(localStorage.getItem('testListings') || '[]');
                   console.log('Existing listings before delete:', existingListings);
-                  const updatedListings = existingListings.filter((l: any) => l.id !== listing.id);
+                  const updatedListings = existingListings.filter((l: Listing) => l.id !== listing.id);
                   localStorage.setItem('testListings', JSON.stringify(updatedListings));
                   console.log('Updated listings after delete:', updatedListings);
                   

@@ -28,7 +28,7 @@ class CarAnalysisAgent:
             
             # Analyze with GPT-4 Vision
             response = self.openai_client.chat.completions.create(
-                model="gpt-4-vision-preview",
+                model="gpt-4o",
                 messages=[
                     {
                         "role": "user",

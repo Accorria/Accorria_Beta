@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 
@@ -10,16 +11,18 @@ export default function Header() {
   return (
     <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-4">
       <div className="flex items-center justify-between">
-        <div 
-          className="flex items-center space-x-3"
-        >
-          <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-white font-bold text-lg">
-            QF
+        <Link href="/" className="flex items-center space-x-3 hover:opacity-80 transition-opacity">
+          <div className="w-10 h-10 bg-white dark:bg-gray-700 rounded-xl flex items-center justify-center border border-gray-200 dark:border-gray-600 shadow-sm">
+            <img 
+              src="/AccorriaYwLOGO.png" 
+              alt="Accorria" 
+              className="h-8 w-auto"
+            />
           </div>
           <div>
             <h1 className="text-xl font-bold text-gray-900 dark:text-white">Accorria</h1>
           </div>
-        </div>
+        </Link>
 
         <div className="flex items-center space-x-3">
           <button

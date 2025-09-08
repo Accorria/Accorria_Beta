@@ -46,7 +46,7 @@ class CarListingResponse(BaseModel):
 
 @router.post("/car-listing/generate", response_model=CarListingResponse)
 async def generate_car_listing(
-    images: List[UploadFile] = File(..., description="Up to 20 car images"),
+    images: List[UploadFile] = File([], description="Up to 20 car images"),
     make: Optional[str] = Form(None, description="Car make"),
     model: Optional[str] = Form(None, description="Car model"),
     year: Optional[int] = Form(None, description="Car year"),

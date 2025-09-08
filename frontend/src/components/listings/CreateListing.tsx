@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { useDropzone } from 'react-dropzone';
+import { useDropzone, FileRejection } from 'react-dropzone';
 import carDataRaw from '../../data/carData.json';
 import { api } from '../../utils/api';
 const carData = carDataRaw as Record<string, string[]>;
@@ -18,8 +18,64 @@ interface CarDetails {
   price: string;
   lowestPrice: string;
   titleStatus: string;
+  city?: string;
+  zipCode?: string;
   aboutVehicle: string; // User's input about the vehicle
   finalDescription: string; // AI-generated final description
+
+}
+
+interface AnalysisResult {
+  success: boolean;
+  post_text?: string;
+  description?: string;
+  ai_analysis?: string;
+  image_analysis?: {
+    make?: string;
+    model?: string;
+    year?: string;
+    color?: string;
+    mileage?: number;
+  };
+  confidence_score?: number;
+  detected?: {
+    features?: string[];
+    make?: string;
+    model?: string;
+    year?: number;
+  };
+  analysis_json?: Record<string, unknown>;
+  listing_context?: Record<string, unknown>;
+  final_listing_text?: string;
+  market_intelligence?: {
+    pricing_analysis?: {
+      price_trends?: {
+        trend?: string;
+      };
+    };
+    make_model_analysis?: {
+      demand_analysis?: {
+        demand_level?: string;
+      };
+    };
+  };
+  price_recommendations?: {
+    price_recommendations?: Record<string, { price: number; description?: string; estimated_days_to_sell?: number }>;
+  };
+  data?: {
+    price_trends?: Record<string, unknown>;
+    demand_analysis?: Record<string, unknown>;
+    condition_assessment?: {
+      overall_condition?: string;
+    };
+    features_detected?: {
+      car_features?: {
+        technology?: string[];
+        interior?: string[];
+        exterior?: string[];
+      };
+    };
+  };
 }
 
 export default function CreateListing({ onClose }: CreateListingProps) {
@@ -36,31 +92,19 @@ export default function CreateListing({ onClose }: CreateListingProps) {
     aboutVehicle: '',
     finalDescription: ''
   });
-  const [isUploading, setIsUploading] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [customMake, setCustomMake] = useState('');
   const [customModel, setCustomModel] = useState('');
-  const [analysisResult, setAnalysisResult] = useState<any>(null);
+  const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [showAnalysis, setShowAnalysis] = useState(false);
-  const [isSearchingMarket, setIsSearchingMarket] = useState(false);
   const [descriptionSuggestions, setDescriptionSuggestions] = useState<string[]>([]);
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [isPosting, setIsPosting] = useState(false);
-  const [postingResults, setPostingResults] = useState<any>(null);
   const [selectedPricingTier, setSelectedPricingTier] = useState<'quick' | 'market' | 'premium' | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStartTime, setDragStartTime] = useState(0);
 
-  // Regenerate description when pricing tier changes
-  useEffect(() => {
-    if (selectedPricingTier && analysisResult && carDetails.finalDescription) {
-      const newDescription = generateAIDescription(analysisResult, carDetails);
-      setCarDetails(prev => ({ ...prev, finalDescription: newDescription }));
-    }
-  }, [selectedPricingTier, analysisResult]);
 
-  const onDrop = useCallback(async (acceptedFiles: File[], rejectedFiles: any[]) => {
+  const onDrop = useCallback(async (acceptedFiles: File[], rejectedFiles: FileRejection[]) => {
     console.log('onDrop called!');
     console.log('Accepted files:', acceptedFiles.length);
     console.log('Rejected files:', rejectedFiles.length);
@@ -194,10 +238,16 @@ export default function CreateListing({ onClose }: CreateListingProps) {
     const testListing = {
       id: Date.now().toString(),
       title: `${carDetails.year} ${carDetails.make} ${carDetails.model}`,
+      make: carDetails.make,
+      model: carDetails.model,
+      year: carDetails.year,
       price: selectedPricingTier === 'quick' ? Math.floor(parseInt(carDetails.price) * 0.85) :
              selectedPricingTier === 'premium' ? Math.floor(parseInt(carDetails.price) * 1.15) :
              parseInt(carDetails.price),
       description: carDetails.finalDescription,
+      finalDescription: carDetails.finalDescription, // AI-generated description
+      detectedFeatures: analysisResult?.detected?.features || [], // AI-detected features
+      aiAnalysis: analysisResult?.ai_analysis || '', // Raw AI analysis
       images: imageUrls, // Use base64 URLs instead of blob URLs
       mileage: carDetails.mileage,
       titleStatus: carDetails.titleStatus,
@@ -222,19 +272,8 @@ export default function CreateListing({ onClose }: CreateListingProps) {
     }, 100);
   };
 
-  const handlePricingSelection = (pricingStrategy: string) => {
-    // Update the price based on selected strategy
-    if (analysisResult?.price_recommendations?.price_recommendations?.[pricingStrategy]?.price) {
-      const newPrice = analysisResult.price_recommendations.price_recommendations[pricingStrategy].price;
-      setCarDetails(prev => ({ ...prev, price: newPrice.toString() }));
-      
-      // Regenerate description with new price
-      const updatedDescription = generateAIDescription(analysisResult, { ...carDetails, price: newPrice.toString() });
-      setCarDetails(prev => ({ ...prev, finalDescription: updatedDescription }));
-    }
-  };
 
-  const generateAIDescription = (analysisResult: any, carDetails: CarDetails): string => {
+  const generateAIDescription = (analysisResult: AnalysisResult, carDetails: CarDetails): string => {
     let description = '';
     
     // Start with basic car info (use actual user input)
@@ -353,6 +392,15 @@ export default function CreateListing({ onClose }: CreateListingProps) {
     return description;
   };
 
+  // Regenerate description when pricing tier changes
+  useEffect(() => {
+    if (selectedPricingTier && analysisResult && carDetails.finalDescription) {
+      const newDescription = generateAIDescription(analysisResult, carDetails);
+      setCarDetails(prev => ({ ...prev, finalDescription: newDescription }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedPricingTier, analysisResult, carDetails.finalDescription, carDetails.make, carDetails.model, carDetails.year, carDetails.mileage, carDetails.price, carDetails.titleStatus, generateAIDescription]);
+
   const analyzeImages = async () => {
     if (selectedFiles.length === 0) {
       alert('Please select at least one image for analysis');
@@ -405,28 +453,33 @@ export default function CreateListing({ onClose }: CreateListingProps) {
       });
       
       // Call backend directly instead of going through frontend API route
-      const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const backendUrl = 'http://localhost:8000'; // Force local backend for development
       const result = await api.postFormData(`${backendUrl}/api/v1/enhanced-analyze`, formData);
       console.log('Analysis result:', result);
-      setAnalysisResult(result);
+      setAnalysisResult(result as AnalysisResult);
       setShowAnalysis(true);
       
       // Generate AI description based on enhanced analysis
-      if (result.success) {
+      const analysisResult = result as AnalysisResult;
+      if (analysisResult.success) {
         // Use AI-generated content from backend if available, otherwise fallback to local generation
         let generatedDescription;
         
-        if (result.data?.formatted_listings?.facebook_marketplace) {
-          // Use the AI-generated listing from backend
-          generatedDescription = result.data.formatted_listings.facebook_marketplace;
-          console.log('Using AI-generated listing from backend:', generatedDescription);
-        } else if (result.data?.listing_description) {
-          // Use alternative AI description field
-          generatedDescription = result.data.listing_description;
+        if (analysisResult.post_text) {
+          // Use the AI-generated post text from backend
+          generatedDescription = analysisResult.post_text;
+          console.log('Using AI-generated post text from backend:', generatedDescription);
+        } else if (analysisResult.description) {
+          // Use the AI-generated description from backend
+          generatedDescription = analysisResult.description;
           console.log('Using AI description from backend:', generatedDescription);
+        } else if (analysisResult.ai_analysis) {
+          // Use the raw AI analysis from backend
+          generatedDescription = analysisResult.ai_analysis;
+          console.log('Using raw AI analysis from backend:', generatedDescription);
         } else {
           // Fallback to local generation
-          generatedDescription = generateAIDescription(result, carDetails);
+          generatedDescription = generateAIDescription(analysisResult, carDetails);
           console.log('Using fallback local generation');
         }
         
@@ -446,7 +499,8 @@ export default function CreateListing({ onClose }: CreateListingProps) {
         })
           .then(marketResult => {
             if (marketResult && result) {
-              setAnalysisResult((prev: any) => ({ ...prev, market_intelligence: marketResult.data }));
+              const marketData = marketResult as { data?: Record<string, unknown> };
+              setAnalysisResult((prev) => prev ? ({ ...prev, market_intelligence: marketData.data }) : null);
             }
           })
           .catch(error => {
@@ -486,16 +540,11 @@ export default function CreateListing({ onClose }: CreateListingProps) {
     
     try {
       const formData = new FormData();
-      files.forEach((file, index) => {
+      files.forEach((file) => {
         formData.append(`images`, file);
       });
       
       // Add car details, using custom values if 'Other' is selected
-      const detailsToSend = {
-        ...carDetails,
-        make: carDetails.make === 'Other' ? customMake : carDetails.make,
-        model: carDetails.model === 'Other' ? customModel : carDetails.model,
-      };
       
       // Add platform selection
       selectedPlatforms.forEach(platform => {
@@ -523,7 +572,6 @@ export default function CreateListing({ onClose }: CreateListingProps) {
       if (response.ok) {
         const result = await response.json();
         console.log('Listing posted:', result);
-        setPostingResults(result);
         
         // Show success message
         const successCount = result.successful_postings || 0;
@@ -542,52 +590,6 @@ export default function CreateListing({ onClose }: CreateListingProps) {
     }
   };
 
-  const searchMarket = async () => {
-    if (!carDetails.make || !carDetails.model) {
-      alert('Please enter make and model first');
-      return;
-    }
-
-    setIsSearchingMarket(true);
-    try {
-      const response = await fetch('/api/v1/market-intelligence/analyze', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          make: carDetails.make,
-          model: carDetails.model,
-          year: carDetails.year ? parseInt(carDetails.year) : undefined,
-          mileage: carDetails.mileage ? parseInt(carDetails.mileage) : undefined,
-          location: 'United States',
-          analysis_type: 'comprehensive'
-        }),
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        console.log('Market search complete:', result);
-        
-        // Update analysis result with market data
-        if (analysisResult) {
-          setAnalysisResult({
-            ...analysisResult,
-            market_intelligence: result.data
-          });
-        }
-        
-        alert('Market search completed! Check the analysis results below.');
-      } else {
-        throw new Error('Market search failed');
-      }
-    } catch (error) {
-      console.error('Error searching market:', error);
-      alert('Failed to search market. Please try again.');
-    } finally {
-      setIsSearchingMarket(false);
-    }
-  };
 
   const makes = Object.keys(carData);
   const models = carDetails.make && carDetails.make !== 'Other' ? carData[carDetails.make] : [];
@@ -668,12 +670,10 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                             e.currentTarget.dataset.mouseDownTime = Date.now().toString();
                           }}
                           onDragStart={(e) => {
-                            setIsDragging(true);
                             e.dataTransfer.setData('text/plain', index.toString());
                             e.currentTarget.classList.add('opacity-50');
                           }}
                           onDragEnd={(e) => {
-                            setIsDragging(false);
                             e.currentTarget.classList.remove('opacity-50');
                           }}
                           onDragOver={(e) => {
@@ -698,13 +698,14 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                             }
                           }}
                         >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={URL.createObjectURL(file)}
                             alt={`Preview ${index + 1}`}
                             className={`w-full h-20 object-cover rounded-lg transition-all ${
                               isSelected ? 'ring-2 ring-blue-500 opacity-100' : 'opacity-70 hover:opacity-100'
                             }`}
-                            onError={(e) => console.error('Image failed to load:', file.name)}
+                            onError={() => console.error('Image failed to load:', file.name)}
                             onLoad={() => console.log('Image loaded successfully:', file.name)}
                           />
                           
@@ -741,7 +742,7 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                               e.stopPropagation();
                               removeFile(index);
                             }}
-                            className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs flex items-center justify-center hover:bg-red-600 transition-colors opacity-0 group-hover:opacity-100 transition-opacity"
+                            className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs flex items-center justify-center hover:bg-red-600 transition-all opacity-0 group-hover:opacity-100"
                           >
                             ✕
                           </button>
@@ -909,11 +910,11 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                   setCarDetails(prev => ({ ...prev, price: numericValue }));
                 }}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-bold focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="15,000"
+                placeholder="Enter asking price"
                 required
               />
               <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mt-2">
-                Lowest I'll Take
+                Lowest I&apos;ll Take
               </label>
               <input
                 type="text"
@@ -924,7 +925,7 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                   setCarDetails(prev => ({ ...prev, lowestPrice: numericValue }));
                 }}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-bold focus:ring-2 focus:ring-blue-500 focus:border-transparent mt-1"
-                placeholder="12,000"
+                placeholder="Enter minimum price"
               />
             </div>
 
@@ -941,6 +942,36 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                 <option value="rebuilt">Rebuilt Title</option>
                 <option value="salvage">Salvage Title</option>
               </select>
+            </div>
+
+            {/* Location Fields */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  City
+                </label>
+                <input
+                  type="text"
+                  value={carDetails.city || ''}
+                  onChange={(e) => setCarDetails(prev => ({ ...prev, city: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Enter city"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Zip Code
+                </label>
+                <input
+                  type="text"
+                  value={carDetails.zipCode || ''}
+                  onChange={(e) => setCarDetails(prev => ({ ...prev, zipCode: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Enter zip code"
+                  required
+                />
+              </div>
             </div>
 
             <div>
@@ -1027,6 +1058,22 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                     </div>
                   </button>
                 </div>
+                
+                {/* Edit Button */}
+                <div className="mt-4 flex justify-center">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowAnalysis(false);
+                      setAnalysisResult(null);
+                      setSelectedPricingTier('market');
+                    }}
+                    className="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center space-x-2"
+                  >
+                    <span>✏️</span>
+                    <span>Edit Details & Pricing</span>
+                  </button>
+                </div>
               </div>
             )}
 
@@ -1084,7 +1131,12 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                 {[
                   { id: 'facebook_marketplace', name: 'Facebook Marketplace', icon: '📘' },
                   { id: 'craigslist', name: 'Craigslist', icon: '📋' },
-                  { id: 'offerup', name: 'OfferUp', icon: '📱' }
+                  { id: 'offerup', name: 'OfferUp', icon: '📱' },
+                  { id: 'ebay', name: 'eBay Motors', icon: '🛒' },
+                  { id: 'autotrader', name: 'AutoTrader', icon: '🚗' },
+                  { id: 'cars_com', name: 'Cars.com', icon: '🚙' },
+                  { id: 'cargurus', name: 'CarGurus', icon: '🔍' },
+                  { id: 'vroom', name: 'Vroom', icon: '💨' }
                 ].map((platform) => (
                   <label key={platform.id} className="flex items-center space-x-2">
                     <input
@@ -1162,7 +1214,7 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                   <div className="mb-4">
                     <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Price Recommendations</h4>
                     <div className="space-y-2">
-                      {Object.entries(analysisResult.price_recommendations.price_recommendations || {}).map(([strategy, data]: [string, any]) => (
+                      {Object.entries(analysisResult.price_recommendations.price_recommendations || {}).map(([strategy, data]: [string, { price: number; description?: string; estimated_days_to_sell?: number }]) => (
                         <div key={strategy} className="flex justify-between items-center p-2 bg-white dark:bg-gray-800 rounded-lg border">
                           <div>
                             <div className="font-medium capitalize">{strategy.replace('_', ' ')}</div>

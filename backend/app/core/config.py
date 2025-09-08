@@ -75,8 +75,7 @@ class Settings(BaseSettings):
         "http://localhost:5173",
         "https://accorria.vercel.app",
         "https://accorria.com",
-        "https://www.accorria.com",
-        "*"  # Allow all origins for development and mobile testing
+        "https://www.accorria.com"
     ]
     
     # OpenAI

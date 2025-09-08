@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import Image from "next/image";
 
 export default function Chatbot() {
   const [open, setOpen] = useState(false);
@@ -44,7 +45,7 @@ export default function Chatbot() {
         throw new Error(`API error: ${res.status}`);
       }
       
-      const data = await res.json();
+      const data = await res.json() as { success: boolean; response?: string; error?: string };
       
       if (data.success && data.response) {
         setMsgs((m) => [...m, { role: "assistant", content: data.response }]);
@@ -89,9 +90,11 @@ export default function Chatbot() {
           >
             <div className="flex items-center justify-between border-b px-4 py-3 bg-gradient-to-r from-amber-50 to-white">
               <div className="flex items-center gap-2">
-                <img 
+                <Image 
                   src="/LOGOSYMBLOYBLUE.png" 
                   alt="Accorria" 
+                  width={24}
+                  height={24}
                   className="w-6 h-6 rounded-full"
                 />
                 <div className="text-sm font-semibold text-slate-800">Accorria Agent</div>
@@ -121,9 +124,11 @@ export default function Chatbot() {
               {msgs.map((m, i) => (
                 <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"} mb-4`}>
                   {m.role === "assistant" && (
-                    <img 
+                    <Image 
                       src="/LOGOSYMBLOYBLUE.png" 
                       alt="Accorria" 
+                      width={24}
+                      height={24}
                       className="w-6 h-6 rounded-full mr-3 mt-1 flex-shrink-0"
                     />
                   )}
@@ -177,9 +182,11 @@ export default function Chatbot() {
               
               {isLoading && (
                 <div className="flex justify-start mb-4">
-                  <img 
+                  <Image 
                     src="/LOGOSYMBLOYBLUE.png" 
                     alt="Accorria" 
+                    width={24}
+                    height={24}
                     className="w-6 h-6 rounded-full mr-3 mt-1 flex-shrink-0"
                   />
                   <div className="bg-white border border-slate-200 max-w-[80%] rounded-2xl px-4 py-3 shadow-sm">

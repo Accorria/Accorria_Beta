@@ -22,7 +22,8 @@ logger = logging.getLogger(__name__)
 
 class EnhancedImageAnalyzer:
     def __init__(self):
-        api_key = os.getenv('OPENAI_API_KEY')
+        from app.core.config import settings
+        api_key = settings.OPENAI_API_KEY or os.getenv('OPENAI_API_KEY')
         if not api_key:
             raise ValueError("OpenAI API key not found")
         self.client = openai.OpenAI(api_key=api_key)

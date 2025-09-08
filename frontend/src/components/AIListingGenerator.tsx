@@ -117,7 +117,7 @@ const AIListingGenerator: React.FC = () => {
         }
       });
 
-      const data = await api.postFormData('/api/v1/car-listing/generate', formData);
+      const data = await api.postFormData('/api/v1/car-listing/generate', formData) as any;
 
       if (!data.success) {
         const errorMessage = data.error || data.detail || 'Failed to generate listing';

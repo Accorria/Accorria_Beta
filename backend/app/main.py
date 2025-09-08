@@ -95,8 +95,8 @@ app.add_middleware(
     expose_headers=["X-Total-Count", "X-Rate-Limit-Remaining"]
 )
 
-# Rate limiting middleware
-app.middleware("http")(rate_limit_middleware)
+# Rate limiting middleware (temporarily disabled for debugging)
+# app.middleware("http")(rate_limit_middleware)
 
 # Health check endpoint
 @app.get("/health")
@@ -125,57 +125,59 @@ async def add_security_headers(request: Request, call_next):
     
     return response
 
-@app.middleware("http")
-async def security_audit_middleware(request: Request, call_next):
-    """Audit all API access for security monitoring"""
-    start_time = time.time()
-    
-    # Get user ID from request state (set by auth middleware)
-    user_id = getattr(request.state, 'user_id', 'anonymous')
-    
-    # Process request
-    response = await call_next(request)
-    
-    # Calculate processing time
-    process_time = time.time() - start_time
-    
-    # Log API access for security audit
-    SecurityAudit.log_api_access(
-        user_id=user_id,
-        endpoint=request.url.path,
-        method=request.method,
-        status_code=response.status_code
-    )
-    
-    # Add processing time header
-    response.headers["X-Process-Time"] = str(process_time)
-    
-    return response
+# Security audit middleware (temporarily disabled for debugging)
+# @app.middleware("http")
+# async def security_audit_middleware(request: Request, call_next):
+#     """Audit all API access for security monitoring"""
+#     start_time = time.time()
+#     
+#     # Get user ID from request state (set by auth middleware)
+#     user_id = getattr(request.state, 'user_id', 'anonymous')
+#     
+#     # Process request
+#     response = await call_next(request)
+#     
+#     # Calculate processing time
+#     process_time = time.time() - start_time
+#     
+#     # Log API access for security audit (temporarily disabled for debugging)
+#     # SecurityAudit.log_api_access(
+#     #     user_id=user_id,
+#     #     endpoint=request.url.path,
+#     #     method=request.method,
+#     #     status_code=response.status_code
+#     # )
+#     
+#     # Add processing time header
+#     response.headers["X-Process-Time"] = str(process_time)
+#     
+#     return response
 
-@app.middleware("http")
-async def input_validation_middleware(request: Request, call_next):
-    """Validate and sanitize input data"""
-    # For POST/PUT requests, validate input
-    if request.method in ["POST", "PUT"]:
-        try:
-            # Get request body
-            body = await request.body()
-            if body:
-                # Skip UTF-8 validation for multipart/form-data (image uploads)
-                content_type = request.headers.get("content-type", "")
-                if "multipart/form-data" not in content_type:
-                    # Only validate text-based requests
-                    body_str = body.decode('utf-8')
-                    if len(body_str) > 1000000:  # 1MB limit
-                        return Response(
-                            content="Request body too large",
-                            status_code=413
-                        )
-        except Exception as e:
-            logger.warning(f"Input validation error: {e}")
-    
-    response = await call_next(request)
-    return response
+# Input validation middleware (temporarily disabled for debugging)
+# @app.middleware("http")
+# async def input_validation_middleware(request: Request, call_next):
+#     """Validate and sanitize input data"""
+#     # For POST/PUT requests, validate input
+#     if request.method in ["POST", "PUT"]:
+#         try:
+#             # Get request body
+#             body = await request.body()
+#             if body:
+#                 # Skip UTF-8 validation for multipart/form-data (image uploads)
+#                 content_type = request.headers.get("content-type", "")
+#                 if "multipart/form-data" not in content_type:
+#                     # Only validate text-based requests
+#                     body_str = body.decode('utf-8')
+#                     if len(body_str) > 1000000:  # 1MB limit
+#                         return Response(
+#                             content="Request body too large",
+#                             status_code=413
+#                         )
+#         except Exception as e:
+#             logger.warning(f"Input validation error: {e}")
+#     
+#     response = await call_next(request)
+#     return response
 
 # Include routers - Full version
 app.include_router(auth_router.router, prefix="/api/v1/auth", tags=["Authentication"])

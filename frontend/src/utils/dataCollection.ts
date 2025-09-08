@@ -115,7 +115,7 @@ class DataCollectionService {
         timestamp: new Date().toISOString(),
       };
 
-      const response = await api.post('/api/v1/analytics/save-car-analysis', analysisData);
+      const response = await api.post('/api/v1/analytics/save-car-analysis', analysisData) as any;
       
       console.log('📊 Saved car analysis:', response.analysisId);
       return response.analysisId;

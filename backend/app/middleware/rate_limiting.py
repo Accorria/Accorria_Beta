@@ -88,7 +88,7 @@ async def rate_limit_middleware(request: Request, call_next):
     """Rate limiting middleware"""
     try:
         # Skip rate limiting for health checks and public endpoints
-        if request.url.path in ["/", "/health", "/api/v1/auth/login", "/api/v1/auth/register"]:
+        if request.url.path in ["/", "/health", "/api/v1/auth/login", "/api/v1/auth/register", "/api/v1/enhanced-analyze", "/api/v1/simple-analyze", "/api/v1/real-analyze", "/api/v1/mock-analyze"]:
             return await call_next(request)
         
         # Get client identifier

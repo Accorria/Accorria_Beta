@@ -56,7 +56,10 @@ class CarListingGenerator:
         """
         try:
             # Step 1: Analyze images with Gemini (primary) or OpenAI (fallback)
-            if self.gemini_api_key:
+            if not images or len(images) == 0:
+                # No images provided, use basic analysis
+                image_analysis = self._generate_basic_analysis(car_details)
+            elif self.gemini_api_key:
                 image_analysis = await self._analyze_images_with_gemini(images, car_details)
             elif self.openai_api_key:
                 image_analysis = await self._analyze_images_with_openai(images, car_details)
@@ -65,7 +68,10 @@ class CarListingGenerator:
                 image_analysis = self._generate_basic_analysis(car_details)
             
             # Step 2: Get market intelligence with Gemini (primary)
-            if self.gemini_api_key:
+            if not images or len(images) == 0:
+                # No images provided, use basic market analysis
+                market_analysis = self._generate_basic_market_analysis(car_details, location)
+            elif self.gemini_api_key:
                 market_analysis = await self._get_market_intelligence(
                     image_analysis, car_details, location
                 )
@@ -480,9 +486,15 @@ class CarListingGenerator:
         condition = image_analysis.get("condition", "good")
         
         # Generate listing content
-        listing_content = await self._generate_listing_content(
-            make, model, year, mileage, features, condition, pricing
-        )
+        if not features or len(features) == 0:
+            # Use fallback listing when no features detected
+            listing_content = self._generate_fallback_listing(
+                make, model, year, mileage, features, condition, pricing
+            )
+        else:
+            listing_content = await self._generate_listing_content(
+                make, model, year, mileage, features, condition, pricing
+            )
         
         return {
             "craigslist": listing_content,

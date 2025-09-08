@@ -25,6 +25,9 @@ async def enhanced_chat(request: ChatRequest):
     Enhanced chat endpoint for Accorria AI agent
     """
     try:
+        print(f"DEBUG: Chat request received: {request}")
+        print(f"DEBUG: Messages: {request.messages}")
+        print(f"DEBUG: useWebSearch: {request.useWebSearch}")
         # Get OpenAI API key
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
@@ -64,13 +67,35 @@ Keep responses concise and actionable. Always offer to help with specific next s
         # Prepare messages with system prompt
         messages = [system_message] + [msg.dict() for msg in request.messages]
         
-        # Make request to OpenAI
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=messages,
-            temperature=0.4,
-            max_tokens=1000
-        )
+        # Make request to OpenAI with timeout
+        import asyncio
+        print("DEBUG: About to call OpenAI API")
+        try:
+            response = await asyncio.wait_for(
+                asyncio.to_thread(
+                    client.chat.completions.create,
+                    model="gpt-4o-mini",
+                    messages=messages,
+                    temperature=0.4,
+                    max_tokens=1000
+                ),
+                timeout=10.0  # 10 second timeout
+            )
+            print("DEBUG: OpenAI API call successful")
+        except asyncio.TimeoutError:
+            print("DEBUG: OpenAI API call timed out")
+            # Return a fallback response if OpenAI times out
+            return ChatResponse(
+                response="I'm experiencing high demand right now. Please try again in a moment, or feel free to ask me about listing your car or home on Accorria!",
+                success=True
+            )
+        except Exception as e:
+            print(f"DEBUG: OpenAI API call failed: {e}")
+            # Return a fallback response for any other errors
+            return ChatResponse(
+                response="I'm experiencing technical difficulties. Please try again in a moment, or feel free to ask me about listing your car or home on Accorria!",
+                success=True
+            )
         
         # Extract response
         ai_response = response.choices[0].message.content

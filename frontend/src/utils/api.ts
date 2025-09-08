@@ -38,7 +38,7 @@ export async function authenticatedFetch(
 /**
  * Make an authenticated API call and return JSON
  */
-export async function authenticatedFetchJson<T = any>(
+export async function authenticatedFetchJson<T = unknown>(
   url: string, 
   options: RequestInit = {}
 ): Promise<T> {
@@ -53,41 +53,73 @@ export async function authenticatedFetchJson<T = any>(
 }
 
 /**
- * Post form data with authentication
+ * Post form data with authentication and retry logic
  */
 export async function postFormData(
   url: string, 
   formData: FormData
-): Promise<any> {
-  try {
-    // Get the current session
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    // Prepare headers
-    const headers: Record<string, string> = {};
-    
-    // Add authorization header if user is authenticated
-    if (session?.access_token) {
-      headers['Authorization'] = `Bearer ${session.access_token}`;
+): Promise<unknown> {
+  const maxRetries = 3;
+  let retries = 0;
+
+  while (retries < maxRetries) {
+    try {
+      // Get the current session
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      // Prepare headers
+      const headers: Record<string, string> = {};
+      
+      // Add authorization header if user is authenticated
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+      
+      // Make the request with timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort('Request timeout after 300 seconds - image processing may be taking too long'), 300000); // 300 second timeout for car analysis with multiple large images
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: formData,
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`API call failed: ${response.status} ${errorText}`);
+      }
+      
+      return response.json();
+      
+    } catch (error: unknown) {
+      console.error(`Post form data error (attempt ${retries + 1}):`, error);
+      
+      // Check if it's a network error that we should retry
+      const errorObj = error as Error;
+      if (errorObj.name === 'AbortError' || 
+          (errorObj.message && errorObj.message.includes('Failed to fetch')) || 
+          (errorObj.message && errorObj.message.includes('ERR_NETWORK_CHANGED')) ||
+          (errorObj.message && errorObj.message.includes('ERR_INTERNET_DISCONNECTED'))) {
+        
+        if (retries < maxRetries - 1) {
+          console.warn(`Network error encountered, retrying... Attempt ${retries + 1}/${maxRetries}`);
+          retries++;
+          // Exponential backoff: wait 1s, 2s, 4s
+          await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, retries - 1)));
+          continue;
+        }
+      }
+      
+      // If it's not a network error or we've exhausted retries, throw the error
+      throw error;
     }
-    
-    // Make the request
-    const response = await fetch(url, {
-      method: 'POST',
-      headers,
-      body: formData,
-    });
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`API call failed: ${response.status} ${errorText}`);
-    }
-    
-    return response.json();
-  } catch (error) {
-    console.error('Post form data error:', error);
-    throw error;
   }
+  
+  throw new Error(`API call failed after ${maxRetries} retries due to network issues.`);
 }
 
 /**
@@ -116,11 +148,11 @@ export const api = {
   supabase,
   // HTTP method shortcuts
   get: (url: string) => authenticatedFetchJson(url, { method: 'GET' }),
-  post: (url: string, data?: any) => authenticatedFetchJson(url, { 
+  post: (url: string, data?: unknown) => authenticatedFetchJson(url, { 
     method: 'POST', 
     body: data ? JSON.stringify(data) : undefined 
   }),
-  put: (url: string, data?: any) => authenticatedFetchJson(url, { 
+  put: (url: string, data?: unknown) => authenticatedFetchJson(url, { 
     method: 'PUT', 
     body: data ? JSON.stringify(data) : undefined 
   }),
