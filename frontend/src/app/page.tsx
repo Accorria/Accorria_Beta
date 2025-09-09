@@ -1,12 +1,11 @@
 'use client';
 
-import React, { useMemo, useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from 'next/link';
 import Chatbot from '@/components/Chatbot';
 import { useAuth } from '@/contexts/AuthContext';
 import { AuthModal } from '@/components/AuthModal';
-import { SupabaseTest } from '@/components/SupabaseTest';
 
 /**
  * Accorria Landing v2 (single-file mock)
@@ -73,13 +72,6 @@ function useCarousel(len: number, interval = 3800) {
   return idx;
 }
 
-function Pill({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs text-white/90 backdrop-blur">
-      {children}
-    </span>
-  );
-}
 
 export default function Home() {
   const idx = useCarousel(IMAGES.length);
@@ -267,50 +259,288 @@ export default function Home() {
       </section>
 
       {/* PRICING TEASER */}
+      {/* Why It Works Better */}
+      <section className="bg-gradient-to-br from-amber-50 to-orange-50">
+        <div className="mx-auto max-w-7xl px-4 py-16">
+          <div className="text-center">
+            <h2 className="text-3xl font-bold md:text-4xl text-gray-900">Why It Works Better</h2>
+            <p className="mt-4 text-lg text-gray-700 max-w-3xl mx-auto">
+              We&apos;re the trust layer for high-value listings. Upload photos → AI listing, Shield verification, escrow you can paste as a link, and optional digital-twin certificates for provenance.
+            </p>
+          </div>
+          
+          <div className="mt-12 grid gap-8 md:grid-cols-3">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-2xl">⚡</span>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">10x Faster</h3>
+              <p className="text-gray-600">AI generates perfect listings in seconds. No more hours writing descriptions or taking photos.</p>
+            </div>
+            <div className="text-center">
+              <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-2xl">🎯</span>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Better Results</h3>
+              <p className="text-gray-600">Smart pricing, multi-platform posting, and automated negotiation get you top dollar.</p>
+            </div>
+            <div className="text-center">
+              <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-2xl">🛡️</span>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Safer Deals</h3>
+              <p className="text-gray-600">Built-in escrow, ID verification, and title checks protect both buyers and sellers.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section id="pricing" className="bg-white">
         <div className="mx-auto max-w-7xl px-4 py-16">
-          <h2 className="text-2xl font-bold md:text-3xl">Pricing (simplified for cars now)</h2>
-          <p className="mt-4 text-slate-700 max-w-2xl">All plans include AI Listing Generator, Assist-to-Post (ToS-compliant), Smart Inbox, e-sign docs, and SafePay escrow (vehicles).</p>
-          <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            <PriceCard name="Starter" price="$29/mo" note="5 car listings/month" cta="Get Starter" />
-            <PriceCard name="Pro" price="$79/mo" note="Unlimited car listings" cta="Upgrade to Pro" highlight />
-            <PriceCard name="Dealer (Auto)" price="$199/mo" note="Unlimited + Team seats" cta="Join Dealer Waitlist" />
+          <div className="text-center">
+            <h2 className="text-3xl font-bold md:text-4xl">Simple, Transparent Pricing</h2>
+            <p className="mt-4 text-lg text-slate-700 max-w-3xl mx-auto">
+              All plans include AI Listing Generator, Assist-to-Post, Smart Inbox, e-sign docs, and SafePay escrow. No hidden fees, no surprises.
+            </p>
           </div>
-          <p className="mt-4 text-sm text-slate-600">Vehicle escrow: 0.9% ($25 min). Homes: 0.5% planned — pilot waitlist open.</p>
+          
+          <div className="mt-12 grid gap-8 lg:grid-cols-2">
+            {/* Cars Pricing */}
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-8">
+              <div className="flex items-center mb-6">
+                <span className="text-3xl mr-3">🚗</span>
+                <h3 className="text-2xl font-bold text-gray-900">Cars</h3>
+              </div>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center py-3 border-b border-blue-200">
+                  <span className="font-medium text-gray-900">Escrow</span>
+                  <span className="text-lg font-bold text-blue-600">1.0%</span>
+                </div>
+                <div className="text-sm text-gray-600 ml-4">(min $39, cap $149)</div>
+                <div className="flex justify-between items-center py-3 border-b border-blue-200">
+                  <span className="font-medium text-gray-900">Shield Verify</span>
+                  <span className="text-lg font-bold text-blue-600">$19</span>
+                </div>
+                <div className="text-sm text-gray-600 ml-4">(ID + title check + escrow link)</div>
+                <div className="flex justify-between items-center py-3">
+                  <span className="font-medium text-gray-900">Title Digital Twin</span>
+                  <span className="text-lg font-bold text-blue-600">$199</span>
+                </div>
+                <div className="text-sm text-gray-600 ml-4">(optional: $199 setup, $19/yr upkeep)</div>
+              </div>
+            </div>
+
+            {/* Homes Pricing */}
+            <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-8">
+              <div className="flex items-center mb-6">
+                <span className="text-3xl mr-3">🏠</span>
+                <h3 className="text-2xl font-bold text-gray-900">Homes</h3>
+              </div>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center py-3 border-b border-green-200">
+                  <span className="font-medium text-gray-900">Escrow</span>
+                  <span className="text-lg font-bold text-green-600">0.35%</span>
+                </div>
+                <div className="text-sm text-gray-600 ml-4">(min $395, cap $995)</div>
+                <div className="flex justify-between items-center py-3 border-b border-green-200">
+                  <span className="font-medium text-gray-900">Shield Verify</span>
+                  <span className="text-lg font-bold text-green-600">$49</span>
+                </div>
+                <div className="text-sm text-gray-600 ml-4">(owner ID + deed/recording match)</div>
+                <div className="flex justify-between items-center py-3">
+                  <span className="font-medium text-gray-900">Digital Deed Twin</span>
+                  <span className="text-lg font-bold text-green-600">$750</span>
+                </div>
+                <div className="text-sm text-gray-600 ml-4">(optional: $750 setup, $49/yr upkeep)</div>
+                <div className="flex justify-between items-center py-3">
+                  <span className="font-medium text-gray-900">Token Lite</span>
+                  <span className="text-lg font-bold text-green-600">$299</span>
+                </div>
+                <div className="text-sm text-gray-600 ml-4">(homes under $75k)</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Savings Comparison */}
+          <div className="mt-12 bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl p-8">
+            <h3 className="text-2xl font-bold text-center text-gray-900 mb-6">Massive Savings vs. Agent Commissions</h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-center">
+                <thead>
+                  <tr className="border-b-2 border-amber-200">
+                    <th className="py-3 font-semibold text-gray-900">Home Price</th>
+                    <th className="py-3 font-semibold text-gray-900">Legacy Agent @ 5.5%</th>
+                    <th className="py-3 font-semibold text-gray-900">Accorria Escrow</th>
+                    <th className="py-3 font-semibold text-green-600">Customer Saves</th>
+                  </tr>
+                </thead>
+                <tbody className="space-y-2">
+                  <tr className="border-b border-amber-100">
+                    <td className="py-3 font-medium">$50,000</td>
+                    <td className="py-3">$2,750</td>
+                    <td className="py-3 font-semibold text-blue-600">$395</td>
+                    <td className="py-3 font-bold text-green-600">$2,355</td>
+                  </tr>
+                  <tr className="border-b border-amber-100">
+                    <td className="py-3 font-medium">$250,000</td>
+                    <td className="py-3">$13,750</td>
+                    <td className="py-3 font-semibold text-blue-600">$875</td>
+                    <td className="py-3 font-bold text-green-600">$12,875</td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 font-medium">$500,000</td>
+                    <td className="py-3">$27,500</td>
+                    <td className="py-3 font-semibold text-blue-600">$995</td>
+                    <td className="py-3 font-bold text-green-600">$26,505</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p className="text-center text-sm text-gray-600 mt-4">
+              Add token if you want faster deals and a clean digital certificate. Skip token on very low-value assets.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* This Changes Everything */}
+      <section className="bg-gradient-to-br from-slate-900 to-gray-900 text-white">
+        <div className="mx-auto max-w-7xl px-4 py-16">
+          <div className="text-center">
+            <h2 className="text-3xl font-bold md:text-4xl mb-4">Why This Changes Everything</h2>
+            <p className="text-lg text-gray-300 max-w-3xl mx-auto mb-12">
+              We&apos;re not just another listing platform. We&apos;re the trust layer that makes high-value transactions safe, fast, and profitable for everyone.
+            </p>
+          </div>
+          
+          <div className="grid md:grid-cols-2 gap-12">
+            <div>
+              <h3 className="text-2xl font-bold mb-6 text-amber-400">🚗 Car Sales</h3>
+              <div className="space-y-4">
+                <div className="flex items-start">
+                  <span className="text-amber-400 mr-3">✓</span>
+                  <div>
+                    <h4 className="font-semibold">Perfect For</h4>
+                    <p className="text-gray-300 text-sm">Individual sellers, flippers, dealers, and anyone who wants to sell cars faster and safer</p>
+                  </div>
+                </div>
+                <div className="flex items-start">
+                  <span className="text-amber-400 mr-3">✓</span>
+                  <div>
+                    <h4 className="font-semibold">AI-Powered Listings</h4>
+                    <p className="text-gray-300 text-sm">Upload 20 photos, pick the best 4, get a perfect description in seconds</p>
+                  </div>
+                </div>
+                <div className="flex items-start">
+                  <span className="text-amber-400 mr-3">✓</span>
+                  <div>
+                    <h4 className="font-semibold">Multi-Platform Posting</h4>
+                    <p className="text-gray-300 text-sm">Post to Facebook, Craigslist, OfferUp with one click</p>
+                  </div>
+                </div>
+                <div className="flex items-start">
+                  <span className="text-amber-400 mr-3">✓</span>
+                  <div>
+                    <h4 className="font-semibold">Built-in Escrow</h4>
+                    <p className="text-gray-300 text-sm">1.0% escrow fee (min $39, cap $149) - way cheaper than dealer fees</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div>
+              <h3 className="text-2xl font-bold mb-6 text-amber-400">🏠 Home Sales</h3>
+              <div className="space-y-4">
+                <div className="flex items-start">
+                  <span className="text-amber-400 mr-3">✓</span>
+                  <div>
+                    <h4 className="font-semibold">Perfect For</h4>
+                    <p className="text-gray-300 text-sm">FSBO sellers, investors, landlords, and anyone avoiding 5.5% agent commissions</p>
+                  </div>
+                </div>
+                <div className="flex items-start">
+                  <span className="text-amber-400 mr-3">✓</span>
+                  <div>
+                    <h4 className="font-semibold">Massive Savings</h4>
+                    <p className="text-gray-300 text-sm">$50k home: $395 vs $2,750 agent fee = $2,355 saved</p>
+                  </div>
+                </div>
+                <div className="flex items-start">
+                  <span className="text-amber-400 mr-3">✓</span>
+                  <div>
+                    <h4 className="font-semibold">Digital Deed Twins</h4>
+                    <p className="text-gray-300 text-sm">Optional digital certificates for faster resale and clean provenance</p>
+                  </div>
+                </div>
+                <div className="flex items-start">
+                  <span className="text-amber-400 mr-3">✓</span>
+                  <div>
+                    <h4 className="font-semibold">High-Value Items</h4>
+                    <p className="text-gray-300 text-sm">Boats, RVs, equipment, luxury items - all with the same trust layer</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="mt-12 text-center">
+            <div className="bg-gradient-to-r from-amber-500 to-orange-500 rounded-2xl p-8">
+              <h3 className="text-2xl font-bold text-white mb-4">The Safe Cashier</h3>
+              <p className="text-lg text-white/90 max-w-2xl mx-auto">
+                &ldquo;We&apos;re the safe cashier. You sell for your price, we keep you safe for a tiny fee. 
+                Cars: 1% (min $39, cap $149). Homes: 0.35% (min $395, cap $995). 
+                Token is optional—use it when you want faster deals and a clean digital certificate.&rdquo;
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 
       {/* FAQ */}
       <section id="faq" className="bg-slate-50">
         <div className="mx-auto max-w-7xl px-4 py-16">
-          <h2 className="text-2xl font-bold md:text-3xl">FAQ</h2>
-          <div className="mt-8 grid md:grid-cols-2 gap-8">
+          <div className="text-center">
+            <h2 className="text-3xl font-bold md:text-4xl">Frequently Asked Questions</h2>
+            <p className="mt-4 text-lg text-slate-700 max-w-3xl mx-auto">
+              Everything you need to know about Accorria&apos;s trust-native listing platform.
+            </p>
+          </div>
+          
+          <div className="mt-12 grid md:grid-cols-2 gap-8">
             <div className="space-y-6">
-              <div>
+              <div className="bg-white rounded-lg p-6 shadow-sm">
                 <h3 className="font-semibold text-slate-900 mb-2">Do I need a dealer license?</h3>
-                <p className="text-slate-600">No — Accorria works for individual sellers, flippers, and dealers. We help anyone sell faster.</p>
+                <p className="text-slate-600">No — Accorria works for individual sellers, flippers, and dealers. We help anyone sell faster and safer.</p>
               </div>
-              <div>
+              <div className="bg-white rounded-lg p-6 shadow-sm">
                 <h3 className="font-semibold text-slate-900 mb-2">Is this a new marketplace?</h3>
-                <p className="text-slate-600">No — we enhance existing platforms like Facebook Marketplace and Craigslist with AI tools.</p>
+                <p className="text-slate-600">No — we enhance existing platforms like Facebook Marketplace and Craigslist with AI tools, escrow, and verification.</p>
               </div>
-              <div>
-                <h3 className="font-semibold text-slate-900 mb-2">Does it work on mobile?</h3>
-                <p className="text-slate-600">Yes — the entire flow is built mobile‑first and works perfectly on phones.</p>
+              <div className="bg-white rounded-lg p-6 shadow-sm">
+                <h3 className="font-semibold text-slate-900 mb-2">What is Shield Verify?</h3>
+                <p className="text-slate-600">Shield Verify checks seller ID and title/deed status, then provides an escrow link you can paste anywhere. $19 for cars, $49 for homes.</p>
+              </div>
+              <div className="bg-white rounded-lg p-6 shadow-sm">
+                <h3 className="font-semibold text-slate-900 mb-2">What are digital twins?</h3>
+                <p className="text-slate-600">Optional digital certificates that prove ownership and transaction history. Great for investors, landlords, and repeat sellers who want provenance.</p>
               </div>
             </div>
             <div className="space-y-6">
-              <div>
-                <h3 className="font-semibold text-slate-900 mb-2">What about homes?</h3>
-                <p className="text-slate-600">Homes are coming next! We're starting with cars, then expanding to real estate.</p>
+              <div className="bg-white rounded-lg p-6 shadow-sm">
+                <h3 className="font-semibold text-slate-900 mb-2">How does escrow work?</h3>
+                <p className="text-slate-600">SafePay escrow is included! Cars: 1.0% (min $39, cap $149). Homes: 0.35% (min $395, cap $995). No crypto needed - buyers pay via ACH/card.</p>
               </div>
-              <div>
-                <h3 className="font-semibold text-slate-900 mb-2">What about escrow?</h3>
-                <p className="text-slate-600">SafePay escrow is included in all plans! Secure transactions with 0.9% for vehicles and 0.5% for homes ($25 minimum). No crypto needed - buyers pay via ACH/card.</p>
+              <div className="bg-white rounded-lg p-6 shadow-sm">
+                <h3 className="font-semibold text-slate-900 mb-2">Does it work on mobile?</h3>
+                <p className="text-slate-600">Yes — the entire flow is built mobile-first and works perfectly on phones. Upload photos, get AI listings, post anywhere.</p>
               </div>
-              <div>
+              <div className="bg-white rounded-lg p-6 shadow-sm">
                 <h3 className="font-semibold text-slate-900 mb-2">Can I post to multiple marketplaces?</h3>
-                <p className="text-slate-600">Yes — Facebook now, Craigslist and OfferUp coming next.</p>
+                <p className="text-slate-600">Yes — Facebook now, Craigslist and OfferUp coming next. One listing, multiple platforms, all managed from one place.</p>
+              </div>
+              <div className="bg-white rounded-lg p-6 shadow-sm">
+                <h3 className="font-semibold text-slate-900 mb-2">When should I use tokens?</h3>
+                <p className="text-slate-600">Use tokens for investors, landlords, repeat sellers, or high-value assets where you want faster resale/rental payouts and clean provenance.</p>
               </div>
             </div>
           </div>
@@ -397,40 +627,3 @@ function Feature({ title, desc }: { title: string; desc: string }) {
     </div>
   );
 }
-
-function PriceCard({ name, price, note, cta, highlight = false }: { name: string; price: string; note: string; cta: string; highlight?: boolean }) {
-  const { user } = useAuth();
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-
-  const handleCtaClick = () => {
-    if (!user) {
-      setIsAuthModalOpen(true);
-    } else {
-      // User is logged in, redirect to app
-      window.location.href = '/app';
-    }
-  };
-
-  return (
-    <>
-      <div className={`rounded-2xl p-6 ring-1 ${highlight ? "bg-amber-50 ring-amber-200" : "bg-white ring-slate-200"}`}>
-                      <div className="text-sm font-semibold text-slate-700">{name}</div>
-        <div className="mt-2 text-3xl font-extrabold text-slate-900">{price}</div>
-        <div className="mt-1 text-sm text-slate-600">{note}</div>
-        <button
-          onClick={handleCtaClick}
-          className={`mt-6 block w-full rounded-xl px-4 py-2 text-center font-semibold ${highlight ? "bg-amber-400 text-slate-900 hover:bg-amber-300" : "bg-slate-900 text-white hover:bg-slate-800"}`}
-        >
-          {user ? 'Go to App' : cta}
-        </button>
-      </div>
-
-      <AuthModal
-        isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
-        onSuccess={() => window.location.href = '/app'}
-        initialMode="register"
-      />
-    </>
-  );
-} 
