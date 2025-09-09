@@ -63,6 +63,15 @@ export default function AppPage() {
                 <Link href="/app/analytics" className="text-gray-500 hover:text-amber-600 px-3 py-2 text-sm font-medium">
                   Analytics
                 </Link>
+                <Link href="/pricing" className="text-gray-500 hover:text-amber-600 px-3 py-2 text-sm font-medium">
+                  Pricing
+                </Link>
+                <Link href="/qa" className="text-gray-500 hover:text-amber-600 px-3 py-2 text-sm font-medium">
+                  Q&A
+                </Link>
+                <Link href="/demo" className="text-gray-500 hover:text-amber-600 px-3 py-2 text-sm font-medium">
+                  Demo
+                </Link>
               </nav>
               
               <UserProfile />
