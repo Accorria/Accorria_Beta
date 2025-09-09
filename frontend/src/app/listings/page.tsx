@@ -78,7 +78,7 @@ export default function ListingsPage() {
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">My Listings</h1>
             <Link 
-              href="/app"
+              href="/dashboard"
               className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors"
             >
               + New Listing
