@@ -209,6 +209,37 @@ export default function Home() {
         </div>
       </section>
 
+      {/* HERO IMAGE SECTION */}
+      <section className="bg-gradient-to-br from-slate-900 to-gray-900">
+        <div className="mx-auto max-w-7xl px-4 py-16">
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            <div>
+              <h2 className="text-3xl font-bold text-white mb-6">See It In Action</h2>
+              <p className="text-lg text-gray-300 mb-8">
+                Watch how Accorria transforms your photos into perfect listings in seconds. 
+                Real users, real results, real savings.
+              </p>
+              <div className="flex gap-4">
+                <Link href="/demo" className="bg-amber-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-amber-600 transition-colors">
+                  Watch Demo
+                </Link>
+                <Link href="/dashboard" className="border border-white/20 text-white px-6 py-3 rounded-lg font-semibold hover:bg-white/10 transition-colors">
+                  Try It Now
+                </Link>
+              </div>
+            </div>
+            <div className="relative">
+              <div className="bg-gray-800 rounded-2xl p-8 text-center">
+                <div className="w-full h-64 bg-gray-700 rounded-lg flex items-center justify-center mb-4">
+                  <span className="text-gray-400 text-lg">📸 Hero Image Placeholder</span>
+                </div>
+                <p className="text-gray-400 text-sm">Upload photos → AI analysis → Perfect listing</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* GET PAID TEASER SECTION */}
       <section className="bg-gradient-to-r from-amber-50 to-orange-50">
         <div className="mx-auto max-w-7xl px-4 py-16">
@@ -276,6 +307,9 @@ export default function Home() {
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">10x Faster</h3>
               <p className="text-gray-600">AI generates perfect listings in seconds. No more hours writing descriptions or taking photos.</p>
+              <div className="mt-4 w-full h-32 bg-gray-100 rounded-lg flex items-center justify-center">
+                <span className="text-gray-400 text-sm">📱 Process Photo</span>
+              </div>
             </div>
             <div className="text-center">
               <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -283,6 +317,9 @@ export default function Home() {
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">Better Results</h3>
               <p className="text-gray-600">Smart pricing, multi-platform posting, and automated negotiation get you top dollar.</p>
+              <div className="mt-4 w-full h-32 bg-gray-100 rounded-lg flex items-center justify-center">
+                <span className="text-gray-400 text-sm">📊 Results Photo</span>
+              </div>
             </div>
             <div className="text-center">
               <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -290,6 +327,9 @@ export default function Home() {
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">Safer Deals</h3>
               <p className="text-gray-600">Built-in escrow, ID verification, and title checks protect both buyers and sellers.</p>
+              <div className="mt-4 w-full h-32 bg-gray-100 rounded-lg flex items-center justify-center">
+                <span className="text-gray-400 text-sm">🔒 Security Photo</span>
+              </div>
             </div>
           </div>
         </div>
@@ -416,6 +456,9 @@ export default function Home() {
           <div className="grid md:grid-cols-2 gap-12">
             <div>
               <h3 className="text-2xl font-bold mb-6 text-amber-400">🚗 Car Sales</h3>
+              <div className="mb-6 w-full h-48 bg-gray-800 rounded-lg flex items-center justify-center">
+                <span className="text-gray-400 text-lg">🚗 Car Listing Photo</span>
+              </div>
               <div className="space-y-4">
                 <div className="flex items-start">
                   <span className="text-amber-400 mr-3">✓</span>
@@ -450,6 +493,9 @@ export default function Home() {
             
             <div>
               <h3 className="text-2xl font-bold mb-6 text-amber-400">🏠 Home Sales</h3>
+              <div className="mb-6 w-full h-48 bg-gray-800 rounded-lg flex items-center justify-center">
+                <span className="text-gray-400 text-lg">🏠 Home Listing Photo</span>
+              </div>
               <div className="space-y-4">
                 <div className="flex items-start">
                   <span className="text-amber-400 mr-3">✓</span>
@@ -504,6 +550,9 @@ export default function Home() {
             <p className="mt-4 text-lg text-slate-700 max-w-3xl mx-auto">
               Everything you need to know about Accorria&apos;s trust-native listing platform.
             </p>
+            <div className="mt-8 w-full max-w-2xl mx-auto h-48 bg-gray-100 rounded-lg flex items-center justify-center">
+              <span className="text-gray-400 text-lg">📋 FAQ Visual Placeholder</span>
+            </div>
           </div>
           
           <div className="mt-12 grid md:grid-cols-2 gap-8">
