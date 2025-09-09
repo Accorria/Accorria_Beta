@@ -140,7 +140,7 @@ export default function Home() {
         <div className="mx-auto grid max-w-7xl grid-cols-1 items-center gap-10 px-4 py-16 md:grid-cols-2 md:py-24">
           <div>
             <h1 className="text-3xl font-extrabold leading-tight md:text-5xl">
-              The First Trust-Native Listing Platform
+              #1 Trust-Native Listing Platform
             </h1>
             <p className="mt-4 max-w-xl text-slate-700 text-xl font-medium">
               🚀 The Future of Selling Starts Here.
