@@ -134,9 +134,9 @@ export default function Home() {
             <h1 className="text-3xl font-extrabold leading-tight md:text-5xl">
               #1 Trust-Native Listing Platform
             </h1>
-            <p className="mt-4 max-w-xl text-slate-700 text-xl font-medium">
+            <h2 className="mt-6 max-w-4xl text-4xl md:text-6xl lg:text-7xl font-extrabold leading-tight bg-gradient-to-r from-amber-400 via-orange-400 to-red-400 bg-clip-text text-transparent drop-shadow-2xl">
               🚀 The Future of Selling Starts Here.
-            </p>
+            </h2>
 
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
               {user ? (
