@@ -15,12 +15,12 @@ export interface Listing {
   make?: string;
   model?: string;
   year?: number;
-  mileage?: string; // Changed to string to match component
+  mileage: string; // Required field to match component
   condition?: string;
   location?: string;
   // Fields expected by DashboardListing component
-  titleStatus?: string;
-  postedAt?: string;
+  titleStatus: string;
+  postedAt: string;
   platforms?: string[];
   messages?: number;
   clicks?: number;
