@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { EmailVerification } from '@/components/EmailVerification';
 import Header from '@/components/Header';
+import { ThemeProvider } from '@/contexts/ThemeContext';
 
 export default function MessagesPage() {
   const { user, loading, isEmailVerified } = useAuth();
@@ -34,10 +35,10 @@ export default function MessagesPage() {
           <h1 className="text-2xl font-bold text-gray-900 mb-4">Access Required</h1>
           <p className="text-gray-600 mb-6">Please sign in to access your messages.</p>
           <Link 
-            href="/" 
+            href="/dashboard" 
             className="inline-block bg-amber-500 text-white py-3 px-6 rounded-lg font-semibold hover:bg-amber-600 transition-colors"
           >
-            Go to Homepage
+            Go to Dashboard
           </Link>
         </div>
       </div>
@@ -45,8 +46,9 @@ export default function MessagesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <Header />
+    <ThemeProvider>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <Header />
       
       <main className="pb-20">
         <div className="px-4 py-6">
@@ -63,8 +65,13 @@ export default function MessagesPage() {
                     <h3 className="font-semibold text-gray-900 dark:text-white">John D.</h3>
                     <span className="text-sm text-gray-500 dark:text-gray-400">2m ago</span>
                   </div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">2017 Nissan Altima</p>
-                    <p className="text-gray-700 dark:text-gray-300 mt-1">&ldquo;Is the car still available? I can come see it today.&rdquo;</p>
+                  <div className="flex items-center gap-3">
+                    <img src="/Car in garage.png" alt="2017 Nissan Altima" className="w-12 h-8 rounded object-cover" />
+                    <div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">2017 Nissan Altima</p>
+                      <p className="text-gray-700 dark:text-gray-300 mt-1">&ldquo;Is the car still available? I can come see it today.&rdquo;</p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -79,8 +86,13 @@ export default function MessagesPage() {
                     <h3 className="font-semibold text-gray-900 dark:text-white">Sarah M.</h3>
                     <span className="text-sm text-gray-500 dark:text-gray-400">15m ago</span>
                   </div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">2019 Honda Civic</p>
-                    <p className="text-gray-700 dark:text-gray-300 mt-1">&ldquo;What&apos;s the lowest you&apos;ll take for the Honda?&rdquo;</p>
+                  <div className="flex items-center gap-3">
+                    <img src="/Car listing Details..png" alt="2019 Honda Civic" className="w-12 h-8 rounded object-cover" />
+                    <div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">2019 Honda Civic</p>
+                      <p className="text-gray-700 dark:text-gray-300 mt-1">&ldquo;What&apos;s the lowest you&apos;ll take for the Honda?&rdquo;</p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -95,8 +107,13 @@ export default function MessagesPage() {
                     <h3 className="font-semibold text-gray-900 dark:text-white">Mike R.</h3>
                     <span className="text-sm text-gray-500 dark:text-gray-400">1h ago</span>
                   </div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">2017 Nissan Altima</p>
-                    <p className="text-gray-700 dark:text-gray-300 mt-1">&ldquo;Can I schedule a test drive for tomorrow?&rdquo;</p>
+                  <div className="flex items-center gap-3">
+                    <img src="/Car in garage.png" alt="2017 Nissan Altima" className="w-12 h-8 rounded object-cover" />
+                    <div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">2017 Nissan Altima</p>
+                      <p className="text-gray-700 dark:text-gray-300 mt-1">&ldquo;Can I schedule a test drive for tomorrow?&rdquo;</p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -107,7 +124,7 @@ export default function MessagesPage() {
       {/* Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-4 py-2">
         <div className="flex justify-around items-center">
-          <Link href="/" className="flex flex-col items-center py-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400">
+          <Link href="/dashboard" className="flex flex-col items-center py-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400">
             <span className="text-2xl">🏠</span>
             <span className="text-xs mt-1">Home</span>
           </Link>
@@ -129,6 +146,7 @@ export default function MessagesPage() {
           </Link>
         </div>
       </nav>
-    </div>
+      </div>
+    </ThemeProvider>
   );
 }

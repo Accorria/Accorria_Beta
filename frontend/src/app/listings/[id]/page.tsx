@@ -126,7 +126,7 @@ export default function ListingPage() {
               </h1>
             </div>
             <Link 
-              href="/"
+              href="/dashboard"
               className="text-2xl font-bold text-blue-600 hover:text-blue-700"
             >
               Accorria

@@ -99,3 +99,13 @@ test_*.py
 # Security files
 setup_secure_env.sh
 secure-env-setup.sh
+
+# Strategic Documentation (CRITICAL SECURITY)
+SECRET_WEAPON_*.md
+ACCORRIA_TRILION_DOLLAR_VISION.md
+FORD_DEMO_RESULT.md
+DEMO_TUTORIAL.md
+*_STRATEGY_*.md
+*_PLAN_*.md
+*_VISION_*.md
+PUSH_AND_CHECK_SUMMARY.md

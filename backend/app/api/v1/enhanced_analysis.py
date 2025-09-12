@@ -67,7 +67,12 @@ IMPORTANT: You are analyzing {len(images)} photos of the same car. Look at ALL i
 Photos of a car + quick line: "{make or 'Infiniti'} {model or 'Q50'} {year or '2014'}, {mileage or '123,456'} miles, {titleStatus or 'clean'}". 
 Extract what is visible using the schema. If trim is not clearly visible, leave trim null.
 
-IMPORTANT: Look for:
+CRITICAL: Look for these SPECIFIC visual details:
+- VIN numbers (visible on dashboard, door jamb, or windshield)
+- Wheel color and style (black rims, chrome, alloy, steel)
+- Window tinting (dark tinted windows, privacy glass)
+- Exterior color (red, black, white, silver, etc.)
+- Interior color and material (black leather, tan cloth, etc.)
 - Sunroof controls/buttons (usually on ceiling or overhead console)
 - Backup camera displays (on infotainment screens)
 - Touchscreen interfaces (large center displays)
@@ -75,6 +80,11 @@ IMPORTANT: Look for:
 - Heated seat buttons (usually near climate controls)
 - Navigation systems (maps visible on screens)
 - Leather vs cloth seats (texture and stitching patterns)
+- Any damage, scratches, or wear visible
+- Tire condition and tread depth
+- Headlight/taillight condition
+- Bumper condition
+- Paint quality and shine
 
 Return ONLY this JSON structure:
 {{
@@ -86,7 +96,10 @@ Return ONLY this JSON structure:
     "drivetrain": {{"value": null, "confidence": 0}},
     "body_style": {{"value": null, "confidence": 0}},
     "transmission": {{"value": null, "confidence": 0}},
-    "engine_hint": {{"value": null, "confidence": 0}}
+    "engine_hint": {{"value": null, "confidence": 0}},
+    "exterior_color": {{"value": null, "confidence": 0}},
+    "interior_color": {{"value": null, "confidence": 0}},
+    "vin_visible": {{"value": null, "confidence": 0}}
   }},
   "features": {{
     "backup_camera": {{"present": false, "confidence": 0}},
@@ -100,16 +113,28 @@ Return ONLY this JSON structure:
     "touchscreen": {{"present": false, "confidence": 0}},
     "third_row": {{"present": false, "confidence": 0}},
     "alloy_wheels": {{"present": false, "confidence": 0}},
-    "roof_rack": {{"present": false, "confidence": 0}}
+    "roof_rack": {{"present": false, "confidence": 0}},
+    "tinted_windows": {{"present": false, "confidence": 0}},
+    "black_rims": {{"present": false, "confidence": 0}},
+    "chrome_rims": {{"present": false, "confidence": 0}}
   }},
   "condition": {{
     "exterior_notes": [{{"note": "", "confidence": 0}}],
     "interior_notes": [{{"note": "", "confidence": 0}}],
     "tire_tread_estimate": {{"value": null, "confidence": 0}},
-    "warning_lights_visible": {{"present": false, "confidence": 0}}
+    "warning_lights_visible": {{"present": false, "confidence": 0}},
+    "paint_condition": {{"value": null, "confidence": 0}},
+    "headlight_condition": {{"value": null, "confidence": 0}},
+    "bumper_condition": {{"value": null, "confidence": 0}}
   }},
   "photos_quality": {{"overall": "good", "missing_angles": []}},
-  "badges_seen": []
+  "badges_seen": [],
+  "specific_details": {{
+    "wheel_description": {{"value": null, "confidence": 0}},
+    "window_tint_description": {{"value": null, "confidence": 0}},
+    "interior_material": {{"value": null, "confidence": 0}},
+    "visible_damage": [{{"note": "", "confidence": 0}}]
+  }}
 }}"""
         
         # Create message content with text + all images
@@ -155,7 +180,52 @@ Return ONLY this JSON structure:
                     feature_name = "Apple CarPlay/Android Auto"
                 elif feature == "third_row":
                     feature_name = "Third-row seating"
+                elif feature == "tinted_windows":
+                    feature_name = "Tinted Windows"
+                elif feature == "black_rims":
+                    feature_name = "Black Rims"
+                elif feature == "chrome_rims":
+                    feature_name = "Chrome Rims"
                 listing_context["features_list"].append(feature_name)
+        
+        # Extract specific visual details
+        if "specific_details" in analysis_json:
+            details = analysis_json["specific_details"]
+            
+            # Add wheel description if available
+            if details.get("wheel_description", {}).get("confidence", 0) >= 0.6:
+                wheel_desc = details["wheel_description"]["value"]
+                if wheel_desc and wheel_desc not in listing_context["features_list"]:
+                    listing_context["features_list"].append(wheel_desc)
+            
+            # Add window tint description if available
+            if details.get("window_tint_description", {}).get("confidence", 0) >= 0.6:
+                tint_desc = details["window_tint_description"]["value"]
+                if tint_desc and tint_desc not in listing_context["features_list"]:
+                    listing_context["features_list"].append(tint_desc)
+            
+            # Add interior material if available
+            if details.get("interior_material", {}).get("confidence", 0) >= 0.6:
+                interior_desc = details["interior_material"]["value"]
+                if interior_desc and interior_desc not in listing_context["features_list"]:
+                    listing_context["features_list"].append(interior_desc)
+        
+        # Extract VIN information if visible
+        if analysis_json.get("vehicle", {}).get("vin_visible", {}).get("confidence", 0) >= 0.7:
+            vin_value = analysis_json["vehicle"]["vin_visible"]["value"]
+            if vin_value:
+                listing_context["condition_blurbs"].append(f"VIN visible: {vin_value}")
+        
+        # Extract exterior and interior colors
+        if analysis_json.get("vehicle", {}).get("exterior_color", {}).get("confidence", 0) >= 0.7:
+            color = analysis_json["vehicle"]["exterior_color"]["value"]
+            if color:
+                listing_context["condition_blurbs"].append(f"Exterior color: {color}")
+        
+        if analysis_json.get("vehicle", {}).get("interior_color", {}).get("confidence", 0) >= 0.7:
+            color = analysis_json["vehicle"]["interior_color"]["value"]
+            if color:
+                listing_context["condition_blurbs"].append(f"Interior color: {color}")
         
         # Additional feature detection from badges and vehicle info
         if "badges_seen" in analysis_json:
@@ -180,16 +250,17 @@ Return ONLY this JSON structure:
                 listing_context["condition_blurbs"].append(note_data["note"])
         
         # PASS-2: COMPOSE - Generate final listing text
-        compose_prompt = f"""You are a dealership listing writer. Write concise, upbeat posts that maximize clarity and trust.
-Only use information provided in the context. Do NOT invent specs or claims.
+        compose_prompt = f"""You are a professional car listing writer. Write detailed, specific, and compelling posts that highlight ALL visible features and details.
+ONLY use information provided in the context. Do NOT invent specs or claims.
+Be as detailed as possible - mention specific colors, materials, conditions, and features.
 Keep bullet alignment and emoji style exactly as in the template.
-If a field is missing, omit that line; do not add placeholders.
 
 Here is listing_context JSON: {json.dumps(listing_context)}
-Write the listing using the template above. Keep bullet dots aligned and do not add a "+" after the year.
+
+Write a DETAILED listing using this template. Include ALL specific details from the analysis:
 
 🚙 {{year}} {{make}} {{model}}{{trim_optional}}
-{{price_line}}
+💰 Asking Price: ${{price}}
 🏁 Mileage: {{mileage}} miles
 📄 Title: {{title}}
 📍 Location: {{location}}
@@ -197,14 +268,18 @@ Write the listing using the template above. Keep bullet dots aligned and do not 
 💡 Details:
 • Runs and drives excellent
 • Transmission shifts smooth
-{{detail_fillers_optional}}
+{{specific_condition_details}}
+{{color_and_material_details}}
+{{vin_and_identification_details}}
 
 🔧 Features & Equipment:
-{{features_bullets}}
+{{detailed_features_list}}
 
-🔑 {{tagline}}
+🔑 {{compelling_tagline}}
 
-📱 Message me to schedule a test drive or ask questions!"""
+📱 Message me to schedule a test drive or ask questions!
+
+IMPORTANT: Make this as detailed as possible. Include specific colors, materials, wheel types, window tinting, interior details, and any visible features. This should be as comprehensive as a professional dealership listing."""
         
         compose_response = client.chat.completions.create(
             model="gpt-4o",
@@ -571,6 +646,107 @@ async def real_analyze_car(
     except Exception as e:
         logger.error(f"REAL: Image analysis failed: {e}")
         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+
+@router.post("/enhanced-analyze-with-rag")
+async def enhanced_analyze_with_rag(
+    images: List[UploadFile] = File(...),
+    make: Optional[str] = Form(None),
+    model: Optional[str] = Form(None),
+    year: Optional[str] = Form(None),
+    mileage: Optional[str] = Form(None),
+    price: Optional[str] = Form(None),
+    lowestPrice: Optional[str] = Form(None),
+    titleStatus: Optional[str] = Form(None),
+    aboutVehicle: Optional[str] = Form(None)
+):
+    """
+    Enhanced analysis with RAG and Tool Use patterns
+    - Real-time market data (Tool Use)
+    - Successful listings database (RAG)
+    - OpenAI Vision API analysis
+    """
+    try:
+        logger.info(f"ENHANCED: RAG + Tool Use analysis request received for {len(images)} images")
+        
+        # Prepare car details
+        car_details = {
+            "make": make or "Unknown",
+            "model": model or "Unknown", 
+            "year": year or "Unknown",
+            "mileage": mileage or "Unknown",
+            "price": price or "15000",
+            "lowestPrice": lowestPrice or "12000",
+            "titleStatus": titleStatus or "clean",
+            "aboutVehicle": aboutVehicle or ""
+        }
+        
+        # Convert first image to base64
+        first_image = images[0]
+        image_content = await first_image.read()
+        import base64
+        image_b64 = base64.b64encode(image_content).decode('utf-8')
+        
+        # Step 1: OpenAI Vision API Analysis
+        from app.services.car_analysis_agent import CarAnalysisAgent
+        car_agent = CarAnalysisAgent()
+        analysis_result = await car_agent.analyze_car_image(image_b64, car_details)
+        
+        # Step 2: RAG - Get successful listings data
+        from app.services.rag_service import RAGService
+        rag_service = RAGService()
+        
+        # Extract car info from analysis
+        detected_make = analysis_result.get("detected", {}).get("make", make or "Unknown")
+        detected_model = analysis_result.get("detected", {}).get("model", model or "Unknown")
+        detected_year = analysis_result.get("detected", {}).get("year", year or "Unknown")
+        detected_mileage = analysis_result.get("detected", {}).get("mileage", mileage or "Unknown")
+        
+        # Convert to proper types
+        try:
+            year_int = int(detected_year) if str(detected_year).isdigit() else int(year) if year and str(year).isdigit() else 2019
+            mileage_int = int(str(detected_mileage).replace(",", "")) if str(detected_mileage).replace(",", "").isdigit() else int(mileage) if mileage and str(mileage).replace(",", "").isdigit() else 50000
+        except:
+            year_int = 2019
+            mileage_int = 50000
+        
+        # Get RAG insights
+        rag_insights = rag_service.get_demo_insights(detected_make, detected_model, year_int)
+        similar_listings = rag_service.get_similar_successful_listings(detected_make, detected_model, year_int)
+        pricing_recommendation = rag_service.get_pricing_recommendation(detected_make, detected_model, year_int, mileage_int, "Good")
+        
+        # Step 3: Tool Use - Get real-time market data
+        from app.services.market_data_service import MarketDataService
+        market_service = MarketDataService()
+        
+        market_data = market_service.get_market_comparison(detected_make, detected_model, year_int, mileage_int)
+        demo_market_data = market_service.get_demo_market_data(detected_make, detected_model, year_int, mileage_int)
+        
+        # Combine all results
+        enhanced_result = {
+            **analysis_result,
+            "rag_insights": {
+                "successful_listings_insights": rag_insights,
+                "similar_successful_listings": similar_listings,
+                "pricing_recommendation": pricing_recommendation
+            },
+            "tool_use_data": {
+                "real_time_market_data": market_data,
+                "demo_market_insights": demo_market_data
+            },
+            "enhancement_summary": {
+                "rag_enabled": True,
+                "tool_use_enabled": True,
+                "data_sources": ["OpenAI Vision API", "Successful Listings Database", "KBB API", "Edmunds API"],
+                "analysis_type": "Enhanced with RAG + Tool Use patterns"
+            }
+        }
+        
+        logger.info("ENHANCED: RAG + Tool Use analysis completed successfully")
+        return JSONResponse(content=enhanced_result, status_code=200)
+        
+    except Exception as e:
+        logger.error(f"ENHANCED: RAG + Tool Use analysis failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Enhanced analysis failed: {str(e)}")
 
 @router.post("/mock-post")
 async def mock_post_to_platforms(

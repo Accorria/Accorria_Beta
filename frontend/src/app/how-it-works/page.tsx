@@ -78,12 +78,14 @@ export default function HowItWorksPage() {
                   </li>
                 </ul>
               </div>
-              <div className="bg-white rounded-2xl p-8 shadow-sm">
-                <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-3xl">📸</span>
+              <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+                <div className="w-full h-64">
+                  <img 
+                    src="/Selecting Photos.png" 
+                    alt="Photo selection interface for AI analysis" 
+                    className="w-full h-full object-cover"
+                  />
                 </div>
-                <h4 className="font-semibold text-center mb-2">Smart Photo Analysis</h4>
-                <p className="text-sm text-slate-600 text-center">Upload photos, get instant insights</p>
               </div>
             </div>
 

@@ -74,19 +74,32 @@ function useCarousel(len: number, interval = 3800) {
 
 
 export default function Home() {
+  const [isHydrated, setIsHydrated] = useState(false);
   const idx = useCarousel(IMAGES.length);
   const hero = IMAGES[idx];
   const { user } = useAuth();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
 
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
+
   const handleAuthSuccess = () => {
     // User successfully logged in or registered
     console.log('Authentication successful');
   };
 
+  if (!isHydrated) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-900 to-slate-50 text-slate-100 flex items-center justify-center">
+        <div className="text-white">Loading...</div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-900 to-slate-50 text-slate-100">
+    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-900 to-slate-50 text-slate-100" suppressHydrationWarning={true}>
       {/* NAV */}
       <header className="sticky top-0 z-30 backdrop-blur supports-[backdrop-filter]:bg-slate-900/70">
         <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4">
@@ -106,11 +119,9 @@ export default function Home() {
             <Link href="/qa" className="hover:text-white">Q&A</Link>
           </div>
           {user ? (
-            <div className="flex items-center gap-4">
-              <Link href="/dashboard" className="rounded-lg bg-amber-400 px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-amber-300">
-                Dashboard
-              </Link>
-            </div>
+            <Link href="/dashboard" className="rounded-lg bg-amber-400 px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-amber-300">
+              Dashboard
+            </Link>
           ) : (
             <button
               onClick={() => {
@@ -134,8 +145,8 @@ export default function Home() {
             <h1 className="text-3xl font-extrabold leading-tight md:text-5xl">
               #1 Trust-Native Listing Platform
             </h1>
-            <h2 className="mt-6 max-w-4xl text-4xl md:text-6xl lg:text-7xl font-extrabold leading-tight bg-gradient-to-r from-amber-400 via-orange-400 to-red-400 bg-clip-text text-transparent drop-shadow-2xl">
-              🚀 The Future of Selling Starts Here.
+            <h2 className="mt-6 max-w-4xl text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-extrabold leading-tight bg-gradient-to-r from-amber-400 via-orange-400 to-red-400 bg-clip-text text-transparent drop-shadow-2xl">
+              The Future of Selling. Starts Here.
             </h2>
 
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
@@ -160,6 +171,21 @@ export default function Home() {
               <Link href="/demo" className="rounded-lg border border-white/20 px-4 py-2 font-semibold text-white/90 hover:bg-white/5">Watch 60‑sec Demo</Link>
             </div>
 
+            {/* Newsletter Signup */}
+            <div className="mt-8 p-6 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20">
+              <h3 className="text-lg font-semibold text-white mb-2">🚀 Stay ahead. Get early access to Accorria.</h3>
+              <p className="text-white/80 text-sm mb-4">Be the first to know about new features, pricing updates, and exclusive offers.</p>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <input 
+                  type="email" 
+                  placeholder="Enter your email" 
+                  className="flex-1 px-4 py-3 rounded-lg bg-white/20 border border-white/30 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-amber-400 text-base"
+                />
+                <button className="px-6 py-3 bg-amber-500 text-white rounded-lg font-semibold hover:bg-amber-600 transition-colors text-base">
+                  Subscribe
+                </button>
+              </div>
+            </div>
 
           </div>
 
@@ -191,9 +217,9 @@ export default function Home() {
         <div className="mx-auto max-w-7xl px-4 py-16">
           <h2 className="text-2xl font-bold md:text-3xl">How it works</h2>
           <div className="mt-8 grid gap-6 md:grid-cols-3">
-            <Card icon="upload" title="Upload" desc="Add photos or paste VIN/address. We pull specs & comps." />
-            <Card icon="magic" title="Generate" desc="AI crafts title, description, price guidance, FB‑ready post." />
-            <Card icon="post" title="Post & Close" desc="You click post. We coach replies. Escrow rolls out at tax time." />
+            <Card icon="upload" title="Upload" desc="Upload photos, select the ones you want analyzed. Your agent pulls details from the images + VIN/address and builds the foundation for your listing." />
+            <Card icon="magic" title="Generate" desc="AI crafts the full listing: title, description, price guidance, and marketplace-ready post." />
+            <Card icon="post" title="Post & Close" desc="Publish once → Accorria helps you cross-post everywhere. Sell via escrow for safer payments or in person your choice." />
           </div>
         </div>
       </section>
@@ -202,9 +228,9 @@ export default function Home() {
       <section className="bg-white">
         <div className="mx-auto max-w-7xl px-4 py-14">
           <div className="grid gap-6 md:grid-cols-3">
-            <Feature title="Faster listings" desc="From photos to posted in minutes—not hours." />
-            <Feature title="Cleaner negotiation" desc="Guided replies and templates cut the back‑and‑forth." />
-            <Feature title="Safer closings" desc="Escrow (cars first, homes next). Optional but powerful." />
+            <Feature title="Faster listings" desc="From photos to posting in minutes, not hours." />
+            <Feature title="Smarter negotiations" desc="Your personal AI Negotiator Agent reduces back-and-forth and keeps buyers serious." />
+            <Feature title="Safer closings" desc="Built-in escrow for cars now, homes next. Future-proof with optional digital certificates coming." />
           </div>
         </div>
       </section>
@@ -230,8 +256,12 @@ export default function Home() {
             </div>
             <div className="relative">
               <div className="bg-gray-800 rounded-2xl p-8 text-center">
-                <div className="w-full h-64 bg-gray-700 rounded-lg flex items-center justify-center mb-4">
-                  <span className="text-gray-400 text-lg">📸 Hero Image Placeholder</span>
+                <div className="w-full h-64 rounded-lg overflow-hidden mb-4">
+                  <img 
+                    src="/Analizing Photos.png" 
+                    alt="AI analyzing photos to generate perfect listing" 
+                    className="w-full h-full object-cover"
+                  />
                 </div>
                 <p className="text-gray-400 text-sm">Upload photos → AI analysis → Perfect listing</p>
               </div>
@@ -251,7 +281,7 @@ export default function Home() {
               A New Way to Get Paid
             </h2>
             <p className="text-xl text-slate-600 max-w-3xl mx-auto">
-              Skip the bank delays. Skip the scams. Get paid instantly when deals close — cars, homes, rentals. Blockchain-powered settlements in 23 hours.
+              Skip the bank delays. Skip the scams. Get paid instantly when deals close cars, homes, rentals. Blockchain-powered settlements within 48 hours.
             </p>
           </div>
           
@@ -260,7 +290,7 @@ export default function Home() {
               <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <span className="text-2xl">⚡</span>
               </div>
-              <h3 className="font-semibold text-slate-900 mb-2">23-Hour Payments</h3>
+              <h3 className="font-semibold text-slate-900 mb-2">48-Hour Payments</h3>
               <p className="text-slate-600">No more waiting weeks for bank transfers</p>
             </div>
             <div className="text-center">
@@ -307,8 +337,12 @@ export default function Home() {
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">10x Faster</h3>
               <p className="text-gray-600">AI generates perfect listings in seconds. No more hours writing descriptions or taking photos.</p>
-              <div className="mt-4 w-full h-32 bg-gray-100 rounded-lg flex items-center justify-center">
-                <span className="text-gray-400 text-sm">📱 Process Photo</span>
+              <div className="mt-4 w-full h-32 rounded-lg overflow-hidden">
+                <img 
+                  src="/Selecting Photos.png" 
+                  alt="User selecting photos for AI analysis" 
+                  className="w-full h-full object-cover"
+                />
               </div>
             </div>
             <div className="text-center">
@@ -317,8 +351,12 @@ export default function Home() {
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">Better Results</h3>
               <p className="text-gray-600">Smart pricing, multi-platform posting, and automated negotiation get you top dollar.</p>
-              <div className="mt-4 w-full h-32 bg-gray-100 rounded-lg flex items-center justify-center">
-                <span className="text-gray-400 text-sm">📊 Results Photo</span>
+              <div className="mt-4 w-full h-32 rounded-lg overflow-hidden">
+                <img 
+                  src="/Fackbook posted.jpeg" 
+                  alt="Final listing posted to Facebook Marketplace" 
+                  className="w-full h-full object-cover"
+                />
               </div>
             </div>
             <div className="text-center">
@@ -327,8 +365,12 @@ export default function Home() {
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">Safer Deals</h3>
               <p className="text-gray-600">Built-in escrow, ID verification, and title checks protect both buyers and sellers.</p>
-              <div className="mt-4 w-full h-32 bg-gray-100 rounded-lg flex items-center justify-center">
-                <span className="text-gray-400 text-sm">🔒 Security Photo</span>
+              <div className="mt-4 w-full h-32 rounded-lg overflow-hidden">
+                <img 
+                  src="/Listing details.png" 
+                  alt="Accorria listing details with verification and escrow" 
+                  className="w-full h-full object-cover"
+                />
               </div>
             </div>
           </div>
@@ -408,28 +450,28 @@ export default function Home() {
               <table className="w-full text-center">
                 <thead>
                   <tr className="border-b-2 border-amber-200">
-                    <th className="py-3 font-semibold text-gray-900">Home Price</th>
-                    <th className="py-3 font-semibold text-gray-900">Legacy Agent @ 5.5%</th>
-                    <th className="py-3 font-semibold text-gray-900">Accorria Escrow</th>
-                    <th className="py-3 font-semibold text-green-600">Customer Saves</th>
+                    <th className="py-3 font-semibold text-gray-900 text-sm sm:text-base">Home Price</th>
+                    <th className="py-3 font-semibold text-gray-900 text-sm sm:text-base">Legacy Agent @ 5.5%</th>
+                    <th className="py-3 font-semibold text-gray-900 text-sm sm:text-base">Accorria Escrow</th>
+                    <th className="py-3 font-semibold text-green-600 text-sm sm:text-base">Customer Saves</th>
                   </tr>
                 </thead>
                 <tbody className="space-y-2">
                   <tr className="border-b border-amber-100">
-                    <td className="py-3 font-medium">$50,000</td>
-                    <td className="py-3">$2,750</td>
+                    <td className="py-3 font-medium text-gray-900">$50,000</td>
+                    <td className="py-3 text-gray-900">$2,750</td>
                     <td className="py-3 font-semibold text-blue-600">$395</td>
                     <td className="py-3 font-bold text-green-600">$2,355</td>
                   </tr>
                   <tr className="border-b border-amber-100">
-                    <td className="py-3 font-medium">$250,000</td>
-                    <td className="py-3">$13,750</td>
+                    <td className="py-3 font-medium text-gray-900">$250,000</td>
+                    <td className="py-3 text-gray-900">$13,750</td>
                     <td className="py-3 font-semibold text-blue-600">$875</td>
                     <td className="py-3 font-bold text-green-600">$12,875</td>
                   </tr>
                   <tr>
-                    <td className="py-3 font-medium">$500,000</td>
-                    <td className="py-3">$27,500</td>
+                    <td className="py-3 font-medium text-gray-900">$500,000</td>
+                    <td className="py-3 text-gray-900">$27,500</td>
                     <td className="py-3 font-semibold text-blue-600">$995</td>
                     <td className="py-3 font-bold text-green-600">$26,505</td>
                   </tr>
@@ -456,8 +498,12 @@ export default function Home() {
           <div className="grid md:grid-cols-2 gap-12">
             <div>
               <h3 className="text-2xl font-bold mb-6 text-amber-400">🚗 Car Sales</h3>
-              <div className="mb-6 w-full h-48 bg-gray-800 rounded-lg flex items-center justify-center">
-                <span className="text-gray-400 text-lg">🚗 Car Listing Photo</span>
+              <div className="mb-6 w-full h-48 rounded-lg overflow-hidden">
+                <img 
+                  src="/Car listing Details..png" 
+                  alt="Complete car listing with Accorria verification and pricing" 
+                  className="w-full h-full object-cover"
+                />
               </div>
               <div className="space-y-4">
                 <div className="flex items-start">
@@ -493,8 +539,12 @@ export default function Home() {
             
             <div>
               <h3 className="text-2xl font-bold mb-6 text-amber-400">🏠 Home Sales</h3>
-              <div className="mb-6 w-full h-48 bg-gray-800 rounded-lg flex items-center justify-center">
-                <span className="text-gray-400 text-lg">🏠 Home Listing Photo</span>
+              <div className="mb-6 w-full h-48 rounded-lg overflow-hidden">
+                <img 
+                  src="/ModernHome.png" 
+                  alt="Modern home listing with Accorria escrow and verification" 
+                  className="w-full h-full object-cover"
+                />
               </div>
               <div className="space-y-4">
                 <div className="flex items-start">
@@ -550,8 +600,12 @@ export default function Home() {
             <p className="mt-4 text-lg text-slate-700 max-w-3xl mx-auto">
               Everything you need to know about Accorria&apos;s trust-native listing platform.
             </p>
-            <div className="mt-8 w-full max-w-2xl mx-auto h-48 bg-gray-100 rounded-lg flex items-center justify-center">
-              <span className="text-gray-400 text-lg">📋 FAQ Visual Placeholder</span>
+            <div className="mt-8 w-full max-w-2xl mx-auto h-48 rounded-lg overflow-hidden">
+              <img 
+                src="/Platform Selection.png" 
+                alt="Accorria platform selection and posting process" 
+                className="w-full h-full object-cover"
+              />
             </div>
           </div>
           
@@ -655,15 +709,36 @@ export default function Home() {
 }
 
 function Card({ icon, title, desc }: { icon: string; title: string; desc: string }) {
+  // Map icons to corresponding photos
+  const getPhotoForIcon = (iconName: string) => {
+    switch (iconName) {
+      case 'upload':
+        return '/Selecting Photos.png';
+      case 'magic':
+        return '/Description.png';
+      case 'post':
+        return '/Fackbook posted.jpeg';
+      default:
+        return '/Selecting Photos.png';
+    }
+  };
+
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 mb-3">
         <div className="rounded-xl bg-amber-100 p-2 text-amber-700">
           <Icon name={icon} className="h-5 w-5" />
         </div>
         <div className="text-lg font-semibold">{title}</div>
       </div>
-      <p className="mt-2 text-slate-600">{desc}</p>
+      <div className="w-full h-64 rounded-lg overflow-hidden mb-3">
+        <img 
+          src={getPhotoForIcon(icon)} 
+          alt={`${title} process step`}
+          className="w-full h-full object-cover"
+        />
+      </div>
+      <p className="text-slate-600">{desc}</p>
     </div>
   );
 }

@@ -34,9 +34,16 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [showSaleForm, setShowSaleForm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
   const [saleData, setSaleData] = useState({
     soldFor: '',
     soldTo: ''
+  });
+  const [editData, setEditData] = useState({
+    title: listing.title,
+    price: listing.price.toString(),
+    description: listing.description,
+    mileage: listing.mileage
   });
 
   const formatDate = (dateString: string) => {
@@ -246,12 +253,7 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
           {/* Secondary Actions */}
           <div className="space-y-2">
             <button 
-              onClick={() => {
-                // TODO: Implement edit functionality
-                console.log('Edit button clicked for listing:', listing.id);
-                // For now, just show an alert
-                alert('Edit functionality coming soon!');
-              }}
+              onClick={() => setShowEditForm(true)}
               className="w-full bg-blue-500 text-white py-2 px-4 rounded-lg font-medium hover:bg-blue-600 transition-colors text-sm"
             >
               ✏️ Edit Listing
@@ -445,6 +447,128 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
                 className="flex-1 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
               >
                 Mark as Sold
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Form Modal */}
+      {showEditForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                ✏️ Edit Listing
+              </h3>
+              <button
+                onClick={() => setShowEditForm(false)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Title
+                </label>
+                <input
+                  type="text"
+                  value={editData.title}
+                  onChange={(e) => setEditData(prev => ({ ...prev, title: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Price
+                </label>
+                <input
+                  type="text"
+                  value={editData.price}
+                  onChange={(e) => setEditData(prev => ({ ...prev, price: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Mileage
+                </label>
+                <input
+                  type="text"
+                  value={editData.mileage}
+                  onChange={(e) => setEditData(prev => ({ ...prev, mileage: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Description
+                </label>
+                <textarea
+                  value={editData.description}
+                  onChange={(e) => setEditData(prev => ({ ...prev, description: e.target.value }))}
+                  rows={6}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white resize-none"
+                />
+              </div>
+            </div>
+            
+            <div className="flex space-x-3 mt-6">
+              <button
+                onClick={() => setShowEditForm(false)}
+                className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  if (!editData.title || !editData.price || !editData.mileage) {
+                    alert('Please fill in all required fields');
+                    return;
+                  }
+                  
+                  // Store edit action in analytics
+                  const editAction = {
+                    ...listing,
+                    editedAt: new Date().toISOString(),
+                    action: 'edited',
+                    changes: {
+                      title: { from: listing.title, to: editData.title },
+                      price: { from: listing.price, to: parseInt(editData.price) },
+                      mileage: { from: listing.mileage, to: editData.mileage },
+                      description: { from: listing.description, to: editData.description }
+                    }
+                  };
+                  
+                  const existingAnalytics = JSON.parse(localStorage.getItem('listingAnalytics') || '[]');
+                  existingAnalytics.push(editAction);
+                  localStorage.setItem('listingAnalytics', JSON.stringify(existingAnalytics));
+                  
+                  // Update the listing in localStorage
+                  const existingListings = JSON.parse(localStorage.getItem('testListings') || '[]');
+                  const updatedListings = existingListings.map((l: Listing) => 
+                    l.id === listing.id ? {
+                      ...l,
+                      title: editData.title,
+                      price: parseInt(editData.price),
+                      mileage: editData.mileage,
+                      description: editData.description
+                    } : l
+                  );
+                  localStorage.setItem('testListings', JSON.stringify(updatedListings));
+                  
+                  setShowEditForm(false);
+                  window.location.reload();
+                }}
+                className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+              >
+                Save Changes
               </button>
             </div>
           </div>

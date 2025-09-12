@@ -16,17 +16,17 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Accorria – #1 Trust-Native AI Listings with Escrow',
+  title: 'Accorria – #1 Trust-Native Listing Platform',
   description:
-    'Accorria helps you sell cars and homes faster with AI-powered listings, multi-platform posting, automated negotiation, and secure escrow transactions. Upload photos, we\'ll flip the rest.',
+    'The future of selling starts here. Secure listings, instant escrow, and AI-powered posting for cars, homes, and high-value items. Upload photos, we\'ll flip the rest.',
   icons: {
     icon: '/AccorriaYwLOGO.png',
     apple: '/AccorriaYwLOGO.png',
   },
   openGraph: {
-    title: 'Accorria – #1 Trust-Native AI Listings with Escrow',
+    title: 'Accorria – #1 Trust-Native Listing Platform',
     description:
-      'Upload photos, we\'ll flip the rest. Accorria automates car & home sales with AI, escrow, and predictive insights.',
+      'The future of selling starts here. Secure listings, instant escrow, and AI-powered posting for cars, homes, and high-value items.',
     url: 'https://accorria.com',
     siteName: 'Accorria',
     images: [
@@ -42,9 +42,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Accorria – #1 Trust-Native AI Listings with Escrow',
+    title: 'Accorria – #1 Trust-Native Listing Platform',
     description:
-      'AI-powered listings, secure escrow, and multi-platform posting. Upload photos, we\'ll flip the rest.',
+      'The future of selling starts here. Secure listings, instant escrow, and AI-powered posting for cars, homes, and high-value items.',
     images: ['https://accorria.com/AccorriaYwLOGO.png'],
   },
 };
@@ -67,7 +67,7 @@ export default function RootLayout({
               name: 'Accorria',
               url: 'https://accorria.com',
               logo: 'https://accorria.com/AccorriaYwLOGO.png',
-              description: 'AI-powered car and home listing platform with secure escrow transactions',
+              description: 'The future of selling starts here. Secure listings, instant escrow, and AI-powered posting for cars, homes, and high-value items.',
               sameAs: [
                 'https://www.facebook.com/accorria',
                 'https://www.linkedin.com/company/accorria',
@@ -78,12 +78,11 @@ export default function RootLayout({
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        suppressHydrationWarning={true}
       >
         <AuthProvider>
-          <ThemeProvider>
-            <ScrollToTop />
-            {children}
-          </ThemeProvider>
+          <ScrollToTop />
+          {children}
         </AuthProvider>
       </body>
     </html>

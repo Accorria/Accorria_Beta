@@ -601,12 +601,13 @@ export default function CreateListing({ onClose }: CreateListingProps) {
       <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md sm:max-w-lg max-h-[95vh] sm:max-h-[90vh] overflow-y-auto animate-slide-up" onClick={(e) => e.stopPropagation()}>
         <div className="p-4 sm:p-6">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">
               Create New Listing
             </h2>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors p-2 -m-2"
+              aria-label="Close"
             >
               ✕
             </button>
@@ -1010,7 +1011,7 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                         <div className="text-sm text-gray-600 dark:text-gray-400">Lower price, faster sale</div>
                       </div>
                       <div className="text-right">
-                        <div className="font-bold text-lg">${Math.floor(parseInt(carDetails.price || '0') * 0.85).toLocaleString()}</div>
+                        <div className="font-bold text-lg">${Math.floor(parseInt(carDetails.price || '10000') * 0.85).toLocaleString()}</div>
                         <div className="text-xs text-gray-500">~7 days</div>
                       </div>
                     </div>
@@ -1031,7 +1032,7 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                         <div className="text-sm text-gray-600 dark:text-gray-400">Balanced price & speed</div>
                       </div>
                       <div className="text-right">
-                        <div className="font-bold text-lg">${parseInt(carDetails.price || '0').toLocaleString()}</div>
+                        <div className="font-bold text-lg">${parseInt(carDetails.price || '10000').toLocaleString()}</div>
                         <div className="text-xs text-gray-500">~14 days</div>
                       </div>
                     </div>
@@ -1052,7 +1053,7 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                         <div className="text-sm text-gray-600 dark:text-gray-400">Higher price, detailed listing</div>
                       </div>
                       <div className="text-right">
-                        <div className="text-lg font-bold">${Math.floor(parseInt(carDetails.price || '0') * 1.15).toLocaleString()}</div>
+                        <div className="text-lg font-bold">${Math.floor(parseInt(carDetails.price || '10000') * 1.15).toLocaleString()}</div>
                         <div className="text-xs text-gray-500">~21 days</div>
                       </div>
                     </div>
@@ -1098,8 +1099,8 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                 <textarea
                   value={carDetails.finalDescription}
                   readOnly
-                  className="w-full px-3 py-2 border border-green-300 dark:border-green-600 rounded-lg bg-green-50 dark:bg-green-900/20 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  rows={12}
+                  className="w-full px-3 py-2 border border-green-300 dark:border-green-600 rounded-lg bg-green-50 dark:bg-green-900/20 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
+                  rows={Math.max(8, carDetails.finalDescription.split('\n').length + 2)}
                   placeholder="AI will generate the final polished listing here..."
                 />
                 
@@ -1279,6 +1280,16 @@ export default function CreateListing({ onClose }: CreateListingProps) {
               </button>
             </div>
           </form>
+          
+          {/* Mobile-friendly back button */}
+          <div className="sticky bottom-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 sm:hidden">
+            <button
+              onClick={onClose}
+              className="w-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 py-3 rounded-lg font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+            >
+              ← Back to Dashboard
+            </button>
+          </div>
         </div>
       </div>
 

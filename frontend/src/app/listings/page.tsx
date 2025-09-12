@@ -7,6 +7,7 @@ import { EmailVerification } from '@/components/EmailVerification';
 import DashboardListing from '@/components/DashboardListing';
 import CreateListing from '@/components/listings/CreateListing';
 import Header from '@/components/Header';
+import { ThemeProvider } from '@/contexts/ThemeContext';
 
 export default function ListingsPage() {
   const { user, loading, isEmailVerified } = useAuth();
@@ -59,10 +60,10 @@ export default function ListingsPage() {
           <h1 className="text-2xl font-bold text-gray-900 mb-4">Access Required</h1>
           <p className="text-gray-600 mb-6">Please sign in to access your listings.</p>
           <Link 
-            href="/" 
+            href="/dashboard" 
             className="inline-block bg-amber-500 text-white py-3 px-6 rounded-lg font-semibold hover:bg-amber-600 transition-colors"
           >
-            Go to Homepage
+            Go to Dashboard
           </Link>
         </div>
       </div>
@@ -70,8 +71,9 @@ export default function ListingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <Header />
+    <ThemeProvider>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <Header />
       
       <main className="pb-20">
         <div className="px-4 py-6">
@@ -110,7 +112,7 @@ export default function ListingsPage() {
       {/* Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-4 py-2">
         <div className="flex justify-around items-center">
-          <Link href="/" className="flex flex-col items-center py-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400">
+          <Link href="/dashboard" className="flex flex-col items-center py-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400">
             <span className="text-2xl">🏠</span>
             <span className="text-xs mt-1">Home</span>
           </Link>
@@ -139,6 +141,7 @@ export default function ListingsPage() {
           onClose={() => setShowCreateListing(false)}
         />
       )}
-    </div>
+      </div>
+    </ThemeProvider>
   );
 }
