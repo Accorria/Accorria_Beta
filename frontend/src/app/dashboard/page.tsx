@@ -8,34 +8,71 @@ import { EmailVerification } from '@/components/EmailVerification';
 import DashboardListing from '@/components/DashboardListing';
 import CreateListing from '@/components/listings/CreateListing';
 import Header from '@/components/Header';
+import { listingsService, Listing } from '@/services/listingsService';
 
 export default function Dashboard() {
   const { user, loading, isEmailVerified } = useAuth();
-  const [testListings, setTestListings] = useState<any[]>([]);
+  const [listings, setListings] = useState<Listing[]>([]);
+  const [stats, setStats] = useState({
+    totalListings: 0,
+    activeListings: 0,
+    soldListings: 0,
+    totalRevenue: 0
+  });
   const [logMsg, setLogMsg] = useState<string | null>(null);
   const [showCreateListing, setShowCreateListing] = useState(false);
+  const [isLoadingListings, setIsLoadingListings] = useState(true);
 
-
-  // Load test listings from localStorage
+  // Load listings from Supabase database
   useEffect(() => {
-    const savedTestListings = localStorage.getItem('testListings');
-    if (savedTestListings) {
-      setTestListings(JSON.parse(savedTestListings));
-    }
-  }, []);
+    const loadListings = async () => {
+      if (!user) {
+        setIsLoadingListings(false);
+        return;
+      }
 
-  // Listen for storage changes to update test listings
-  useEffect(() => {
-    const handleStorageChange = () => {
-      const savedTestListings = localStorage.getItem('testListings');
-      if (savedTestListings) {
-        setTestListings(JSON.parse(savedTestListings));
+      try {
+        setIsLoadingListings(true);
+        
+        // First, try to migrate any localStorage data
+        await listingsService.migrateLocalStorageData();
+        
+        // Load listings from database
+        const userListings = await listingsService.getUserListings();
+        setListings(userListings);
+        
+        // Load stats
+        const listingStats = await listingsService.getListingStats();
+        setStats(listingStats);
+        
+        setLogMsg(`Loaded ${userListings.length} listings from database`);
+      } catch (error) {
+        console.error('Failed to load listings:', error);
+        setLogMsg('Failed to load listings from database');
+      } finally {
+        setIsLoadingListings(false);
       }
     };
 
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
+    loadListings();
+  }, [user]);
+
+  // Refresh listings when a new one is created
+  const handleListingCreated = async () => {
+    try {
+      const userListings = await listingsService.getUserListings();
+      setListings(userListings);
+      
+      const listingStats = await listingsService.getListingStats();
+      setStats(listingStats);
+      
+      setShowCreateListing(false);
+      setLogMsg('New listing created successfully!');
+    } catch (error) {
+      console.error('Failed to refresh listings:', error);
+      setLogMsg('Failed to refresh listings');
+    }
+  };
 
 
   // Show loading state
@@ -90,26 +127,26 @@ export default function Dashboard() {
         <div className="px-4 py-6">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
             <div className="bg-white dark:bg-gray-800 p-3 sm:p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-              <div className="text-2xl font-bold text-blue-600 dark:text-blue-300">{testListings.length}</div>
+              <div className="text-2xl font-bold text-blue-600 dark:text-blue-300">
+                {isLoadingListings ? '...' : stats.activeListings}
+              </div>
               <div className="text-xs text-gray-600 dark:text-gray-300">Active Listings</div>
             </div>
             <div className="bg-white dark:bg-gray-800 p-3 sm:p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
               <div className="text-2xl font-bold text-green-600 dark:text-green-300">
-                {testListings.reduce((total, listing) => total + (listing.views || 0), 0)}
+                {isLoadingListings ? '...' : stats.totalListings}
               </div>
-              <div className="text-xs text-gray-600 dark:text-gray-300">Total Views</div>
+              <div className="text-xs text-gray-600 dark:text-gray-300">Total Listings</div>
             </div>
             <div className="bg-white dark:bg-gray-800 p-3 sm:p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
               <div className="text-2xl font-bold text-orange-600 dark:text-orange-300">
-                {testListings.reduce((total, listing) => total + (listing.messages || 0), 0)}
+                {isLoadingListings ? '...' : stats.soldListings}
               </div>
-              <div className="text-xs text-gray-600 dark:text-gray-300">Messages</div>
+              <div className="text-xs text-gray-600 dark:text-gray-300">Cars Sold</div>
             </div>
             <div className="bg-white dark:bg-gray-800 p-3 sm:p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
               <div className="text-2xl font-bold text-purple-600 dark:text-purple-300">
-                ${testListings.reduce((total, listing) => {
-                  return total + (listing.soldFor || 0);
-                }, 0).toLocaleString()}
+                ${isLoadingListings ? '...' : stats.totalRevenue.toLocaleString()}
               </div>
               <div className="text-xs text-gray-600 dark:text-gray-300">Total Revenue</div>
             </div>
@@ -130,10 +167,10 @@ export default function Dashboard() {
 
 
         {/* Active Listings */}
-        {testListings.length > 0 && (
+        {!isLoadingListings && listings.length > 0 && (
           <div className="px-4 mb-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Your Listings ({testListings.length})</h2>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Your Listings ({listings.length})</h2>
               <Link
                 href="/listings"
                 className="text-sm text-blue-600 hover:text-blue-700 px-2 py-1 rounded border border-blue-200 hover:border-blue-300 transition-colors"
@@ -142,9 +179,36 @@ export default function Dashboard() {
               </Link>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {testListings.slice(0, 2).map((listing) => (
+              {listings.slice(0, 2).map((listing) => (
                 <DashboardListing key={listing.id} listing={listing} />
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* Loading state for listings */}
+        {isLoadingListings && (
+          <div className="px-4 mb-6">
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p className="text-gray-600 dark:text-gray-400">Loading your listings...</p>
+            </div>
+          </div>
+        )}
+
+        {/* Empty state */}
+        {!isLoadingListings && listings.length === 0 && (
+          <div className="px-4 mb-6">
+            <div className="text-center py-8">
+              <div className="text-6xl mb-4">🚗</div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No listings yet</h3>
+              <p className="text-gray-600 dark:text-gray-400 mb-4">Start by posting your first car!</p>
+              <button
+                onClick={() => setShowCreateListing(true)}
+                className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors"
+              >
+                Create Your First Listing
+              </button>
             </div>
           </div>
         )}
@@ -181,6 +245,7 @@ export default function Dashboard() {
       {showCreateListing && (
         <CreateListing 
           onClose={() => setShowCreateListing(false)}
+          onListingCreated={handleListingCreated}
         />
       )}
       </div>
