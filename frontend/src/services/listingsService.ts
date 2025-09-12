@@ -289,9 +289,20 @@ export class ListingsService {
           make: listing.make,
           model: listing.model,
           year: listing.year,
-          mileage: listing.mileage,
+          mileage: listing.mileage?.toString() || '0',
           condition: listing.condition,
-          location: listing.location
+          location: listing.location,
+          // Required fields for component compatibility
+          postedAt: listing.postedAt || new Date().toISOString(),
+          titleStatus: listing.titleStatus || 'Clean',
+          platforms: listing.platforms || [],
+          messages: listing.messages || 0,
+          clicks: listing.clicks || 0,
+          soldAt: listing.soldAt,
+          soldTo: listing.soldTo,
+          detectedFeatures: listing.detectedFeatures || [],
+          aiAnalysis: listing.aiAnalysis,
+          finalDescription: listing.finalDescription
         });
       }
 
