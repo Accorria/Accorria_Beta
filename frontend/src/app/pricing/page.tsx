@@ -15,13 +15,15 @@ export default function PricingPage() {
       price: "$0",
       duration: "7 days",
       subtitle: "For new users testing the platform",
-      posts: "3 posts total",
+      posts: "1 post for 7 days",
       features: [
-        "Full feature access for trial duration",
-        "AI Listing Generator",
-        "Smart Inbox + Messenger Bot",
-        "FlipScore included",
-        "Email support"
+        "ALL Pro features for 1 post",
+        "We try to sell your car for 7 days",
+        "Smart listing optimizer",
+        "Lead & sales analytics", 
+        "Messenger Bot (enhanced replies)",
+        "FlipScore (market comps & demand hints)",
+        "Priority chat support"
       ],
       cta: "Start Free Trial",
       popular: false,
@@ -147,7 +149,7 @@ export default function PricingPage() {
             All plans include AI Listing Generator, Messenger Bot, FlipScore, Smart Inbox, and SafePay escrow (vehicles). 
             <br />
             <span className="text-sm text-slate-600 mt-2 block">
-              <strong>Post</strong> = 1 unique vehicle listing. <strong>Trial</strong> ends at 7 days OR after 3 posts, whichever comes first.
+              <strong>Free Trial:</strong> Get 1 post with ALL Pro features - we try to sell it for 7 days.
             </span>
           </p>
           <p className="text-slate-600 font-medium">
