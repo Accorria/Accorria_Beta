@@ -11,46 +11,71 @@ export default function PricingPage() {
 
   const pricingPlans = [
     {
-      name: "Starter",
-      price: "$29",
-      duration: "per month",
-      subtitle: "For one-off sellers & first flips",
-      posts: "5 car listings / month",
+      name: "Free Trial",
+      price: "$0",
+      duration: "7 days",
+      subtitle: "For new users testing the platform",
+      posts: "3 posts total",
       features: [
-        "Assist-to-Post (guided)",
-        "Smart Inbox (1 user) + quick-reply templates",
-        "1 active vehicle escrow (0.9% fee, $25 min)",
+        "Full feature access for trial duration",
+        "AI Listing Generator",
+        "Smart Inbox + Messenger Bot",
+        "FlipScore included",
+        "Email support"
+      ],
+      cta: "Start Free Trial",
+      popular: false,
+      trial: true
+    },
+    {
+      name: "Starter",
+      price: "$20",
+      duration: "per month",
+      subtitle: "For side hustlers (1–2 flips/mo)",
+      posts: "5 posts / month",
+      features: [
+        "Multi-platform posting",
+        "AI listing generator",
+        "Simple analytics",
+        "Messenger Bot (baseline replies)",
+        "FlipScore included",
         "Email support"
       ],
       cta: "Get Starter",
       popular: false
     },
     {
-      name: "Pro",
-      price: "$79",
+      name: "Growth",
+      price: "$50",
       duration: "per month",
-      subtitle: "For active flippers",
-      posts: "Unlimited car listings",
+      subtitle: "For full-time flippers & salespeople",
+      posts: "Unlimited posts",
       features: [
-        "Smart Inbox (1 user) with saved templates",
-        "Up to 3 active vehicle escrows",
+        "Smart listing optimizer",
+        "Lead & sales analytics",
+        "Messenger Bot (enhanced replies + suggested replies + auto follow-ups)",
+        "FlipScore (market comps & demand hints)",
         "Priority chat support"
       ],
-      cta: "Upgrade to Pro",
+      cta: "Upgrade to Growth",
       popular: true
     },
     {
-      name: "Dealer (Auto)",
-      price: "$199",
+      name: "Dealer Pro",
+      price: "$200",
       duration: "per month",
-      subtitle: "For independent dealers (waitlist while we onboard)",
-      posts: "Unlimited listings",
+      subtitle: "For dealerships & teams",
+      posts: "Unlimited posts + Team seats",
       features: [
-        "Team access (up to 3 seats during beta)",
-        "Up to 10 active vehicle escrows",
+        "Team accounts",
+        "Auction tools",
+        "Repair-cost estimator",
+        "Dealer analytics",
+        "Messenger Bot (end-to-end automation with approval toggles)",
+        "FlipScore (advanced insight pack)",
         "Priority chat & phone support"
       ],
-      cta: "Join Dealer Waitlist",
+      cta: "Join Dealer Pro",
       popular: false
     }
   ];
@@ -119,25 +144,37 @@ export default function PricingPage() {
             Pricing (simplified for cars now)
           </h2>
           <p className="text-lg text-slate-700 max-w-3xl mx-auto mb-8">
-            All plans include AI Listing Generator, Assist-to-Post (ToS-compliant), Smart Inbox, e-sign docs, and SafePay escrow (vehicles).
+            All plans include AI Listing Generator, Messenger Bot, FlipScore, Smart Inbox, and SafePay escrow (vehicles). 
+            <br />
+            <span className="text-sm text-slate-600 mt-2 block">
+              <strong>Post</strong> = 1 unique vehicle listing. <strong>Trial</strong> ends at 7 days OR after 3 posts, whichever comes first.
+            </span>
           </p>
           <p className="text-slate-600 font-medium">
             Cancel anytime.
           </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8 mb-16">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
           {pricingPlans.map((plan, index) => (
             <div 
               key={index}
               className={`relative bg-white rounded-2xl shadow-xl p-8 border-2 ${
-                plan.popular ? 'border-amber-500 scale-105' : 'border-gray-200'
+                plan.popular ? 'border-amber-500 scale-105' : 
+                plan.trial ? 'border-green-500' : 'border-gray-200'
               }`}
             >
               {plan.popular && (
                 <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
                   <span className="bg-amber-500 text-white px-4 py-1 rounded-full text-sm font-medium">
                     Most Popular
+                  </span>
+                </div>
+              )}
+              {plan.trial && (
+                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                  <span className="bg-green-500 text-white px-4 py-1 rounded-full text-sm font-medium">
+                    Free Trial
                   </span>
                 </div>
               )}
