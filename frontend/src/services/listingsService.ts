@@ -15,9 +15,20 @@ export interface Listing {
   make?: string;
   model?: string;
   year?: number;
-  mileage?: number;
+  mileage?: string; // Changed to string to match component
   condition?: string;
   location?: string;
+  // Fields expected by DashboardListing component
+  titleStatus?: string;
+  postedAt?: string;
+  platforms?: string[];
+  messages?: number;
+  clicks?: number;
+  soldAt?: string;
+  soldTo?: string;
+  detectedFeatures?: string[];
+  aiAnalysis?: string;
+  finalDescription?: string;
 }
 
 export class ListingsService {
@@ -45,7 +56,28 @@ export class ListingsService {
         throw error;
       }
 
-      return data || [];
+      // Map database fields to component-expected fields
+      const mappedListings = (data || []).map(listing => ({
+        ...listing,
+        // Map created_at to postedAt for component compatibility
+        postedAt: listing.created_at,
+        // Map database field names to component-expected names
+        titleStatus: listing.title_status || 'Clean',
+        mileage: listing.mileage?.toString() || '0',
+        platforms: listing.platforms || [],
+        messages: listing.messages || 0,
+        clicks: listing.clicks || 0,
+        // Map sold_for to soldFor
+        soldFor: listing.sold_for,
+        // Map sold status
+        soldAt: listing.sold_at || (listing.status === 'sold' ? listing.updated_at : undefined),
+        soldTo: listing.sold_to || undefined,
+        detectedFeatures: listing.detected_features || [],
+        aiAnalysis: listing.ai_analysis,
+        finalDescription: listing.final_description
+      }));
+
+      return mappedListings;
     } catch (error) {
       console.error('Failed to fetch user listings:', error);
       return [];

@@ -20,6 +20,17 @@ CREATE TABLE IF NOT EXISTS public.listings (
     condition TEXT,
     location TEXT,
     
+    -- Component-expected fields
+    title_status TEXT DEFAULT 'Clean',
+    platforms TEXT[] DEFAULT '{}',
+    messages INTEGER DEFAULT 0,
+    clicks INTEGER DEFAULT 0,
+    sold_at TIMESTAMP WITH TIME ZONE,
+    sold_to TEXT,
+    detected_features TEXT[] DEFAULT '{}',
+    ai_analysis TEXT,
+    final_description TEXT,
+    
     -- Metadata
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
