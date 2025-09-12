@@ -1,4 +1,4 @@
-import { supabaseBrowser } from '@/utils/supabase/client';
+import { supabaseBrowser } from '../../lib/supabaseBrowser';
 
 export interface Listing {
   id: string;
