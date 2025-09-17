@@ -29,6 +29,11 @@ export default function Chatbot() {
       setCarData({});
       setConversationState('start');
       setMessageCount(0);
+      
+      // Focus the input field after a short delay to ensure it's rendered
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 100);
     }
   }, [open]);
 
@@ -84,7 +89,12 @@ export default function Chatbot() {
 
   const send = async () => {
     const text = inputRef.current?.value?.trim();
-    if (!text || isLoading) return;
+    console.log('Chatbot send called with text:', text, 'isLoading:', isLoading);
+    
+    if (!text || isLoading) {
+      console.log('Early return - no text or loading');
+      return;
+    }
     
     // Rate limiting: max 3 messages after collect_meta
     if (messageCount >= 3 && conversationState === 'gate_to_login') {
@@ -104,7 +114,9 @@ export default function Chatbot() {
 
     try {
       // Handle conversation flow based on state
+      console.log('Handling conversation flow for state:', conversationState);
       const response = await handleConversationFlow(text);
+      console.log('Got response:', response);
       setMsgs((m) => [...m, { role: "assistant", content: response }]);
     } catch (error) {
       console.error("Chat error:", error);
@@ -135,6 +147,14 @@ export default function Chatbot() {
   };
 
   const handleStartState = (input: string): string => {
+    // Handle greetings
+    const greetingWords = ['hello', 'hi', 'hey', 'good morning', 'good afternoon', 'good evening'];
+    const isGreeting = greetingWords.some(word => input.toLowerCase().includes(word));
+    
+    if (isGreeting) {
+      return "Hello! I'm here to help you sell your car quickly and safely. What kind of car do you have? (Year, Make, Model)";
+    }
+    
     // Extract year, make, model from input
     const words = input.split(' ');
     const yearMatch = words.find(word => /^\d{4}$/.test(word));
