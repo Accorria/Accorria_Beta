@@ -50,7 +50,7 @@ export default function Demo() {
           <h1 className="text-4xl font-extrabold text-white sm:text-5xl">
             See Accorria in Action
           </h1>
-          <p className="mt-4 text-xl text-slate-700">
+          <p className="mt-4 text-xl bg-gradient-to-r from-amber-400 via-yellow-500 to-amber-600 bg-clip-text text-transparent font-semibold">
             Watch how AI transforms car selling from hours to minutes
           </p>
         </div>
@@ -67,7 +67,7 @@ export default function Demo() {
                   </svg>
                 </div>
                 <p className="text-gray-600">Demo video coming soon</p>
-                <p className="text-sm text-gray-500 mt-2">Upload photo → AI analysis → Professional listing</p>
+                <p className="text-sm text-gray-700 mt-2">Upload photo → AI analysis → Professional listing</p>
               </div>
             </div>
           </div>

@@ -21,7 +21,7 @@ export default function QAPage() {
     },
     {
       question: "How accurate is the AI analysis?",
-      answer: "Our AI uses Google Vision API and advanced machine learning to analyze car photos with 90%+ accuracy. It can detect make, model, year, features, and condition from your photos. The more photos you provide, the more accurate the analysis."
+      answer: "Our AI uses advanced machine learning to analyze car photos with 90%+ accuracy. It can detect make, model, year, features, and condition from your photos. The more photos you provide, the more accurate the analysis."
     },
     {
       question: "What is FlipScore?",
@@ -103,12 +103,12 @@ export default function QAPage() {
                 Dashboard
               </Link>
             ) : (
-              <button
-                onClick={() => setIsAuthModalOpen(true)}
+              <Link 
+                href="/beta-signup" 
                 className="bg-amber-500 text-slate-900 px-4 py-2 rounded-lg font-medium hover:bg-amber-400 transition-colors"
               >
-                Sign In
-              </button>
+                Get Early Access
+              </Link>
             )}
           </div>
         </nav>
@@ -117,10 +117,10 @@ export default function QAPage() {
       {/* Q&A Content */}
       <div className="max-w-4xl mx-auto px-4 py-16">
         <div className="text-center mb-16">
-          <h1 className="text-5xl font-bold text-slate-900 mb-6">
-            Frequently Asked Questions
+          <h1 className="text-5xl font-bold mb-6">
+            <span className="bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 bg-clip-text text-transparent">Frequently Asked Questions</span>
           </h1>
-          <p className="text-xl text-slate-600">
+          <p className="text-xl text-slate-800">
             Everything you need to know about Accorria and car flipping with AI
           </p>
         </div>

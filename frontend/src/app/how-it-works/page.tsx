@@ -21,8 +21,7 @@ export default function HowItWorksPage() {
             <Link href="/how-it-works" className="hover:text-white text-amber-300">How it works</Link>
             <Link href="/demo" className="hover:text-white">Demo</Link>
             <Link href="/get-paid" className="hover:text-white">Get Paid</Link>
-            <a href="/#pricing" className="hover:text-white">Pricing</a>
-            <a href="/#faq" className="hover:text-white">FAQ</a>
+            <Link href="/qa" className="hover:text-white">Q&A</Link>
           </div>
           <Link href="/beta-signup" className="rounded-lg bg-amber-400 px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-amber-300">Get early access</Link>
         </nav>
@@ -37,8 +36,8 @@ export default function HowItWorksPage() {
             <h1 className="text-4xl font-extrabold leading-tight md:text-6xl mb-6">
               How <span className="text-amber-300">Accorria</span> Works
             </h1>
-            <p className="text-xl text-slate-700 max-w-3xl mx-auto mb-8">
-              From photos to posted in minutes. From listing to closed deal in days. Here's how our AI deal agent makes selling faster and safer.
+            <p className="text-xl max-w-3xl mx-auto mb-8">
+              <span className="bg-gradient-to-r from-amber-400 via-yellow-500 to-amber-600 bg-clip-text text-transparent font-semibold">From photos to posted in minutes. From listing to closed deal in days. Here's how our AI deal agent makes selling faster and safer.</span>
             </p>
             <div className="flex flex-col gap-3 sm:flex-row justify-center">
               <Link href="/demo" className="rounded-lg bg-amber-400 px-6 py-3 font-semibold text-slate-900 hover:bg-amber-300">Watch Demo</Link>
@@ -60,10 +59,10 @@ export default function HowItWorksPage() {
                   Step 1
                 </div>
                 <h3 className="text-2xl font-bold mb-4">Upload & Analyze</h3>
-                <p className="text-lg text-slate-600 mb-6">
+                <p className="text-lg text-slate-800 mb-6">
                   Add photos of your car or home, or paste a VIN/address. Our AI analyzes the images and pulls specs, comps, and market data automatically.
                 </p>
-                <ul className="space-y-2 text-slate-600">
+                <ul className="space-y-2 text-slate-800">
                   <li className="flex items-center gap-2">
                     <span className="w-2 h-2 bg-amber-400 rounded-full"></span>
                     AI identifies make, model, year, features
@@ -96,10 +95,10 @@ export default function HowItWorksPage() {
                   Step 2
                 </div>
                 <h3 className="text-2xl font-bold mb-4">AI Generates Listing</h3>
-                <p className="text-lg text-slate-600 mb-6">
+                <p className="text-lg text-slate-800 mb-6">
                   Our AI crafts a professional title, compelling description, competitive pricing, and Facebook-ready post with all the right keywords.
                 </p>
-                <ul className="space-y-2 text-slate-600">
+                <ul className="space-y-2 text-slate-800">
                   <li className="flex items-center gap-2">
                     <span className="w-2 h-2 bg-amber-400 rounded-full"></span>
                     Professional title with keywords
@@ -130,10 +129,10 @@ export default function HowItWorksPage() {
                   Step 3
                 </div>
                 <h3 className="text-2xl font-bold mb-4">Post & Close</h3>
-                <p className="text-lg text-slate-600 mb-6">
+                <p className="text-lg text-slate-800 mb-6">
                   One click posts to Facebook Marketplace. Our AI coaches your replies, handles negotiations, and soon — escrow for secure closings.
                 </p>
-                <ul className="space-y-2 text-slate-600">
+                <ul className="space-y-2 text-slate-800">
                   <li className="flex items-center gap-2">
                     <span className="w-2 h-2 bg-amber-400 rounded-full"></span>
                     One-click posting to Facebook
@@ -163,28 +162,28 @@ export default function HowItWorksPage() {
       {/* FEATURES */}
       <section className="bg-white">
         <div className="mx-auto max-w-7xl px-4 py-16">
-          <h2 className="text-3xl font-bold text-center mb-12">Why It Works Better</h2>
+          <h2 className="text-3xl font-bold text-center mb-12 text-black">Why It Works Better</h2>
           <div className="grid gap-8 md:grid-cols-3">
             <div className="text-center">
               <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <span className="text-3xl">⚡</span>
               </div>
-              <h3 className="text-xl font-semibold mb-3">10x Faster</h3>
-              <p className="text-slate-600">From photos to posted in minutes, not hours. No more staring at blank screens wondering what to write.</p>
+              <h3 className="text-xl font-semibold mb-3 text-black">10x Faster</h3>
+              <p className="text-slate-800">From photos to posted in minutes, not hours. No more staring at blank screens wondering what to write.</p>
             </div>
             <div className="text-center">
               <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <span className="text-3xl">📈</span>
               </div>
-              <h3 className="text-xl font-semibold mb-3">Better Results</h3>
-              <p className="text-slate-600">AI-optimized titles and descriptions get more views, better offers, and faster sales.</p>
+              <h3 className="text-xl font-semibold mb-3 text-black">Better Results</h3>
+              <p className="text-slate-800">AI-optimized titles and descriptions get more views, better offers, and faster sales.</p>
             </div>
             <div className="text-center">
               <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <span className="text-3xl">🛡️</span>
               </div>
-              <h3 className="text-xl font-semibold mb-3">Safer Deals</h3>
-              <p className="text-slate-600">Smart reply coaching and soon — blockchain escrow — make every deal safer and more secure.</p>
+              <h3 className="text-xl font-semibold mb-3 text-black">Safer Deals</h3>
+              <p className="text-slate-800">Smart reply coaching and soon — blockchain escrow — make every deal safer and more secure.</p>
             </div>
           </div>
         </div>

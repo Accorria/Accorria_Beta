@@ -19,12 +19,30 @@ export default function BetaSignup() {
     e.preventDefault();
     setIsSubmitting(true);
     
-    // TODO: Connect to Supabase + SendGrid
-    // For now, just simulate success
-    setTimeout(() => {
+    try {
+      const response = await fetch('/api/beta-signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        console.log('Beta signup successful:', result);
+        setIsSubmitted(true);
+      } else {
+        console.error('Beta signup failed:', result);
+        alert(result.error || 'Failed to sign up. Please try again.');
+      }
+    } catch (error) {
+      console.error('Network error:', error);
+      alert('Network error. Please check your connection and try again.');
+    } finally {
       setIsSubmitting(false);
-      setIsSubmitted(true);
-    }, 1000);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -49,15 +67,17 @@ export default function BetaSignup() {
           <p className="text-gray-600 mb-6">
             Thanks for joining the beta. You'll get early access to our AI deal agent as soon as we're ready.
           </p>
-          <button 
-            onClick={() => {
-              console.log('Navigating to /dashboard');
-              router.push('/dashboard');
-            }}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
-          >
-            Go to Dashboard
-          </button>
+          <div className="space-y-3">
+            <p className="text-sm text-gray-500">
+              We'll notify you when early access is ready!
+            </p>
+            <Link 
+              href="/"
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-amber-600 hover:bg-amber-700"
+            >
+              Back to Home
+            </Link>
+          </div>
         </div>
       </div>
     );

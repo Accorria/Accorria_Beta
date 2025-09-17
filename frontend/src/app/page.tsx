@@ -115,7 +115,6 @@ export default function Home() {
             <Link href="/how-it-works" className="hover:text-white">How it works</Link>
             <Link href="/demo" className="hover:text-white">Demo</Link>
             <Link href="/get-paid" className="hover:text-white">Get Paid</Link>
-            <Link href="/pricing" className="hover:text-white">Pricing</Link>
             <Link href="/qa" className="hover:text-white">Q&A</Link>
           </div>
           {user ? (
@@ -123,15 +122,9 @@ export default function Home() {
               Dashboard
             </Link>
           ) : (
-            <button
-              onClick={() => {
-                setAuthMode('login');
-                setIsAuthModalOpen(true);
-              }}
-              className="rounded-lg bg-amber-400 px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-amber-300"
-            >
-              Sign In
-            </button>
+            <Link href="/beta-signup" className="rounded-lg bg-amber-400 px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-amber-300">
+              Get Early Access
+            </Link>
           )}
         </nav>
       </header>
@@ -280,7 +273,7 @@ export default function Home() {
             <h2 className="text-3xl font-bold text-slate-900 mb-4">
               A New Way to Get Paid
             </h2>
-            <p className="text-xl text-slate-600 max-w-3xl mx-auto">
+            <p className="text-xl text-slate-800 max-w-3xl mx-auto">
               Skip the bank delays. Skip the scams. Get paid instantly when deals close cars, homes, rentals. Blockchain-powered settlements within 48 hours.
             </p>
           </div>
@@ -291,21 +284,21 @@ export default function Home() {
                 <span className="text-2xl">⚡</span>
               </div>
               <h3 className="font-semibold text-slate-900 mb-2">48-Hour Payments</h3>
-              <p className="text-slate-600">No more waiting weeks for bank transfers</p>
+              <p className="text-slate-800">No more waiting weeks for bank transfers</p>
             </div>
             <div className="text-center">
               <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <span className="text-2xl">🔐</span>
               </div>
               <h3 className="font-semibold text-slate-900 mb-2">Funds Locked</h3>
-              <p className="text-slate-600">Smart contracts hold payment until deal closes</p>
+              <p className="text-slate-800">Smart contracts hold payment until deal closes</p>
             </div>
             <div className="text-center">
               <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <span className="text-2xl">🛡️</span>
               </div>
               <h3 className="font-semibold text-slate-900 mb-2">No Scams</h3>
-              <p className="text-slate-600">Blockchain verification prevents fraud</p>
+              <p className="text-slate-800">Blockchain verification prevents fraud</p>
             </div>
           </div>
           
@@ -377,119 +370,12 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="pricing" className="bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-16">
-          <div className="text-center">
-            <h2 className="text-3xl font-bold md:text-4xl">Simple, Transparent Pricing</h2>
-            <p className="mt-4 text-lg text-slate-700 max-w-3xl mx-auto">
-              All plans include AI Listing Generator, Assist-to-Post, Smart Inbox, e-sign docs, and SafePay escrow. No hidden fees, no surprises.
-            </p>
-          </div>
-          
-          <div className="mt-12 grid gap-8 lg:grid-cols-2">
-            {/* Cars Pricing */}
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-8">
-              <div className="flex items-center mb-6">
-                <span className="text-3xl mr-3">🚗</span>
-                <h3 className="text-2xl font-bold text-gray-900">Cars</h3>
-              </div>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center py-3 border-b border-blue-200">
-                  <span className="font-medium text-gray-900">Escrow</span>
-                  <span className="text-lg font-bold text-blue-600">1.0%</span>
-                </div>
-                <div className="text-sm text-gray-600 ml-4">(min $39, cap $149)</div>
-                <div className="flex justify-between items-center py-3 border-b border-blue-200">
-                  <span className="font-medium text-gray-900">Shield Verify</span>
-                  <span className="text-lg font-bold text-blue-600">$19</span>
-                </div>
-                <div className="text-sm text-gray-600 ml-4">(ID + title check + escrow link)</div>
-                <div className="flex justify-between items-center py-3">
-                  <span className="font-medium text-gray-900">Title Digital Twin</span>
-                  <span className="text-lg font-bold text-blue-600">$199</span>
-                </div>
-                <div className="text-sm text-gray-600 ml-4">(optional: $199 setup, $19/yr upkeep)</div>
-              </div>
-            </div>
-
-            {/* Homes Pricing */}
-            <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-8">
-              <div className="flex items-center mb-6">
-                <span className="text-3xl mr-3">🏠</span>
-                <h3 className="text-2xl font-bold text-gray-900">Homes</h3>
-              </div>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center py-3 border-b border-green-200">
-                  <span className="font-medium text-gray-900">Escrow</span>
-                  <span className="text-lg font-bold text-green-600">0.35%</span>
-                </div>
-                <div className="text-sm text-gray-600 ml-4">(min $395, cap $995)</div>
-                <div className="flex justify-between items-center py-3 border-b border-green-200">
-                  <span className="font-medium text-gray-900">Shield Verify</span>
-                  <span className="text-lg font-bold text-green-600">$49</span>
-                </div>
-                <div className="text-sm text-gray-600 ml-4">(owner ID + deed/recording match)</div>
-                <div className="flex justify-between items-center py-3">
-                  <span className="font-medium text-gray-900">Digital Deed Twin</span>
-                  <span className="text-lg font-bold text-green-600">$750</span>
-                </div>
-                <div className="text-sm text-gray-600 ml-4">(optional: $750 setup, $49/yr upkeep)</div>
-                <div className="flex justify-between items-center py-3">
-                  <span className="font-medium text-gray-900">Token Lite</span>
-                  <span className="text-lg font-bold text-green-600">$299</span>
-                </div>
-                <div className="text-sm text-gray-600 ml-4">(homes under $75k)</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Savings Comparison */}
-          <div className="mt-12 bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl p-8">
-            <h3 className="text-2xl font-bold text-center text-gray-900 mb-6">Massive Savings vs. Agent Commissions</h3>
-            <div className="overflow-x-auto">
-              <table className="w-full text-center">
-                <thead>
-                  <tr className="border-b-2 border-amber-200">
-                    <th className="py-3 font-semibold text-gray-900 text-sm sm:text-base">Home Price</th>
-                    <th className="py-3 font-semibold text-gray-900 text-sm sm:text-base">Legacy Agent @ 5.5%</th>
-                    <th className="py-3 font-semibold text-gray-900 text-sm sm:text-base">Accorria Escrow</th>
-                    <th className="py-3 font-semibold text-green-600 text-sm sm:text-base">Customer Saves</th>
-                  </tr>
-                </thead>
-                <tbody className="space-y-2">
-                  <tr className="border-b border-amber-100">
-                    <td className="py-3 font-medium text-gray-900">$50,000</td>
-                    <td className="py-3 text-gray-900">$2,750</td>
-                    <td className="py-3 font-semibold text-blue-600">$395</td>
-                    <td className="py-3 font-bold text-green-600">$2,355</td>
-                  </tr>
-                  <tr className="border-b border-amber-100">
-                    <td className="py-3 font-medium text-gray-900">$250,000</td>
-                    <td className="py-3 text-gray-900">$13,750</td>
-                    <td className="py-3 font-semibold text-blue-600">$875</td>
-                    <td className="py-3 font-bold text-green-600">$12,875</td>
-                  </tr>
-                  <tr>
-                    <td className="py-3 font-medium text-gray-900">$500,000</td>
-                    <td className="py-3 text-gray-900">$27,500</td>
-                    <td className="py-3 font-semibold text-blue-600">$995</td>
-                    <td className="py-3 font-bold text-green-600">$26,505</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-            <p className="text-center text-sm text-gray-600 mt-4">
-              Add token if you want faster deals and a clean digital certificate. Skip token on very low-value assets.
-            </p>
-          </div>
-        </div>
-      </section>
 
       {/* This Changes Everything */}
       <section className="bg-gradient-to-br from-slate-900 to-gray-900 text-white">
         <div className="mx-auto max-w-7xl px-4 py-16">
           <div className="text-center">
-            <h2 className="text-3xl font-bold md:text-4xl mb-4">Why This Changes Everything</h2>
+            <h2 className="text-3xl font-bold md:text-4xl mb-4 text-black">Why This Changes Everything</h2>
             <p className="text-lg text-gray-300 max-w-3xl mx-auto mb-12">
               We&apos;re not just another listing platform. We&apos;re the trust layer that makes high-value transactions safe, fast, and profitable for everyone.
             </p>
@@ -497,7 +383,7 @@ export default function Home() {
           
           <div className="grid md:grid-cols-2 gap-12">
             <div>
-              <h3 className="text-2xl font-bold mb-6 text-amber-400">🚗 Car Sales</h3>
+              <h3 className="text-2xl font-bold mb-6 text-black">🚗 Car Sales</h3>
               <div className="mb-6 w-full h-48 rounded-lg overflow-hidden">
                 <img 
                   src="/Car listing Details..png" 
@@ -538,7 +424,7 @@ export default function Home() {
             </div>
             
             <div>
-              <h3 className="text-2xl font-bold mb-6 text-amber-400">🏠 Home Sales</h3>
+              <h3 className="text-2xl font-bold mb-6 text-black">🏠 Home Sales</h3>
               <div className="mb-6 w-full h-48 rounded-lg overflow-hidden">
                 <img 
                   src="/ModernHome.png" 
@@ -596,7 +482,7 @@ export default function Home() {
       <section id="faq" className="bg-slate-50">
         <div className="mx-auto max-w-7xl px-4 py-16">
           <div className="text-center">
-            <h2 className="text-3xl font-bold md:text-4xl">Frequently Asked Questions</h2>
+            <h2 className="text-3xl font-bold md:text-4xl text-black">Frequently Asked Questions</h2>
             <p className="mt-4 text-lg text-slate-700 max-w-3xl mx-auto">
               Everything you need to know about Accorria&apos;s trust-native listing platform.
             </p>
@@ -613,37 +499,37 @@ export default function Home() {
             <div className="space-y-6">
               <div className="bg-white rounded-lg p-6 shadow-sm">
                 <h3 className="font-semibold text-slate-900 mb-2">Do I need a dealer license?</h3>
-                <p className="text-slate-600">No — Accorria works for individual sellers, flippers, and dealers. We help anyone sell faster and safer.</p>
+                <p className="text-slate-800">No — Accorria works for individual sellers, flippers, and dealers. We help anyone sell faster and safer.</p>
               </div>
               <div className="bg-white rounded-lg p-6 shadow-sm">
                 <h3 className="font-semibold text-slate-900 mb-2">Is this a new marketplace?</h3>
-                <p className="text-slate-600">No — we enhance existing platforms like Facebook Marketplace and Craigslist with AI tools, escrow, and verification.</p>
+                <p className="text-slate-800">No — we enhance existing platforms like Facebook Marketplace and Craigslist with AI tools, escrow, and verification.</p>
               </div>
               <div className="bg-white rounded-lg p-6 shadow-sm">
                 <h3 className="font-semibold text-slate-900 mb-2">What is Shield Verify?</h3>
-                <p className="text-slate-600">Shield Verify checks seller ID and title/deed status, then provides an escrow link you can paste anywhere. $19 for cars, $49 for homes.</p>
+                <p className="text-slate-800">Shield Verify checks seller ID and title/deed status, then provides an escrow link you can paste anywhere. $19 for cars, $49 for homes.</p>
               </div>
               <div className="bg-white rounded-lg p-6 shadow-sm">
                 <h3 className="font-semibold text-slate-900 mb-2">What are digital twins?</h3>
-                <p className="text-slate-600">Optional digital certificates that prove ownership and transaction history. Great for investors, landlords, and repeat sellers who want provenance.</p>
+                <p className="text-slate-800">Optional digital certificates that prove ownership and transaction history. Great for investors, landlords, and repeat sellers who want provenance.</p>
               </div>
             </div>
             <div className="space-y-6">
               <div className="bg-white rounded-lg p-6 shadow-sm">
                 <h3 className="font-semibold text-slate-900 mb-2">How does escrow work?</h3>
-                <p className="text-slate-600">SafePay escrow is included! Cars: 1.0% (min $39, cap $149). Homes: 0.35% (min $395, cap $995). No crypto needed - buyers pay via ACH/card.</p>
+                <p className="text-slate-800">SafePay escrow is included! Cars: 1.0% (min $39, cap $149). Homes: 0.35% (min $395, cap $995). No crypto needed - buyers pay via ACH/card.</p>
               </div>
               <div className="bg-white rounded-lg p-6 shadow-sm">
                 <h3 className="font-semibold text-slate-900 mb-2">Does it work on mobile?</h3>
-                <p className="text-slate-600">Yes — the entire flow is built mobile-first and works perfectly on phones. Upload photos, get AI listings, post anywhere.</p>
+                <p className="text-slate-800">Yes — the entire flow is built mobile-first and works perfectly on phones. Upload photos, get AI listings, post anywhere.</p>
               </div>
               <div className="bg-white rounded-lg p-6 shadow-sm">
                 <h3 className="font-semibold text-slate-900 mb-2">Can I post to multiple marketplaces?</h3>
-                <p className="text-slate-600">Yes — Facebook now, Craigslist and OfferUp coming next. One listing, multiple platforms, all managed from one place.</p>
+                <p className="text-slate-800">Yes — Facebook now, Craigslist and OfferUp coming next. One listing, multiple platforms, all managed from one place.</p>
               </div>
               <div className="bg-white rounded-lg p-6 shadow-sm">
                 <h3 className="font-semibold text-slate-900 mb-2">When should I use tokens?</h3>
-                <p className="text-slate-600">Use tokens for investors, landlords, repeat sellers, or high-value assets where you want faster resale/rental payouts and clean provenance.</p>
+                <p className="text-slate-800">Use tokens for investors, landlords, repeat sellers, or high-value assets where you want faster resale/rental payouts and clean provenance.</p>
               </div>
             </div>
           </div>
@@ -657,7 +543,6 @@ export default function Home() {
                 <h3 className="font-semibold text-white mb-4">Product</h3>
                 <ul className="space-y-2">
                   <li><Link href="/how-it-works" className="hover:text-amber-300">How it Works</Link></li>
-                  <li><Link href="/pricing" className="hover:text-amber-300">Pricing</Link></li>
                   <li><Link href="/demo" className="hover:text-amber-300">Demo</Link></li>
                 </ul>
               </div>

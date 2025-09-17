@@ -21,8 +21,7 @@ export default function GetPaidPage() {
             <a href="/#how" className="hover:text-white">How it works</a>
             <Link href="/demo" className="hover:text-white">Demo</Link>
             <Link href="/get-paid" className="hover:text-white text-amber-300">Get Paid</Link>
-            <a href="/#pricing" className="hover:text-white">Pricing</a>
-            <a href="/#faq" className="hover:text-white">FAQ</a>
+            <Link href="/qa" className="hover:text-white">Q&A</Link>
           </div>
           <Link href="/beta-signup" className="rounded-lg bg-amber-400 px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-amber-300">Get early access</Link>
         </nav>
@@ -40,8 +39,8 @@ export default function GetPaidPage() {
             <h1 className="text-4xl font-extrabold leading-tight md:text-6xl mb-6">
               A New Way to <span className="text-amber-300">Get Paid</span>
             </h1>
-                    <p className="text-xl text-slate-700 max-w-3xl mx-auto mb-8">
-          Skip the bank delays. Skip the scams. Get paid instantly when deals close — cars, homes, rentals. Blockchain-powered settlements in 23 hours.
+                    <p className="text-xl text-white max-w-3xl mx-auto mb-8">
+          <span className="bg-gradient-to-r from-amber-400 via-yellow-500 to-amber-600 bg-clip-text text-transparent font-semibold">Skip the bank delays. Skip the scams.</span> <span className="text-white">Get paid instantly when deals close — cars, homes, rentals. Blockchain-powered settlements in 23 hours.</span>
         </p>
             <div className="flex flex-col gap-3 sm:flex-row justify-center">
               <Link href="/beta-signup" className="rounded-lg bg-amber-400 px-6 py-3 font-semibold text-slate-900 hover:bg-amber-300">Join Beta Waitlist</Link>
@@ -84,7 +83,7 @@ export default function GetPaidPage() {
       {/* BENEFITS */}
       <section className="bg-white">
         <div className="mx-auto max-w-7xl px-4 py-16">
-          <h2 className="text-3xl font-bold text-center mb-12">Why This Changes Everything</h2>
+          <h2 className="text-3xl font-bold text-center mb-12 text-black">Why This Changes Everything</h2>
           <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
             <div className="text-center">
               <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -121,13 +120,13 @@ export default function GetPaidPage() {
       {/* USE CASES */}
       <section className="bg-slate-50">
         <div className="mx-auto max-w-7xl px-4 py-16">
-          <h2 className="text-3xl font-bold text-center mb-12">Perfect For</h2>
+          <h2 className="text-3xl font-bold text-center mb-12 text-black">Perfect For</h2>
           <div className="grid gap-8 md:grid-cols-3">
             <div className="bg-white rounded-2xl p-8 shadow-sm">
               <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mb-4">
                 <span className="text-2xl">🚗</span>
               </div>
-              <h3 className="text-xl font-semibold mb-3">Car Sales</h3>
+              <h3 className="text-xl font-semibold mb-3 text-black">Car Sales</h3>
               <p className="text-slate-600 mb-4">Sell cars faster with instant payment. No more waiting for bank transfers or dealing with fake checks.</p>
               <ul className="text-sm text-slate-600 space-y-1">
                 <li>• Instant payment verification</li>
@@ -139,7 +138,7 @@ export default function GetPaidPage() {
               <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mb-4">
                 <span className="text-2xl">🏠</span>
               </div>
-              <h3 className="text-xl font-semibold mb-3">Home Sales</h3>
+              <h3 className="text-xl font-semibold mb-3 text-black">Home Sales</h3>
               <p className="text-slate-600 mb-4">Close real estate deals with confidence. Smart contracts ensure all conditions are met before payment.</p>
               <ul className="text-sm text-slate-600 space-y-1">
                 <li>• Conditional payments</li>
@@ -151,7 +150,7 @@ export default function GetPaidPage() {
               <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mb-4">
                 <span className="text-2xl">📦</span>
               </div>
-              <h3 className="text-xl font-semibold mb-3">High-Value Items</h3>
+              <h3 className="text-xl font-semibold mb-3 text-black">High-Value Items</h3>
               <p className="text-slate-600 mb-4">Electronics, jewelry, collectibles. Get paid instantly when the buyer confirms receipt.</p>
               <ul className="text-sm text-slate-600 space-y-1">
                 <li>• Delivery confirmation</li>

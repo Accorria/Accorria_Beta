@@ -46,7 +46,7 @@ export class ListingsService {
       }
 
       const { data, error } = await this.supabase
-        .from('listings')
+        .from('car_listings')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
@@ -61,20 +61,19 @@ export class ListingsService {
         ...listing,
         // Map created_at to postedAt for component compatibility
         postedAt: listing.created_at,
-        // Map database field names to component-expected names
-        titleStatus: listing.title_status || 'Clean',
-        mileage: listing.mileage?.toString() || '0',
-        platforms: listing.platforms || [],
-        messages: listing.messages || 0,
-        clicks: listing.clicks || 0,
-        // Map sold_for to soldFor
-        soldFor: listing.sold_for,
+        // Map car_listings fields to component-expected names
+        titleStatus: 'Clean', // Default since car_listings doesn't have title_status
+        mileage: '0', // Default since car_listings doesn't have mileage
+        platforms: listing.platform ? [listing.platform] : [],
+        messages: 0, // Default since car_listings doesn't have messages
+        clicks: 0, // Default since car_listings doesn't have clicks
         // Map sold status
-        soldAt: listing.sold_at || (listing.status === 'sold' ? listing.updated_at : undefined),
-        soldTo: listing.sold_to || undefined,
-        detectedFeatures: listing.detected_features || [],
-        aiAnalysis: listing.ai_analysis,
-        finalDescription: listing.final_description
+        soldFor: listing.status === 'sold' ? listing.price : undefined,
+        soldAt: listing.status === 'sold' ? listing.updated_at : undefined,
+        soldTo: undefined, // Not available in car_listings
+        detectedFeatures: [], // Not available in car_listings
+        aiAnalysis: undefined, // Not available in car_listings
+        finalDescription: listing.description
       }));
 
       return mappedListings;
@@ -96,9 +95,14 @@ export class ListingsService {
       }
 
       const { data, error } = await this.supabase
-        .from('listings')
+        .from('car_listings')
         .insert({
-          ...listingData,
+          title: listingData.title,
+          description: listingData.description,
+          price: listingData.price,
+          platform: listingData.platforms?.[0] || 'accorria',
+          status: listingData.status,
+          images: listingData.images,
           user_id: user.id,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
@@ -130,9 +134,14 @@ export class ListingsService {
       }
 
       const { data, error } = await this.supabase
-        .from('listings')
+        .from('car_listings')
         .update({
-          ...updates,
+          title: updates.title,
+          description: updates.description,
+          price: updates.price,
+          platform: updates.platforms?.[0] || 'accorria',
+          status: updates.status,
+          images: updates.images,
           updated_at: new Date().toISOString()
         })
         .eq('id', id)
@@ -164,7 +173,7 @@ export class ListingsService {
       }
 
       const { error } = await this.supabase
-        .from('listings')
+        .from('car_listings')
         .delete()
         .eq('id', id)
         .eq('user_id', user.id); // Ensure user can only delete their own listings
@@ -193,7 +202,7 @@ export class ListingsService {
       }
 
       const { data, error } = await this.supabase
-        .from('listings')
+        .from('car_listings')
         .select('*')
         .eq('id', id)
         .eq('user_id', user.id)
@@ -295,7 +304,7 @@ export class ListingsService {
           // Required fields for component compatibility
           postedAt: listing.postedAt || new Date().toISOString(),
           titleStatus: listing.titleStatus || 'Clean',
-          platforms: listing.platforms || [],
+          platforms: listing.platforms || ['accorria'],
           messages: listing.messages || 0,
           clicks: listing.clicks || 0,
           soldAt: listing.soldAt,

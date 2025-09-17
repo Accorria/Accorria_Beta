@@ -24,9 +24,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const handleSuccess = () => {
     onSuccess?.();
     onClose();
-    // Auto redirect to dashboard after successful login
+    // Auto redirect to beta signup after successful login
     if (typeof window !== 'undefined') {
-      window.location.href = '/dashboard';
+      window.location.href = '/beta-signup';
     }
   };
 
