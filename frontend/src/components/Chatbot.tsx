@@ -3,22 +3,10 @@ import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 
-interface CarListingData {
-  year?: string;
-  make?: string;
-  model?: string;
-  miles?: string;
-  title_status?: string;
-  zip?: string;
-}
-
 export default function Chatbot() {
   const [open, setOpen] = useState(false);
   const [msgs, setMsgs] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [carData, setCarData] = useState<CarListingData>({});
-  const [conversationState, setConversationState] = useState<'start' | 'collect_basic' | 'collect_meta' | 'gate_to_login' | 'nudge_alt_capture'>('start');
-  const [messageCount, setMessageCount] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const boxRef = useRef<HTMLDivElement>(null);
 
@@ -26,9 +14,6 @@ export default function Chatbot() {
   useEffect(() => {
     if (open) {
       setMsgs([]);
-      setCarData({});
-      setConversationState('start');
-      setMessageCount(0);
       
       // Focus the input field after a short delay to ensure it's rendered
       setTimeout(() => {
@@ -89,139 +74,97 @@ export default function Chatbot() {
 
   const send = async () => {
     const text = inputRef.current?.value?.trim();
-    console.log('Chatbot send called with text:', text, 'isLoading:', isLoading);
     
-    if (!text || isLoading) {
-      console.log('Early return - no text or loading');
-      return;
-    }
-    
-    // Rate limiting: max 3 messages after collect_meta
-    if (messageCount >= 3 && conversationState === 'gate_to_login') {
-      setMsgs((m) => [...m, { 
-        role: "assistant", 
-        content: "To continue, please **sign in** to Accorria or provide your email/phone for a magic link."
-      }]);
-      return;
-    }
+    if (!text || isLoading) return;
     
     inputRef.current!.value = "";
     setIsLoading(true);
-    setMessageCount(prev => prev + 1);
     
     const next = [...msgs, { role: "user", content: text }];
     setMsgs(next);
 
     try {
-      // Handle conversation flow based on state
-      console.log('Handling conversation flow for state:', conversationState);
-      const response = await handleConversationFlow(text);
-      console.log('Got response:', response);
+      // Simulate typing delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      const response = getAccorriaResponse(text);
       setMsgs((m) => [...m, { role: "assistant", content: response }]);
     } catch (error) {
       console.error("Chat error:", error);
       setMsgs((m) => [...m, { 
         role: "assistant", 
-        content: "Sorry, I'm having trouble right now. Please try again or sign in to create your listing directly."
+        content: "Sorry, I'm having trouble right now. Please try again or visit our FAQ page for more information."
       }]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleConversationFlow = async (userInput: string): Promise<string> => {
-    switch (conversationState) {
-      case 'start':
-        return handleStartState(userInput);
-      case 'collect_basic':
-        return handleCollectBasicState(userInput);
-      case 'collect_meta':
-        return handleCollectMetaState(userInput);
-      case 'gate_to_login':
-        return handleGateToLoginState(userInput);
-      case 'nudge_alt_capture':
-        return handleNudgeAltCaptureState(userInput);
-      default:
-        return "Let's start over. What kind of car do you have? (Year, Make, Model)";
-    }
-  };
-
-  const handleStartState = (input: string): string => {
-    // Handle greetings
-    const greetingWords = ['hello', 'hi', 'hey', 'good morning', 'good afternoon', 'good evening'];
-    const isGreeting = greetingWords.some(word => input.toLowerCase().includes(word));
+  const getAccorriaResponse = (input: string): string => {
+    const lowerInput = input.toLowerCase();
     
-    if (isGreeting) {
-      return "Hello! I'm here to help you sell your car quickly and safely. What kind of car do you have? (Year, Make, Model)";
+    // Greetings
+    if (lowerInput.includes('hello') || lowerInput.includes('hi') || lowerInput.includes('hey')) {
+      return "Hello! I'm the Accorria AI assistant. I'm here to help you understand how Accorria can transform your car selling experience. What would you like to know about our platform?";
     }
     
-    // Extract year, make, model from input
-    const words = input.split(' ');
-    const yearMatch = words.find(word => /^\d{4}$/.test(word));
-    
-    if (yearMatch) {
-      setCarData(prev => ({ ...prev, year: yearMatch }));
-      setConversationState('collect_basic');
-      return "Nice. About how many miles and what's the title status (clean or rebuilt)?";
+    // What is Accorria
+    if (lowerInput.includes('what is accorria') || lowerInput.includes('what does accorria do') || lowerInput.includes('tell me about accorria')) {
+      return "Accorria is an AI-powered platform that transforms car selling from hours to minutes. We use advanced AI to analyze your car photos and automatically generate professional listings, handle negotiations, and facilitate secure transactions with instant payments.";
     }
     
-    return "What kind of car do you have? (Year, Make, Model)";
-  };
-
-  const handleCollectBasicState = (input: string): string => {
-    // Extract miles and title status
-    const milesMatch = input.match(/(\d+(?:,\d{3})*)\s*miles?/i);
-    const titleMatch = input.match(/(clean|rebuilt|salvage)/i);
-    
-    if (milesMatch) {
-      setCarData(prev => ({ ...prev, miles: milesMatch[1].replace(/,/g, '') }));
+    // How it works
+    if (lowerInput.includes('how does it work') || lowerInput.includes('how it works') || lowerInput.includes('process')) {
+      return "Here's how Accorria works:\n\n1. **Upload Photos** - Take photos of your car\n2. **AI Analysis** - Our AI analyzes your car and market data\n3. **Auto-Listing** - We generate a professional listing automatically\n4. **Smart Negotiations** - AI handles buyer inquiries and negotiations\n5. **Secure Payment** - Get paid instantly when the deal closes\n\nFrom photos to posted in minutes, from listing to closed deal in days!";
     }
     
-    if (titleMatch) {
-      setCarData(prev => ({ ...prev, title_status: titleMatch[1].toLowerCase() }));
+    // Pricing
+    if (lowerInput.includes('price') || lowerInput.includes('cost') || lowerInput.includes('fee') || lowerInput.includes('how much')) {
+      return "Accorria offers transparent, performance-based pricing. We only succeed when you do! Our fees are competitive and clearly displayed. For specific pricing details, please sign up for early access and we'll notify you when we launch with our final pricing structure.";
     }
     
-    if (milesMatch && titleMatch) {
-      setConversationState('collect_meta');
-      return "Last thing: what's your ZIP? (We use this for local demand.)";
+    // AI Technology
+    if (lowerInput.includes('ai') || lowerInput.includes('artificial intelligence') || lowerInput.includes('technology')) {
+      return "Accorria uses cutting-edge AI technology including:\n\n• **Computer Vision** - Analyzes car photos for condition, features, and value\n• **Natural Language Processing** - Generates compelling listing descriptions\n• **Market Intelligence** - Real-time pricing and demand analysis\n• **Automated Negotiations** - AI handles buyer communications\n• **Blockchain Payments** - Secure, instant settlements\n\nOur AI is trained on millions of car sales to provide accurate valuations and optimal selling strategies.";
     }
     
-    return "Got it. Miles and title (clean or rebuilt)?";
-  };
-
-  const handleCollectMetaState = (input: string): string => {
-    const zipMatch = input.match(/\b\d{5}(?:-\d{4})?\b/);
-    
-    if (zipMatch) {
-      setCarData(prev => ({ ...prev, zip: zipMatch[0] }));
-      setConversationState('gate_to_login');
-      return "Sweet. To see **Good / Better / Best** pricing and finish your listing, please sign in.";
+    // Speed/Time
+    if (lowerInput.includes('fast') || lowerInput.includes('quick') || lowerInput.includes('speed') || lowerInput.includes('time') || lowerInput.includes('minutes')) {
+      return "Accorria is designed for speed:\n\n• **10x Faster** than traditional selling methods\n• **Photos to listing** in minutes, not hours\n• **Listing to sale** in days, not weeks\n• **Instant payments** when deals close\n• **24/7 AI assistance** for buyers and sellers\n\nWhat used to take weeks of back-and-forth now happens in minutes!";
     }
     
-    return "Your ZIP? (For local demand)";
-  };
-
-  const handleGateToLoginState = (input: string): string => {
-    if (input.toLowerCase().includes('sign') || input.toLowerCase().includes('login')) {
-      // Open auth modal
-      window.location.href = '/dashboard';
-      return "Perfect! You're being redirected to sign in.";
+    // Safety/Security
+    if (lowerInput.includes('safe') || lowerInput.includes('secure') || lowerInput.includes('scam') || lowerInput.includes('fraud')) {
+      return "Accorria prioritizes safety and security:\n\n• **Blockchain-powered payments** - Funds are locked until deal completion\n• **Identity verification** for all users\n• **Escrow protection** - Money is held securely until delivery\n• **No scams** - AI filters out suspicious buyers\n• **Instant settlements** - No waiting for bank transfers\n\nYour money and your car are protected throughout the entire process.";
     }
     
-    setConversationState('nudge_alt_capture');
-    return "No worries — I can send a magic link. What's your email or phone?";
-  };
-
-  const handleNudgeAltCaptureState = (input: string): string => {
-    const emailMatch = input.match(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/);
-    const phoneMatch = input.match(/\b\d{3}[-.]?\d{3}[-.]?\d{4}\b/);
-    
-    if (emailMatch || phoneMatch) {
-      // Send magic link
-      return "Magic link sent! Open it to finish your listing.";
+    // Payment
+    if (lowerInput.includes('payment') || lowerInput.includes('paid') || lowerInput.includes('money') || lowerInput.includes('funds')) {
+      return "Accorria's payment system is revolutionary:\n\n• **Instant payments** when deals close\n• **Blockchain settlements** in 23 hours\n• **No bank delays** or wire transfer fees\n• **Funds locked** until delivery confirmation\n• **Works for cars, homes, and high-value items**\n\nSkip the bank delays. Skip the scams. Get paid instantly!";
     }
     
-    return "What's your email or phone for the magic link?";
+    // Early Access
+    if (lowerInput.includes('early access') || lowerInput.includes('beta') || lowerInput.includes('sign up') || lowerInput.includes('join')) {
+      return "Get early access to Accorria! We're currently in beta and accepting early users. Sign up now to:\n\n• Be among the first to experience AI-powered car selling\n• Get priority access when we launch\n• Receive exclusive updates and features\n• Help shape the future of car sales\n\nClick 'Get Early Access' to join our beta program!";
+    }
+    
+    // Support/Help
+    if (lowerInput.includes('help') || lowerInput.includes('support') || lowerInput.includes('contact')) {
+      return "I'm here to help! You can:\n\n• Ask me any questions about Accorria\n• Visit our FAQ page for detailed answers\n• Sign up for early access to get priority support\n• Check out our 'How It Works' page for more details\n\nWhat specific question can I answer for you?";
+    }
+    
+    // Features
+    if (lowerInput.includes('feature') || lowerInput.includes('what can') || lowerInput.includes('capabilities')) {
+      return "Accorria's key features include:\n\n• **AI Photo Analysis** - Instant car condition assessment\n• **Auto-Listing Generation** - Professional listings in minutes\n• **Smart Pricing** - Real-time market-based valuations\n• **Automated Negotiations** - AI handles buyer communications\n• **Secure Payments** - Blockchain-powered instant settlements\n• **24/7 Availability** - Never miss a potential buyer\n• **Multi-Platform** - Works for cars, homes, and high-value items";
+    }
+    
+    // Benefits
+    if (lowerInput.includes('benefit') || lowerInput.includes('advantage') || lowerInput.includes('why')) {
+      return "Why choose Accorria?\n\n• **10x Faster** - From hours to minutes\n• **Better Results** - AI-optimized listings and pricing\n• **Safer Deals** - Blockchain security and escrow protection\n• **No Hassle** - AI handles the heavy lifting\n• **Instant Payments** - No waiting for bank transfers\n• **24/7 Support** - AI assistance around the clock\n• **Transparent Pricing** - No hidden fees or surprises";
+    }
+    
+    // Default response
+    return "That's a great question! Accorria is an AI-powered platform that makes selling cars faster, safer, and more profitable. We use advanced AI to analyze photos, generate listings, handle negotiations, and facilitate secure payments.\n\nWould you like to know more about:\n• How the process works\n• Our AI technology\n• Payment and security features\n• Getting early access\n\nJust ask me anything about Accorria!";
   };
 
   return (
@@ -285,13 +228,13 @@ export default function Chatbot() {
             >
               {msgs.length === 0 && (
                 <div className="text-center text-slate-500 py-8">
-                  <div className="text-lg mb-2">🚗</div>
-                  <div className="text-sm font-medium">What kind of car do you have?</div>
+                  <div className="text-lg mb-2">🤖</div>
+                  <div className="text-sm font-medium">Hello! I'm the Accorria AI Assistant</div>
                   <div className="text-xs mt-2 text-slate-400">
-                    (Year, Make, Model)
+                    Ask me anything about Accorria
                   </div>
                   <div className="text-xs mt-3 text-slate-300 max-w-xs mx-auto">
-                    Get instant market analysis, pricing strategies, and listing optimization powered by AI
+                    Learn about our AI-powered car selling platform, features, pricing, and how to get early access
                   </div>
                 </div>
               )}
