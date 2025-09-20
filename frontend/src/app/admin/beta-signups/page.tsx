@@ -69,7 +69,6 @@ export default function BetaSignupsAdmin() {
       
       // Refresh data
       await fetchSignups();
-      await fetchStats();
     } catch (err) {
       console.error('Error updating status:', err);
       alert('Failed to update status');
