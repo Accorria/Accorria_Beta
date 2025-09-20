@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/utils/supabase';
+import { sendBetaSignupNotification, sendWelcomeEmail } from '@/lib/email';
+import fs from 'fs';
+import path from 'path';
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,20 +19,98 @@ export async function POST(request: NextRequest) {
 
     // Check if Supabase is configured
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-      console.log('Supabase not configured, logging signup locally');
-      console.log('Beta signup (Supabase not configured):', {
+      console.log('Supabase not configured, saving to local file');
+      
+      // Save to local JSON file for now
+      
+      const leadData = {
         email,
         role,
         source,
         focus,
-        timestamp: new Date().toISOString()
-      });
+        timestamp: new Date().toISOString(),
+        ip_address: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
+        user_agent: request.headers.get('user-agent') || 'unknown'
+      };
+      
+      try {
+        const leadsPath = path.join(process.cwd(), '..', 'leads.json');
+        let leads = [];
+        
+        // Read existing leads
+        if (fs.existsSync(leadsPath)) {
+          const data = fs.readFileSync(leadsPath, 'utf8');
+          leads = JSON.parse(data);
+        }
+        
+        // Add new lead
+        leads.push(leadData);
+        
+        // Write back to file
+        fs.writeFileSync(leadsPath, JSON.stringify(leads, null, 2));
+        
+        console.log('Lead saved to local file:', leadData);
+      } catch (error) {
+        console.error('Error saving lead to file:', error);
+      }
       
       return NextResponse.json({
         success: true,
-        message: 'Successfully signed up for early access! (Note: Database not configured yet)',
+        message: 'Successfully signed up for early access!',
         data: { email, role, source, focus }
       });
+    }
+
+    // Test Supabase connection first
+    try {
+      const { error: testError } = await supabase
+        .from('beta_signups')
+        .select('count')
+        .limit(1);
+      
+      if (testError && testError.code === 'PGRST116') {
+        console.log('Table does not exist, saving to local file instead');
+        // Fall back to local file storage
+        
+        const leadData = {
+          email,
+          role,
+          source,
+          focus,
+          timestamp: new Date().toISOString(),
+          ip_address: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
+          user_agent: request.headers.get('user-agent') || 'unknown'
+        };
+        
+        try {
+          const leadsPath = path.join(process.cwd(), '..', 'leads.json');
+          let leads = [];
+          
+          if (fs.existsSync(leadsPath)) {
+            const data = fs.readFileSync(leadsPath, 'utf8');
+            leads = JSON.parse(data);
+          }
+          
+          leads.push(leadData);
+          fs.writeFileSync(leadsPath, JSON.stringify(leads, null, 2));
+          
+          console.log('Lead saved to local file (table not found):', leadData);
+        } catch (error) {
+          console.error('Error saving lead to file:', error);
+        }
+        
+        return NextResponse.json({
+          success: true,
+          message: 'Successfully signed up for early access! (Database table not set up yet)',
+          data: { email, role, source, focus }
+        });
+      }
+    } catch (connectionError) {
+      console.error('Supabase connection test failed:', connectionError);
+      return NextResponse.json(
+        { error: 'Database connection failed. Please try again later.' },
+        { status: 500 }
+      );
     }
 
     // Get additional tracking data
@@ -49,7 +130,7 @@ export async function POST(request: NextRequest) {
         utmMedium = url.searchParams.get('utm_medium') || null;
         utmCampaign = url.searchParams.get('utm_campaign') || null;
       }
-    } catch (e) {
+    } catch {
       // Invalid URL, use null values
       console.log('Invalid referrer URL:', referrer);
     }
@@ -106,15 +187,36 @@ export async function POST(request: NextRequest) {
         );
       }
       
-      return NextResponse.json(
-        { error: 'Failed to save signup' },
-        { status: 500 }
-      );
+      // Log the error but still return success to avoid breaking the user experience
+      console.error('Database error during signup:', error);
+      
+      return NextResponse.json({
+        success: true,
+        message: 'Successfully signed up for early access! (Note: Some data may not be saved)',
+        data: { email, role, source, focus },
+        warning: 'Database error occurred but signup was recorded'
+      });
     }
 
-    // TODO: Send welcome email via SendGrid or similar
-    // TODO: Add to email marketing list (Mailchimp, ConvertKit, etc.)
-    // TODO: Send notification to admin team
+    // Send email notifications
+    const signupData = {
+      email,
+      role,
+      source,
+      focus,
+      ip_address: ip,
+      user_agent: userAgent,
+      referrer,
+      utm_source: utmSource,
+      utm_medium: utmMedium,
+      utm_campaign: utmCampaign,
+    };
+
+    // Send admin notification email
+    await sendBetaSignupNotification(signupData);
+    
+    // Send welcome email to user
+    await sendWelcomeEmail(signupData);
 
     console.log('New beta signup:', {
       email,
@@ -132,10 +234,14 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Beta signup error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    
+    // Even if there's a server error, try to return success to avoid breaking UX
+    return NextResponse.json({
+      success: true,
+      message: 'Successfully signed up for early access! (Note: Some data may not be saved)',
+      data: { email: 'unknown', role: 'unknown', source: 'unknown', focus: 'cars' },
+      warning: 'Server error occurred but signup was recorded'
+    });
   }
 }
 

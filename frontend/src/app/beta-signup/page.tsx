@@ -1,11 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 
 export default function BetaSignup() {
-  const router = useRouter();
   const [formData, setFormData] = useState({
     email: '',
     role: '',
@@ -15,9 +14,32 @@ export default function BetaSignup() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
 
+  // Parse URL parameters on component mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const email = urlParams.get('email');
+      const role = urlParams.get('role');
+      const source = urlParams.get('source');
+      const focus = urlParams.get('focus');
+      
+      if (email || role || source || focus) {
+        setFormData(prev => ({
+          ...prev,
+          email: email || prev.email,
+          role: role || prev.role,
+          source: source || prev.source,
+          focus: focus || prev.focus
+        }));
+      }
+    }
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    
+    console.log('Submitting form data:', formData);
     
     try {
       const response = await fetch('/api/beta-signup', {
@@ -28,7 +50,11 @@ export default function BetaSignup() {
         body: JSON.stringify(formData),
       });
 
+      console.log('Response status:', response.status);
+      console.log('Response ok:', response.ok);
+      
       const result = await response.json();
+      console.log('Response result:', result);
 
       if (response.ok) {
         console.log('Beta signup successful:', result);
@@ -65,11 +91,11 @@ export default function BetaSignup() {
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Welcome to Accorria!</h2>
           <p className="text-gray-600 mb-6">
-            Thanks for joining the beta. You'll get early access to our AI deal agent as soon as we're ready.
+            Thanks for joining the beta. You&apos;ll get early access to the Accorria platform as soon as we&apos;re ready.
           </p>
           <div className="space-y-3">
             <p className="text-sm text-gray-500">
-              We'll notify you when early access is ready!
+              We&apos;ll notify you when early access is ready!
             </p>
             <Link 
               href="/"
@@ -91,10 +117,13 @@ export default function BetaSignup() {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
               <Link href="/" className="flex-shrink-0">
-                <img 
+                <Image 
                   src="/AccorriaYwLOGO.png" 
                   alt="Accorria" 
+                  width={175}
+                  height={175}
                   className="h-[175px] w-auto"
+                  priority
                 />
               </Link>
             </div>
@@ -110,7 +139,7 @@ export default function BetaSignup() {
               Get Early Access
             </h2>
             <p className="mt-2 text-sm text-gray-600">
-              Join the beta and be among the first to try Accorria's AI deal agent.
+              Join the beta and be among the first to try the Accorria platform.
             </p>
           </div>
 
@@ -177,7 +206,7 @@ export default function BetaSignup() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  I'm most interested in:
+                  I&apos;m most interested in:
                 </label>
                 <div className="space-y-2">
                   <label className="flex items-center">
@@ -229,7 +258,7 @@ export default function BetaSignup() {
 
             <div className="text-center">
               <p className="text-xs text-gray-500">
-                We'll send you an invite link as soon as we're ready. No spam, ever.
+                We&apos;ll send you an invite link as soon as we&apos;re ready. No spam, ever.
               </p>
             </div>
           </form>

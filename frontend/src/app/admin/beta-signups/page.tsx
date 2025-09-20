@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/utils/supabase';
+import QRCodeGenerator from '@/components/QRCodeGenerator';
 
 interface BetaSignup {
   id: string;
@@ -27,54 +28,32 @@ interface SignupStats {
 export default function BetaSignupsAdmin() {
   const [signups, setSignups] = useState<BetaSignup[]>([]);
   const [stats, setStats] = useState<SignupStats | null>(null);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     fetchSignups();
-    fetchStats();
   }, []);
 
   const fetchSignups = async () => {
     try {
-      const { data, error } = await supabase
-        .from('beta_signups')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const response = await fetch('/api/admin/beta-signups');
+      const result = await response.json();
 
-      if (error) {
-        // Handle table doesn't exist error
-        if (error.code === 'PGRST116' || error.code === 'PGRST205' || error.message?.includes('relation "beta_signups" does not exist') || error.message?.includes('Could not find the table')) {
-          setError('Database table not set up yet. Please run the SQL setup first.');
-          return;
-        }
-        throw error;
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fetch signups');
       }
-      setSignups(data || []);
+
+      setSignups(result.signups || []);
+      setStats(result.stats);
     } catch (err) {
       console.error('Error fetching signups:', err);
       setError('Failed to load signups. Make sure the database table is set up.');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const fetchStats = async () => {
-    try {
-      const { data, error } = await supabase
-        .rpc('get_beta_signup_stats');
-
-      if (error) {
-        // Handle function doesn't exist error
-        if (error.code === 'PGRST202' || error.message?.includes('function get_beta_signup_stats() does not exist')) {
-          console.log('Stats function not set up yet. Skipping stats.');
-          return;
-        }
-        throw error;
-      }
-      setStats(data?.[0] || null);
-    } catch (err) {
-      console.error('Error fetching stats:', err);
-    }
-  };
 
   const updateStatus = async (id: string, newStatus: string) => {
     try {
@@ -89,8 +68,8 @@ export default function BetaSignupsAdmin() {
       if (error) throw error;
       
       // Refresh data
-      fetchSignups();
-      fetchStats();
+      await fetchSignups();
+      await fetchStats();
     } catch (err) {
       console.error('Error updating status:', err);
       alert('Failed to update status');
@@ -199,7 +178,11 @@ export default function BetaSignupsAdmin() {
               Export CSV
             </button>
             <button
-              onClick={() => { fetchSignups(); fetchStats(); }}
+              onClick={async () => { 
+                setLoading(true);
+                await fetchSignups(); 
+                await fetchStats(); 
+              }}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
               Refresh
@@ -208,6 +191,31 @@ export default function BetaSignupsAdmin() {
           <p className="text-sm text-gray-500">
             Last updated: {new Date().toLocaleString()}
           </p>
+        </div>
+
+        {/* QR Code Generator Section */}
+        <div className="mb-8 bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Share Beta Signup Link</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h4 className="text-sm font-medium text-gray-700 mb-2">Beta Signup Page</h4>
+              <QRCodeGenerator 
+                url={`${window.location.origin}/beta-signup`}
+                size={150}
+                showDownload={true}
+                showUrl={true}
+              />
+            </div>
+            <div>
+              <h4 className="text-sm font-medium text-gray-700 mb-2">With UTM Tracking</h4>
+              <QRCodeGenerator 
+                url={`${window.location.origin}/beta-signup?utm_source=qr&utm_medium=admin&utm_campaign=beta`}
+                size={150}
+                showDownload={true}
+                showUrl={true}
+              />
+            </div>
+          </div>
         </div>
 
         {/* Signups Table */}

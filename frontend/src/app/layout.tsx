@@ -82,9 +82,11 @@ export default function RootLayout({
         suppressHydrationWarning={true}
       >
         <AuthProvider>
-          <ScrollToTop />
-          {children}
-          <Analytics />
+          <ThemeProvider>
+            <ScrollToTop />
+            {children}
+            <Analytics />
+          </ThemeProvider>
         </AuthProvider>
       </body>
     </html>

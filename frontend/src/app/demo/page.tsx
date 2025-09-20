@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function Demo() {
   const [demoData, setDemoData] = useState({
@@ -30,10 +31,13 @@ export default function Demo() {
       <header className="sticky top-0 z-30 backdrop-blur supports-[backdrop-filter]:bg-slate-900/70">
         <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4">
           <div className="flex items-center gap-3">
-            <img 
+            <Image 
               src="/AccorriaYwLOGO.png" 
               alt="Accorria" 
+              width={175}
+              height={175}
               className="h-[175px] w-auto"
+              priority
             />
           </div>
           <div className="flex items-center gap-4">
@@ -51,24 +55,35 @@ export default function Demo() {
             See Accorria in Action
           </h1>
           <p className="mt-4 text-xl bg-gradient-to-r from-amber-400 via-yellow-500 to-amber-600 bg-clip-text text-transparent font-semibold">
-            Watch how AI transforms car selling from hours to minutes
+            Book a live demo to see how AI transforms selling from hours to minutes
           </p>
         </div>
 
-        {/* Video Demo Section */}
+        {/* Live Demo CTA Section */}
         <div className="mb-16">
-          <div className="bg-white rounded-lg shadow-lg p-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">60-Second Demo</h2>
-            <div className="aspect-video bg-gray-100 rounded-lg flex items-center justify-center">
-              <div className="text-center">
-                <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-amber-100 mb-4">
-                  <svg className="h-8 w-8 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <p className="text-gray-600">Demo video coming soon</p>
-                <p className="text-sm text-gray-700 mt-2">Upload photo → AI analysis → Professional listing</p>
+          <div className="bg-white rounded-lg shadow-lg p-8 text-center">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">Book a Live Demo</h2>
+            <p className="text-gray-600 mb-6">
+              Schedule a personalized demo to see how Accorria works with your specific needs
+            </p>
+            <div className="space-y-4">
+              <div className="flex items-center justify-center space-x-2 text-sm text-gray-500">
+                <span>✓</span>
+                <span>See the full process in action</span>
               </div>
+              <div className="flex items-center justify-center space-x-2 text-sm text-gray-500">
+                <span>✓</span>
+                <span>Get your questions answered</span>
+              </div>
+              <div className="flex items-center justify-center space-x-2 text-sm text-gray-500">
+                <span>✓</span>
+                <span>Learn how to maximize your results</span>
+              </div>
+            </div>
+            <div className="mt-8">
+              <Link href="/beta-signup" className="inline-flex items-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-slate-900 bg-amber-400 hover:bg-amber-300">
+                Book Live Demo
+              </Link>
             </div>
           </div>
         </div>

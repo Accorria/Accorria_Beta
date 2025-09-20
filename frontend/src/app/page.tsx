@@ -92,14 +92,14 @@ export default function Home() {
 
   if (!isHydrated) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-900 to-slate-50 text-slate-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-900 to-slate-50 text-slate-100 flex items-center justify-center" style={{ background: 'linear-gradient(to bottom, #0f172a, #0f172a, #f8fafc)' }}>
         <div className="text-white">Loading...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-900 to-slate-50 text-slate-100" suppressHydrationWarning={true}>
+    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-900 to-slate-50 text-slate-100" style={{ background: 'linear-gradient(to bottom, #0f172a, #0f172a, #f8fafc)' }} suppressHydrationWarning={true}>
       {/* NAV */}
       <header className="sticky top-0 z-30 backdrop-blur supports-[backdrop-filter]:bg-slate-900/70">
         <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4">
@@ -113,7 +113,7 @@ export default function Home() {
           <div className="hidden gap-6 text-sm text-slate-200/80 md:flex">
             <Link href="/" className="hover:text-white">Home</Link>
             <Link href="/how-it-works" className="hover:text-white">How it works</Link>
-            <Link href="/demo" className="hover:text-white">Demo</Link>
+            <Link href="/demo" className="hover:text-white">Book Live Demo</Link>
             <Link href="/get-paid" className="hover:text-white">Get Paid</Link>
             <Link href="/qa" className="hover:text-white">Q&A</Link>
           </div>
@@ -161,7 +161,7 @@ export default function Home() {
                   </Link>
                 </>
               )}
-              <Link href="/demo" className="rounded-lg border border-white/20 px-4 py-2 font-semibold text-white/90 hover:bg-white/5">Watch 60‑sec Demo</Link>
+              <Link href="/demo" className="rounded-lg border border-white/20 px-4 py-2 font-semibold text-white/90 hover:bg-white/5">Book Live Demo</Link>
             </div>
 
             {/* Newsletter Signup */}
@@ -240,7 +240,7 @@ export default function Home() {
               </p>
               <div className="flex gap-4">
                 <Link href="/demo" className="bg-amber-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-amber-600 transition-colors">
-                  Watch Demo
+                  Book Live Demo
                 </Link>
                 <Link href="/dashboard" className="border border-white/20 text-white px-6 py-3 rounded-lg font-semibold hover:bg-white/10 transition-colors">
                   Try It Now
@@ -330,13 +330,6 @@ export default function Home() {
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">10x Faster</h3>
               <p className="text-gray-600">AI generates perfect listings in seconds. No more hours writing descriptions or taking photos.</p>
-              <div className="mt-4 w-full h-32 rounded-lg overflow-hidden">
-                <img 
-                  src="/Selecting Photos.png" 
-                  alt="User selecting photos for AI analysis" 
-                  className="w-full h-full object-cover"
-                />
-              </div>
             </div>
             <div className="text-center">
               <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -344,13 +337,6 @@ export default function Home() {
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">Better Results</h3>
               <p className="text-gray-600">Smart pricing, multi-platform posting, and automated negotiation get you top dollar.</p>
-              <div className="mt-4 w-full h-32 rounded-lg overflow-hidden">
-                <img 
-                  src="/Fackbook posted.jpeg" 
-                  alt="Final listing posted to Facebook Marketplace" 
-                  className="w-full h-full object-cover"
-                />
-              </div>
             </div>
             <div className="text-center">
               <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -358,13 +344,6 @@ export default function Home() {
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">Safer Deals</h3>
               <p className="text-gray-600">Built-in escrow, ID verification, and title checks protect both buyers and sellers.</p>
-              <div className="mt-4 w-full h-32 rounded-lg overflow-hidden">
-                <img 
-                  src="/Listing details.png" 
-                  alt="Accorria listing details with verification and escrow" 
-                  className="w-full h-full object-cover"
-                />
-              </div>
             </div>
           </div>
         </div>
@@ -372,93 +351,79 @@ export default function Home() {
 
 
       {/* This Changes Everything */}
-      <section className="bg-gradient-to-br from-slate-900 to-gray-900 text-white">
+      <section className="bg-white text-slate-900">
         <div className="mx-auto max-w-7xl px-4 py-16">
           <div className="text-center">
-            <h2 className="text-3xl font-bold md:text-4xl mb-4 text-black">Why This Changes Everything</h2>
-            <p className="text-lg text-gray-300 max-w-3xl mx-auto mb-12">
+            <h2 className="text-3xl font-bold md:text-4xl mb-4 text-slate-900">Why This Changes Everything</h2>
+            <p className="text-lg text-slate-600 max-w-3xl mx-auto mb-12">
               We&apos;re not just another listing platform. We&apos;re the trust layer that makes high-value transactions safe, fast, and profitable for everyone.
             </p>
           </div>
           
           <div className="grid md:grid-cols-2 gap-12">
             <div>
-              <h3 className="text-2xl font-bold mb-6 text-black">🚗 Car Sales</h3>
-              <div className="mb-6 w-full h-48 rounded-lg overflow-hidden">
-                <img 
-                  src="/Car listing Details..png" 
-                  alt="Complete car listing with Accorria verification and pricing" 
-                  className="w-full h-full object-cover"
-                />
-              </div>
+              <h3 className="text-2xl font-bold mb-6 text-slate-900">🚗 Car Sales</h3>
               <div className="space-y-4">
                 <div className="flex items-start">
                   <span className="text-amber-400 mr-3">✓</span>
                   <div>
-                    <h4 className="font-semibold">Perfect For</h4>
-                    <p className="text-gray-300 text-sm">Individual sellers, flippers, dealers, and anyone who wants to sell cars faster and safer</p>
+                    <h4 className="font-semibold text-slate-900">Perfect For</h4>
+                    <p className="text-slate-600 text-sm">Individual sellers, flippers, dealers, and anyone who wants to sell cars faster and safer</p>
                   </div>
                 </div>
                 <div className="flex items-start">
                   <span className="text-amber-400 mr-3">✓</span>
                   <div>
-                    <h4 className="font-semibold">AI-Powered Listings</h4>
-                    <p className="text-gray-300 text-sm">Upload 20 photos, pick the best 4, get a perfect description in seconds</p>
+                    <h4 className="font-semibold text-slate-900">AI-Powered Listings</h4>
+                    <p className="text-slate-600 text-sm">Upload 20 photos, pick the best 4, get a perfect description in seconds</p>
                   </div>
                 </div>
                 <div className="flex items-start">
                   <span className="text-amber-400 mr-3">✓</span>
                   <div>
-                    <h4 className="font-semibold">Multi-Platform Posting</h4>
-                    <p className="text-gray-300 text-sm">Post to Facebook, Craigslist, OfferUp with one click</p>
+                    <h4 className="font-semibold text-slate-900">Multi-Platform Posting</h4>
+                    <p className="text-slate-600 text-sm">Post to Facebook, Craigslist, OfferUp with one click</p>
                   </div>
                 </div>
                 <div className="flex items-start">
                   <span className="text-amber-400 mr-3">✓</span>
                   <div>
-                    <h4 className="font-semibold">Built-in Escrow</h4>
-                    <p className="text-gray-300 text-sm">1.0% escrow fee (min $39, cap $149) - way cheaper than dealer fees</p>
+                    <h4 className="font-semibold text-slate-900">Built-in Escrow</h4>
+                    <p className="text-slate-600 text-sm">1.0% escrow fee (min $39, cap $149) - secure payments for all transactions</p>
                   </div>
                 </div>
               </div>
             </div>
             
             <div>
-              <h3 className="text-2xl font-bold mb-6 text-black">🏠 Home Sales</h3>
-              <div className="mb-6 w-full h-48 rounded-lg overflow-hidden">
-                <img 
-                  src="/ModernHome.png" 
-                  alt="Modern home listing with Accorria escrow and verification" 
-                  className="w-full h-full object-cover"
-                />
-              </div>
+              <h3 className="text-2xl font-bold mb-6 text-slate-900">🏠 Home Sales</h3>
               <div className="space-y-4">
                 <div className="flex items-start">
                   <span className="text-amber-400 mr-3">✓</span>
                   <div>
-                    <h4 className="font-semibold">Perfect For</h4>
-                    <p className="text-gray-300 text-sm">FSBO sellers, investors, landlords, and anyone avoiding 5.5% agent commissions</p>
+                    <h4 className="font-semibold text-slate-900">Perfect For</h4>
+                    <p className="text-slate-600 text-sm">FSBO sellers, investors, landlords, and anyone avoiding 5.5% agent commissions</p>
                   </div>
                 </div>
                 <div className="flex items-start">
                   <span className="text-amber-400 mr-3">✓</span>
                   <div>
-                    <h4 className="font-semibold">Massive Savings</h4>
-                    <p className="text-gray-300 text-sm">$50k home: $395 vs $2,750 agent fee = $2,355 saved</p>
+                    <h4 className="font-semibold text-slate-900">Massive Savings</h4>
+                    <p className="text-slate-600 text-sm">$50k home: $395 vs $2,750 agent fee = $2,355 saved</p>
                   </div>
                 </div>
                 <div className="flex items-start">
                   <span className="text-amber-400 mr-3">✓</span>
                   <div>
-                    <h4 className="font-semibold">Digital Deed Twins</h4>
-                    <p className="text-gray-300 text-sm">Optional digital certificates for faster resale and clean provenance</p>
+                    <h4 className="font-semibold text-slate-900">Digital Deed Twins</h4>
+                    <p className="text-slate-600 text-sm">Optional digital certificates for faster resale and clean provenance</p>
                   </div>
                 </div>
                 <div className="flex items-start">
                   <span className="text-amber-400 mr-3">✓</span>
                   <div>
-                    <h4 className="font-semibold">High-Value Items</h4>
-                    <p className="text-gray-300 text-sm">Boats, RVs, equipment, luxury items - all with the same trust layer</p>
+                    <h4 className="font-semibold text-slate-900">High-Value Items</h4>
+                    <p className="text-slate-600 text-sm">Boats, RVs, equipment, luxury items - all with the same trust layer</p>
                   </div>
                 </div>
               </div>
@@ -486,13 +451,6 @@ export default function Home() {
             <p className="mt-4 text-lg text-slate-700 max-w-3xl mx-auto">
               Everything you need to know about Accorria&apos;s trust-native listing platform.
             </p>
-            <div className="mt-8 w-full max-w-2xl mx-auto h-48 rounded-lg overflow-hidden">
-              <img 
-                src="/Platform Selection.png" 
-                alt="Accorria platform selection and posting process" 
-                className="w-full h-full object-cover"
-              />
-            </div>
           </div>
           
           <div className="mt-12 grid md:grid-cols-2 gap-8">

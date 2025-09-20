@@ -26,49 +26,7 @@ export default function Chatbot() {
     boxRef.current?.scrollTo({ top: boxRef.current.scrollHeight, behavior: "smooth" });
   }, [msgs]);
 
-  // Lock body scroll when modal is open
-  useEffect(() => {
-    if (open) {
-      // Store current scroll position
-      const scrollY = window.scrollY;
-      
-      // Apply comprehensive body scroll lock
-      document.body.style.overflow = 'hidden';
-      document.body.style.position = 'fixed';
-      document.body.style.top = `-${scrollY}px`;
-      document.body.style.left = '0';
-      document.body.style.right = '0';
-      document.body.style.width = '100%';
-      document.body.style.height = '100%';
-      
-      // Prevent all touch interactions on body
-      document.body.style.touchAction = 'none';
-      document.body.style.pointerEvents = 'none';
-      
-      // Prevent scrolling on html element too
-      document.documentElement.style.overflow = 'hidden';
-      document.documentElement.style.height = '100%';
-      
-      // Cleanup function
-      return () => {
-        document.body.style.overflow = 'unset';
-        document.body.style.position = 'unset';
-        document.body.style.top = 'unset';
-        document.body.style.left = 'unset';
-        document.body.style.right = 'unset';
-        document.body.style.width = 'unset';
-        document.body.style.height = 'unset';
-        document.body.style.touchAction = 'unset';
-        document.body.style.pointerEvents = 'unset';
-        
-        document.documentElement.style.overflow = 'unset';
-        document.documentElement.style.height = 'unset';
-        
-        // Restore scroll position
-        window.scrollTo(0, scrollY);
-      };
-    }
-  }, [open]);
+  // Removed body scroll lock to prevent black screen issues
 
 
 
@@ -84,11 +42,32 @@ export default function Chatbot() {
     setMsgs(next);
 
     try {
-      // Simulate typing delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Call the actual OpenAI API endpoint
+      const response = await fetch('/api/chat/enhanced', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messages: next,
+          useWebSearch: false
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`API call failed: ${response.status}`);
+      }
+
+      const data = await response.json();
       
-      const response = getAccorriaResponse(text);
-      setMsgs((m) => [...m, { role: "assistant", content: response }]);
+      if (data.success && data.response) {
+        setMsgs((m) => [...m, { role: "assistant", content: data.response }]);
+        
+        // Track chatbot engagement for lead scoring
+        trackChatbotEngagement(text, data.response);
+      } else {
+        throw new Error(data.error || 'No response from AI');
+      }
     } catch (error) {
       console.error("Chat error:", error);
       setMsgs((m) => [...m, { 
@@ -97,6 +76,28 @@ export default function Chatbot() {
       }]);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const trackChatbotEngagement = async (userMessage: string, aiResponse: string) => {
+    try {
+      // Track engagement metrics
+      const engagement = {
+        timestamp: new Date().toISOString(),
+        user_message: userMessage,
+        ai_response: aiResponse,
+        message_length: userMessage.length,
+        response_length: aiResponse.length,
+        session_id: Date.now().toString() // Simple session tracking
+      };
+      
+      // Log engagement for lead scoring
+      console.log('Chatbot engagement:', engagement);
+      
+      // You can send this to your analytics service or lead scoring system
+      // For now, we'll just log it
+    } catch (error) {
+      console.error('Error tracking engagement:', error);
     }
   };
 
@@ -184,15 +185,7 @@ export default function Chatbot() {
       <AnimatePresence>
         {open && (
           <>
-            {/* Backdrop overlay */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="fixed inset-0 bg-black bg-opacity-50 z-40"
-              onClick={() => setOpen(false)}
-            />
+            {/* Backdrop overlay - removed to prevent black screen */}
             
             {/* Chat modal */}
             <motion.div
@@ -224,7 +217,7 @@ export default function Chatbot() {
 
             <div 
               ref={boxRef} 
-              className="h-80 sm:h-80 max-h-[60vh] space-y-4 overflow-y-auto bg-slate-50 p-4 sm:p-6 text-sm text-slate-800"
+              className="h-80 sm:h-80 max-h-[60vh] space-y-4 overflow-y-auto bg-slate-50 p-4 sm:p-6 text-sm text-slate-800 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-slate-100"
             >
               {msgs.length === 0 && (
                 <div className="text-center text-slate-500 py-8">
@@ -232,9 +225,6 @@ export default function Chatbot() {
                   <div className="text-sm font-medium">Hello! I'm the Accorria AI Assistant</div>
                   <div className="text-xs mt-2 text-slate-400">
                     Ask me anything about Accorria
-                  </div>
-                  <div className="text-xs mt-3 text-slate-300 max-w-xs mx-auto">
-                    Learn about our AI-powered car selling platform, features, pricing, and how to get early access
                   </div>
                 </div>
               )}
