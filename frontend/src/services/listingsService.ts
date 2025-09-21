@@ -55,7 +55,7 @@ export class ListingsService {
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         images: ['/Car in garage.png'],
-        platform: 'facebook',
+        platforms: ['facebook'],
         ai_generated: true
       },
       {
@@ -74,7 +74,7 @@ export class ListingsService {
         created_at: new Date(Date.now() - 86400000).toISOString(),
         updated_at: new Date().toISOString(),
         images: ['/ModernHome.png'],
-        platform: 'craigslist',
+        platforms: ['craigslist'],
         ai_generated: true
       }
     ];
