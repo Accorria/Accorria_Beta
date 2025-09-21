@@ -35,51 +35,10 @@ export class ListingsService {
   private supabase = supabaseBrowser();
 
   /**
-   * Get mock listings for development
+   * Get empty listings array - ready for real car data
    */
   private getMockListings(): Listing[] {
-    return [
-      {
-        id: 'mock-1',
-        user_id: 'demo-user-123',
-        title: '2020 Honda Civic - Excellent Condition',
-        description: 'Well-maintained Honda Civic with low mileage. Perfect for daily commuting.',
-        price: 18500,
-        make: 'Honda',
-        model: 'Civic',
-        year: 2020,
-        mileage: '25000',
-        condition: 'excellent',
-        location: 'Detroit, MI',
-        status: 'active',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        images: ['/Car in garage.png'],
-        platforms: ['facebook'],
-        titleStatus: 'Clean',
-        postedAt: new Date().toISOString()
-      },
-      {
-        id: 'mock-2',
-        user_id: 'demo-user-123',
-        title: '2018 Toyota Camry - One Owner',
-        description: 'Single owner vehicle with full service records. Great fuel economy.',
-        price: 16500,
-        make: 'Toyota',
-        model: 'Camry',
-        year: 2018,
-        mileage: '45000',
-        condition: 'good',
-        location: 'Detroit, MI',
-        status: 'sold',
-        created_at: new Date(Date.now() - 86400000).toISOString(),
-        updated_at: new Date().toISOString(),
-        images: ['/ModernHome.png'],
-        platforms: ['craigslist'],
-        titleStatus: 'Clean',
-        postedAt: new Date(Date.now() - 86400000).toISOString()
-      }
-    ];
+    return [];
   }
 
   /**
