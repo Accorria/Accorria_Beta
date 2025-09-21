@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from 'next/link';
+import Image from 'next/image';
 import Chatbot from '@/components/Chatbot';
 import { useAuth } from '@/contexts/AuthContext';
 import { AuthModal } from '@/components/AuthModal';
@@ -79,7 +80,7 @@ export default function Home() {
   const hero = IMAGES[idx];
   const { user } = useAuth();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
+  const [authMode] = useState<'login' | 'register'>('login');
 
   useEffect(() => {
     setIsHydrated(true);
@@ -104,10 +105,13 @@ export default function Home() {
       <header className="sticky top-0 z-30 backdrop-blur supports-[backdrop-filter]:bg-slate-900/70">
         <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4">
           <div className="flex items-center gap-3">
-            <img 
+            <Image 
               src="/AccorriaYwLOGO.png" 
               alt="Accorria" 
+              width={175}
+              height={175}
               className="h-[175px] w-auto"
+              priority
             />
           </div>
           <div className="hidden gap-6 text-sm text-slate-200/80 md:flex">
@@ -294,9 +298,11 @@ export default function Home() {
             <div className="relative">
               <div className="bg-gray-800 rounded-2xl p-8 text-center">
                 <div className="w-full h-64 rounded-lg overflow-hidden mb-4">
-                  <img 
+                  <Image 
                     src="/Analizing Photos.png" 
                     alt="AI analyzing photos to generate perfect listing" 
+                    width={400}
+                    height={256}
                     className="w-full h-full object-cover"
                   />
                 </div>
@@ -609,9 +615,11 @@ function Card({ icon, title, desc }: { icon: string; title: string; desc: string
         <div className="text-lg font-semibold">{title}</div>
       </div>
       <div className="w-full h-64 rounded-lg overflow-hidden mb-3">
-        <img 
+        <Image 
           src={getPhotoForIcon(icon)} 
           alt={`${title} process step`}
+          width={400}
+          height={256}
           className="w-full h-full object-cover"
         />
       </div>
