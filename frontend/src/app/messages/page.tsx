@@ -5,10 +5,11 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { EmailVerification } from '@/components/EmailVerification';
 import Header from '@/components/Header';
-import { ThemeProvider } from '@/contexts/ThemeContext';
+import { useTheme } from '@/contexts/ThemeContext';
 
 export default function MessagesPage() {
   const { user, loading, isEmailVerified } = useAuth();
+  const { isDarkMode } = useTheme();
 
   // Show loading state
   if (loading) {
@@ -46,8 +47,7 @@ export default function MessagesPage() {
   }
 
   return (
-    <ThemeProvider>
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         <Header />
       
       <main className="pb-20">
@@ -55,21 +55,67 @@ export default function MessagesPage() {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Messages</h1>
           
           <div className="space-y-4">
+            {/* AI Agent Conversation */}
             <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
               <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-semibold">
-                  JD
+                <div className="w-10 h-10 bg-amber-500 rounded-full flex items-center justify-center text-white font-semibold">
+                  🤖
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center justify-between">
-                    <h3 className="font-semibold text-gray-900 dark:text-white">John D.</h3>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">2m ago</span>
+                    <h3 className="font-semibold text-gray-900 dark:text-white">AI Agent - Honda Civic</h3>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">Live</span>
                   </div>
                   <div className="flex items-center gap-3">
-                    <img src="/Car in garage.png" alt="2017 Nissan Altima" className="w-12 h-8 rounded object-cover" />
+                    <img src="/Car in garage.png" alt="2020 Honda Civic" className="w-12 h-8 rounded object-cover" />
                     <div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">2017 Nissan Altima</p>
-                      <p className="text-gray-700 dark:text-gray-300 mt-1">&ldquo;Is the car still available? I can come see it today.&rdquo;</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">2020 Honda Civic - $18,500</p>
+                      <div className="mt-2 space-y-1">
+                        <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-2 text-sm">
+                          <span className="text-gray-600 dark:text-gray-400">Buyer:</span> "Is this car still available?"
+                        </div>
+                        <div className="bg-amber-100 dark:bg-amber-900 rounded-lg p-2 text-sm">
+                          <span className="text-amber-700 dark:text-amber-300">AI Agent:</span> "Yes! The 2020 Honda Civic is available. Would you like to schedule a viewing?"
+                        </div>
+                        <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-2 text-sm">
+                          <span className="text-gray-600 dark:text-gray-400">Buyer:</span> "What's the lowest you'll take?"
+                        </div>
+                        <div className="bg-amber-100 dark:bg-amber-900 rounded-lg p-2 text-sm">
+                          <span className="text-amber-700 dark:text-amber-300">AI Agent:</span> "The price is firm at $18,500. This is below market value for the condition and mileage. Would you like to see it today?"
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Another AI Agent Conversation */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-amber-500 rounded-full flex items-center justify-center text-white font-semibold">
+                  🤖
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold text-gray-900 dark:text-white">AI Agent - Toyota Camry</h3>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">Completed</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <img src="/ModernHome.png" alt="2018 Toyota Camry" className="w-12 h-8 rounded object-cover" />
+                    <div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">2018 Toyota Camry - $16,500</p>
+                      <div className="mt-2 space-y-1">
+                        <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-2 text-sm">
+                          <span className="text-gray-600 dark:text-gray-400">Buyer:</span> "I'm interested in the Camry"
+                        </div>
+                        <div className="bg-amber-100 dark:bg-amber-900 rounded-lg p-2 text-sm">
+                          <span className="text-amber-700 dark:text-amber-300">AI Agent:</span> "Great! The 2018 Camry has excellent fuel economy and one owner. When would you like to see it?"
+                        </div>
+                        <div className="bg-green-100 dark:bg-green-900 rounded-lg p-2 text-sm">
+                          <span className="text-green-700 dark:text-green-300">✅ Deal Closed:</span> "Sold for $16,500 - Escrow completed"
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -147,6 +193,5 @@ export default function MessagesPage() {
         </div>
       </nav>
       </div>
-    </ThemeProvider>
   );
 }

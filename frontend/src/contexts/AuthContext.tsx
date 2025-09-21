@@ -2,14 +2,14 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabaseBrowser } from '../../lib/supabaseBrowser';
-import { User, Session } from '@supabase/supabase-js';
+import { User, Session, AuthError } from '@supabase/supabase-js';
 import { getAppUrl, getHomeUrl } from '../utils/urls';
 
 interface AuthContextType {
   user: User | null;
   session: Session | null;
-  signUp: (email: string, password: string, firstName?: string, lastName?: string, phone?: string) => Promise<{ error: any }>;
-  signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, firstName?: string, lastName?: string, phone?: string) => Promise<{ error: AuthError | null }>;
+  signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>;
   signOut: () => Promise<void>;
   loading: boolean;
   error: string | null;
@@ -63,15 +63,38 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     );
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [supabase.auth]);
 
   const signUp = async (email: string, password: string, firstName?: string, lastName?: string, phone?: string) => {
     try {
       setLoading(true);
       setError(null);
 
+      // Simple dev login - use "user" as email and "register" as password
+      if (email === 'user' && password === 'register') {
+        const mockUser: User = {
+          id: 'demo-user-123',
+          email: 'demo@accorria.com',
+          email_confirmed_at: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+          app_metadata: {},
+          aud: 'authenticated',
+          user_metadata: {
+            first_name: firstName || 'Demo',
+            last_name: lastName || 'User',
+            full_name: `${firstName || 'Demo'} ${lastName || 'User'}`.trim(),
+            phone: phone || ''
+          }
+        };
+        
+          setUser(mockUser as User);
+        setIsEmailVerified(true);
+        setLoading(false);
+        return { error: null };
+      }
+
       // Sign up with Supabase
-      const { data, error } = await supabase.auth.signUp({
+      const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -93,10 +116,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // User will need to verify email before accessing dashboard
       return { error: null };
 
-    } catch (err: any) {
-      const errorMessage = err.message || 'Registration failed';
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Registration failed';
       setError(errorMessage);
-      return { error: { message: errorMessage } };
+      return { error: { message: errorMessage } as AuthError };
     } finally {
       setLoading(false);
     }
@@ -107,7 +130,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setLoading(true);
       setError(null);
 
-      const { data, error } = await supabase.auth.signInWithPassword({
+      // Simple dev login - use "user" as email and "register" as password
+      if (email === 'user' && password === 'register') {
+        const mockUser: User = {
+          id: 'demo-user-123',
+          email: 'demo@accorria.com',
+          email_confirmed_at: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+          app_metadata: {},
+          aud: 'authenticated',
+          user_metadata: {
+            first_name: 'Demo',
+            last_name: 'User',
+            full_name: 'Demo User'
+          }
+        };
+        
+          setUser(mockUser as User);
+        setIsEmailVerified(true);
+        setLoading(false);
+        return { error: null };
+      }
+
+      const { error } = await supabase.auth.signInWithPassword({
         email,
         password
       });
@@ -119,10 +164,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       return { error: null };
 
-    } catch (err: any) {
-      const errorMessage = err.message || 'Login failed';
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Login failed';
       setError(errorMessage);
-      return { error: { message: errorMessage } };
+      return { error: { message: errorMessage } as AuthError };
     } finally {
       setLoading(false);
     }
@@ -139,8 +184,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (typeof window !== 'undefined') {
         window.location.href = getHomeUrl();
       }
-    } catch (err: any) {
+    } catch (error) {
       setError('Logout failed');
+      console.error('Error signing out:', error);
     }
   };
 

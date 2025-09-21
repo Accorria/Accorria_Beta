@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function HowItWorksPage() {
   return (
@@ -10,10 +11,13 @@ export default function HowItWorksPage() {
       <header className="sticky top-0 z-30 backdrop-blur supports-[backdrop-filter]:bg-slate-900/70">
         <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4">
           <div className="flex items-center gap-3">
-            <img 
+            <Image 
               src="/AccorriaYwLOGO.png" 
               alt="Accorria" 
-              className="h-[175px] w-auto"
+              width={120}
+              height={120}
+              className="h-[120px] w-auto"
+              priority
             />
           </div>
           <div className="hidden gap-6 text-sm text-slate-200/80 md:flex">
@@ -47,10 +51,17 @@ export default function HowItWorksPage() {
         </div>
       </section>
 
-      {/* STEP BY STEP */}
+      {/* AI LISTINGS EXPLANATION */}
       <section className="bg-slate-50 text-slate-900">
         <div className="mx-auto max-w-7xl px-4 py-16">
-          <h2 className="text-3xl font-bold text-center mb-12">The Process</h2>
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-8 mb-12">
+            <h2 className="text-3xl font-bold text-amber-900 mb-4">🤖 What are "AI Listings"?</h2>
+            <p className="text-lg text-amber-800">
+              Instead of spending hours writing descriptions and researching prices, our AI analyzes your photos and automatically creates professional listings. Think of it as having a professional copywriter and market analyst working for you 24/7.
+            </p>
+          </div>
+          
+          <h2 className="text-3xl font-bold text-center mb-12">The Complete Process</h2>
           <div className="grid gap-12">
             {/* Step 1 */}
             <div className="grid md:grid-cols-2 gap-8 items-center">
@@ -79,9 +90,11 @@ export default function HowItWorksPage() {
               </div>
               <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
                 <div className="w-full h-64">
-                  <img 
+                  <Image 
                     src="/Selecting Photos.png" 
                     alt="Photo selection interface for AI analysis" 
+                    width={400}
+                    height={256}
                     className="w-full h-full object-cover"
                   />
                 </div>
@@ -96,7 +109,7 @@ export default function HowItWorksPage() {
                 </div>
                 <h3 className="text-2xl font-bold mb-4">AI Generates Listing</h3>
                 <p className="text-lg text-slate-800 mb-6">
-                  Our AI crafts a professional title, compelling description, competitive pricing, and Facebook-ready post with all the right keywords.
+                  Our AI crafts a professional title, compelling description, and provides three pricing tiers based on market analysis: Quick Sale, Market Rate, and Premium pricing.
                 </p>
                 <ul className="space-y-2 text-slate-800">
                   <li className="flex items-center gap-2">
@@ -105,20 +118,24 @@ export default function HowItWorksPage() {
                   </li>
                   <li className="flex items-center gap-2">
                     <span className="w-2 h-2 bg-amber-400 rounded-full"></span>
-                    Compelling description that converts
+                    Complete description that converts
                   </li>
                   <li className="flex items-center gap-2">
                     <span className="w-2 h-2 bg-amber-400 rounded-full"></span>
-                    Market-based pricing guidance
+                    Three pricing tiers: Quick, Market, Premium
                   </li>
                 </ul>
               </div>
-              <div className="bg-white rounded-2xl p-8 shadow-sm md:order-1">
-                <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-3xl">✨</span>
+              <div className="bg-white rounded-2xl shadow-sm overflow-hidden md:order-1">
+                <div className="w-full h-64">
+                  <Image 
+                    src="/Description.png" 
+                    alt="AI-generated listing description" 
+                    width={400}
+                    height={256}
+                    className="w-full h-full object-cover"
+                  />
                 </div>
-                <h4 className="font-semibold text-center mb-2">AI-Powered Content</h4>
-                <p className="text-sm text-slate-600 text-center">Professional listings in seconds</p>
               </div>
             </div>
 
@@ -128,41 +145,174 @@ export default function HowItWorksPage() {
                 <div className="inline-flex items-center gap-2 rounded-full bg-amber-100 px-4 py-2 text-sm font-semibold text-amber-800 mb-4">
                   Step 3
                 </div>
-                <h3 className="text-2xl font-bold mb-4">Post & Close</h3>
+                <h3 className="text-2xl font-bold mb-4">Post to Marketplaces</h3>
                 <p className="text-lg text-slate-800 mb-6">
-                  One click posts to Facebook Marketplace. Our AI coaches your replies, handles negotiations, and soon — escrow for secure closings.
+                  One click posts to Facebook Marketplace, Craigslist, and other platforms. Your listing goes live with professional copy and optimized pricing.
                 </p>
                 <ul className="space-y-2 text-slate-800">
                   <li className="flex items-center gap-2">
                     <span className="w-2 h-2 bg-amber-400 rounded-full"></span>
-                    One-click posting to Facebook
+                    One-click posting to multiple platforms
                   </li>
                   <li className="flex items-center gap-2">
                     <span className="w-2 h-2 bg-amber-400 rounded-full"></span>
-                    AI reply suggestions and coaching
+                    Professional copy ready to go
                   </li>
                   <li className="flex items-center gap-2">
                     <span className="w-2 h-2 bg-amber-400 rounded-full"></span>
-                    Secure escrow closing (coming soon)
+                    Optimized pricing for each platform
+                  </li>
+                </ul>
+              </div>
+              <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+                <div className="w-full h-64">
+                  <Image 
+                    src="/Fackbook posted.jpeg" 
+                    alt="Facebook Marketplace posting interface" 
+                    width={400}
+                    height={256}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              </div>
+            </div>
+            
+            {/* Step 4 - AI Negotiation Agent */}
+            <div className="grid md:grid-cols-2 gap-8 items-center">
+              <div className="md:order-2">
+                <div className="inline-flex items-center gap-2 rounded-full bg-amber-100 px-4 py-2 text-sm font-semibold text-amber-800 mb-4">
+                  Step 4
+                </div>
+                <h3 className="text-2xl font-bold mb-4">AI Negotiation Agent</h3>
+                <p className="text-lg text-slate-800 mb-6">
+                  Our AI connects to your Facebook Messenger and automatically responds to buyer inquiries. Set your price thresholds and let the agent negotiate within your range.
+                </p>
+                <ul className="space-y-2 text-slate-800">
+                  <li className="flex items-center gap-2">
+                    <span className="w-2 h-2 bg-amber-400 rounded-full"></span>
+                    Connects to Facebook Messenger automatically
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-2 h-2 bg-amber-400 rounded-full"></span>
+                    Set your own price thresholds (e.g., $8,000-$10,000)
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-2 h-2 bg-amber-400 rounded-full"></span>
+                    Agent negotiates within your range
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-2 h-2 bg-amber-400 rounded-full"></span>
+                    Filters out low-ball offers and tire-kickers
+                  </li>
+                </ul>
+              </div>
+              <div className="bg-white rounded-2xl p-8 shadow-sm md:order-1">
+                <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span className="text-3xl">🤖</span>
+                </div>
+                <h4 className="font-semibold text-center mb-2">Smart Agent</h4>
+                <p className="text-sm text-slate-600 text-center">24/7 buyer screening and response</p>
+              </div>
+            </div>
+            
+            {/* Step 5 - Secure Closing */}
+            <div className="grid md:grid-cols-2 gap-8 items-center">
+              <div>
+                <div className="inline-flex items-center gap-2 rounded-full bg-amber-100 px-4 py-2 text-sm font-semibold text-amber-800 mb-4">
+                  Step 5
+                </div>
+                <h3 className="text-2xl font-bold mb-4">Secure Escrow Closing</h3>
+                <p className="text-lg text-slate-800 mb-6">
+                  When you're ready to close, our blockchain-powered escrow system locks the funds until both parties are satisfied. Choose between instant escrow closing or traditional in-person transactions.
+                </p>
+                <ul className="space-y-2 text-slate-800">
+                  <li className="flex items-center gap-2">
+                    <span className="w-2 h-2 bg-amber-400 rounded-full"></span>
+                    Funds locked in smart contract
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-2 h-2 bg-amber-400 rounded-full"></span>
+                    Instant release when deal closes
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-2 h-2 bg-amber-400 rounded-full"></span>
+                    Or choose traditional in-person closing
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-2 h-2 bg-amber-400 rounded-full"></span>
+                    No bank delays or cash risks
                   </li>
                 </ul>
               </div>
               <div className="bg-white rounded-2xl p-8 shadow-sm">
                 <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-3xl">🚀</span>
+                  <span className="text-3xl">🔐</span>
                 </div>
-                <h4 className="font-semibold text-center mb-2">Smart Closing</h4>
-                <p className="text-sm text-slate-600 text-center">From listing to closed deal</p>
+                <h4 className="font-semibold text-center mb-2">Secure Payments</h4>
+                <p className="text-sm text-slate-600 text-center">Blockchain escrow for safe deals</p>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* FEATURES */}
+      {/* COMPETITIVE ADVANTAGE */}
       <section className="bg-white">
         <div className="mx-auto max-w-7xl px-4 py-16">
-          <h2 className="text-3xl font-bold text-center mb-12 text-black">Why It Works Better</h2>
+          <h2 className="text-3xl font-bold text-center mb-12 text-black">Why Accorria Beats the Competition</h2>
+          <div className="grid gap-8 md:grid-cols-2 mb-12">
+            <div className="bg-slate-50 rounded-2xl p-8">
+              <h3 className="text-2xl font-bold mb-4 text-slate-900">❌ Other Platforms</h3>
+              <ul className="space-y-3 text-slate-700">
+                <li className="flex items-start gap-2">
+                  <span className="text-red-500 mt-1">✗</span>
+                  <span>Manual listing creation - hours of work</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-red-500 mt-1">✗</span>
+                  <span>No AI negotiation assistance</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-red-500 mt-1">✗</span>
+                  <span>Cash transactions or bank delays</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-red-500 mt-1">✗</span>
+                  <span>No escrow protection</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-red-500 mt-1">✗</span>
+                  <span>Limited to one item type only</span>
+                </li>
+              </ul>
+            </div>
+            <div className="bg-amber-50 rounded-2xl p-8">
+              <h3 className="text-2xl font-bold mb-4 text-amber-900">✅ Accorria Advantage</h3>
+              <ul className="space-y-3 text-amber-800">
+                <li className="flex items-start gap-2">
+                  <span className="text-green-500 mt-1">✓</span>
+                  <span>AI creates listings in seconds</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-green-500 mt-1">✓</span>
+                  <span>AI negotiation agent handles inquiries</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-green-500 mt-1">✓</span>
+                  <span>Blockchain escrow for instant, secure payments</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-green-500 mt-1">✓</span>
+                  <span>Full protection from scams and fraud</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-green-500 mt-1">✓</span>
+                  <span>Cars, homes, and high-value assets</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+          
           <div className="grid gap-8 md:grid-cols-3">
             <div className="text-center">
               <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -183,7 +333,7 @@ export default function HowItWorksPage() {
                 <span className="text-3xl">🛡️</span>
               </div>
               <h3 className="text-xl font-semibold mb-3 text-black">Safer Deals</h3>
-              <p className="text-slate-800">Smart reply coaching and soon — blockchain escrow — make every deal safer and more secure.</p>
+              <p className="text-slate-800">Smart reply coaching and blockchain escrow make every deal safer and more secure.</p>
             </div>
           </div>
         </div>

@@ -37,8 +37,8 @@ const IMAGES = [
   {
     title: "Close the deal, safer",
     caption: "We coach replies. Escrow support coming soon.",
-    url: "https://images.unsplash.com/photo-1573167243872-43c6433b9d40?q=80&w=1600&auto=format&fit=crop",
-    alt: "Handshake at a desk"
+    url: "/Posted.png",
+    alt: "Deal closing and payment"
   }
 ];
 
@@ -75,29 +75,16 @@ function useCarousel(len: number, interval = 3800) {
 
 
 export default function Home() {
-  const [isHydrated, setIsHydrated] = useState(false);
   const idx = useCarousel(IMAGES.length);
   const hero = IMAGES[idx];
   const { user } = useAuth();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode] = useState<'login' | 'register'>('login');
 
-  useEffect(() => {
-    setIsHydrated(true);
-  }, []);
-
   const handleAuthSuccess = () => {
     // User successfully logged in or registered
     console.log('Authentication successful');
   };
-
-  if (!isHydrated) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-900 to-slate-50 text-slate-100 flex items-center justify-center" style={{ background: 'linear-gradient(to bottom, #0f172a, #0f172a, #f8fafc)' }}>
-        <div className="text-white">Loading...</div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-900 to-slate-50 text-slate-100" style={{ background: 'linear-gradient(to bottom, #0f172a, #0f172a, #f8fafc)' }} suppressHydrationWarning={true}>
@@ -108,9 +95,9 @@ export default function Home() {
             <Image 
               src="/AccorriaYwLOGO.png" 
               alt="Accorria" 
-              width={175}
-              height={175}
-              className="h-[175px] w-auto"
+              width={120}
+              height={120}
+              className="h-[120px] w-auto"
               priority
             />
           </div>
@@ -126,9 +113,14 @@ export default function Home() {
               Dashboard
             </Link>
           ) : (
-            <Link href="/beta-signup" className="rounded-lg bg-amber-400 px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-amber-300">
-              Join Waitlist
-            </Link>
+            <div className="flex gap-2">
+              <Link href="/login" className="rounded-lg border border-white/20 px-3 py-2 text-sm font-semibold text-white/90 hover:bg-white/5">
+                Sign In
+              </Link>
+              <Link href="/beta-signup" className="rounded-lg bg-amber-400 px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-amber-300">
+                Join Waitlist
+              </Link>
+            </div>
           )}
         </nav>
       </header>
@@ -257,6 +249,8 @@ export default function Home() {
       <section id="how" className="bg-slate-50 text-slate-900">
         <div className="mx-auto max-w-7xl px-4 py-16">
           <h2 className="text-2xl font-bold md:text-3xl">How it works</h2>
+          
+
           <div className="mt-8 grid gap-6 md:grid-cols-3">
             <Card icon="upload" title="Upload" desc="Upload photos, select the ones you want analyzed. Your agent pulls details from the images + VIN/address and builds the foundation for your listing." />
             <Card icon="magic" title="Generate" desc="AI crafts the full listing: title, description, price guidance, and marketplace-ready post." />
@@ -270,7 +264,7 @@ export default function Home() {
         <div className="mx-auto max-w-7xl px-4 py-14">
           <div className="grid gap-6 md:grid-cols-3">
             <Feature title="Faster listings" desc="From photos to posting in minutes, not hours." />
-            <Feature title="Smarter negotiations" desc="Your personal AI Negotiator Agent reduces back-and-forth and keeps buyers serious." />
+            <Feature title="Smarter negotiations" desc="Your personal AI Negotiator Agent connects to Facebook Messenger and automatically responds to buyer inquiries, reducing back-and-forth and keeping buyers serious." />
             <Feature title="Safer closings" desc="Built-in escrow for cars now, homes next. Future-proof with optional digital certificates coming." />
           </div>
         </div>
