@@ -56,7 +56,8 @@ export class ListingsService {
         updated_at: new Date().toISOString(),
         images: ['/Car in garage.png'],
         platforms: ['facebook'],
-        ai_generated: true
+        titleStatus: 'Clean',
+        postedAt: new Date().toISOString()
       },
       {
         id: 'mock-2',
@@ -75,7 +76,8 @@ export class ListingsService {
         updated_at: new Date().toISOString(),
         images: ['/ModernHome.png'],
         platforms: ['craigslist'],
-        ai_generated: true
+        titleStatus: 'Clean',
+        postedAt: new Date(Date.now() - 86400000).toISOString()
       }
     ];
   }
