@@ -53,6 +53,26 @@ export async function POST(request: NextRequest) {
       } catch (error) {
         console.error('Error saving lead to file:', error);
       }
+
+      // Send email notifications even when using local file storage
+      const signupData = {
+        email,
+        role,
+        source,
+        focus,
+        ip_address: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
+        user_agent: request.headers.get('user-agent') || 'unknown',
+        referrer: request.headers.get('referer') || 'unknown',
+        utm_source: null,
+        utm_medium: null,
+        utm_campaign: null,
+      };
+
+      // Send admin notification email
+      await sendBetaSignupNotification(signupData);
+      
+      // Send welcome email to user
+      await sendWelcomeEmail(signupData);
       
       return NextResponse.json({
         success: true,

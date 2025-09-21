@@ -123,7 +123,7 @@ export default function Home() {
             </Link>
           ) : (
             <Link href="/beta-signup" className="rounded-lg bg-amber-400 px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-amber-300">
-              Get Early Access
+              Join Waitlist
             </Link>
           )}
         </nav>
@@ -143,24 +143,9 @@ export default function Home() {
             </h2>
 
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-              {user ? (
-                <Link href="/dashboard" className="rounded-lg bg-amber-400 px-4 py-2 font-semibold text-slate-900 hover:bg-amber-300">Dashboard</Link>
-              ) : (
-                <>
-                  <button
-                    onClick={() => {
-                      setAuthMode('register');
-                      setIsAuthModalOpen(true);
-                    }}
-                    className="rounded-lg bg-amber-400 px-4 py-2 font-semibold text-slate-900 hover:bg-amber-300"
-                  >
-                    Get Started Free
-                  </button>
-                  <Link href="/how-it-works" className="rounded-lg border border-white/20 px-4 py-2 font-semibold text-white/90 hover:bg-white/5">
-                    Learn How It Works
-                  </Link>
-                </>
-              )}
+              <Link href="/how-it-works" className="rounded-lg border border-white/20 px-4 py-2 font-semibold text-white/90 hover:bg-white/5">
+                Learn How It Works
+              </Link>
               <Link href="/demo" className="rounded-lg border border-white/20 px-4 py-2 font-semibold text-white/90 hover:bg-white/5">Book Live Demo</Link>
             </div>
 
@@ -168,16 +153,75 @@ export default function Home() {
             <div className="mt-8 p-6 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20">
               <h3 className="text-lg font-semibold text-white mb-2">🚀 Stay ahead. Get early access to Accorria.</h3>
               <p className="text-white/80 text-sm mb-4">Be the first to know about new features, pricing updates, and exclusive offers.</p>
-              <div className="flex flex-col sm:flex-row gap-3">
+              <form 
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  const formData = new FormData(e.currentTarget);
+                  const email = formData.get('email') as string;
+                  
+                  if (!email) return;
+                  
+                  try {
+                    const response = await fetch('/api/beta-signup', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        email,
+                        role: 'individual',
+                        source: 'homepage',
+                        focus: 'general'
+                      })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                      // Redirect to the beautiful success page
+                      window.location.href = '/beta-signup?success=true';
+                    } else if (result.error && result.error.includes('duplicate')) {
+                      // Redirect to success page for duplicates too
+                      window.location.href = '/beta-signup?success=true&duplicate=true';
+                    } else {
+                      // Show error message
+                      const errorDiv = document.createElement('div');
+                      errorDiv.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+                      errorDiv.textContent = 'Something went wrong. Please try again.';
+                      document.body.appendChild(errorDiv);
+                      
+                      setTimeout(() => {
+                        document.body.removeChild(errorDiv);
+                      }, 5000);
+                    }
+                  } catch (error) {
+                    console.error('Signup error:', error);
+                    
+                    // Show error message
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+                    errorDiv.textContent = 'Something went wrong. Please try again.';
+                    document.body.appendChild(errorDiv);
+                    
+                    setTimeout(() => {
+                      document.body.removeChild(errorDiv);
+                    }, 5000);
+                  }
+                }}
+                className="flex flex-col sm:flex-row gap-3"
+              >
                 <input 
+                  name="email"
                   type="email" 
                   placeholder="Enter your email" 
+                  required
                   className="flex-1 px-4 py-3 rounded-lg bg-white/20 border border-white/30 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-amber-400 text-base"
                 />
-                <button className="px-6 py-3 bg-amber-500 text-white rounded-lg font-semibold hover:bg-amber-600 transition-colors text-base">
+                <button 
+                  type="submit"
+                  className="px-6 py-3 bg-amber-500 text-white rounded-lg font-semibold hover:bg-amber-600 transition-colors text-base"
+                >
                   Subscribe
                 </button>
-              </div>
+              </form>
             </div>
 
           </div>
@@ -496,28 +540,18 @@ export default function Home() {
 
                       <footer className="bg-slate-900 py-10 text-center text-sm text-slate-200">
           <div className="max-w-7xl mx-auto px-4">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-              <div>
-                <h3 className="font-semibold text-white mb-4">Product</h3>
-                <ul className="space-y-2">
-                  <li><Link href="/how-it-works" className="hover:text-amber-300">How it Works</Link></li>
-                  <li><Link href="/demo" className="hover:text-amber-300">Demo</Link></li>
-                </ul>
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
               <div>
                 <h3 className="font-semibold text-white mb-4">Company</h3>
                 <ul className="space-y-2">
                   <li><Link href="/about" className="hover:text-amber-300">About</Link></li>
                   <li><Link href="/contact" className="hover:text-amber-300">Contact</Link></li>
-                  <li><Link href="/careers" className="hover:text-amber-300">Careers</Link></li>
                 </ul>
               </div>
               <div>
                 <h3 className="font-semibold text-white mb-4">Support</h3>
                 <ul className="space-y-2">
-                  <li><Link href="/help" className="hover:text-amber-300">Help Center</Link></li>
                   <li><Link href="/qa" className="hover:text-amber-300">FAQ</Link></li>
-                  <li><Link href="/status" className="hover:text-amber-300">Status</Link></li>
                 </ul>
               </div>
               <div>
@@ -530,7 +564,7 @@ export default function Home() {
               </div>
             </div>
             <div className="border-t border-slate-700 pt-8">
-              <p>© {new Date().getFullYear()} Accorria. All rights reserved. | <a href="https://acoria.com" className="hover:text-amber-300">acoria.com</a></p>
+              <p>© {new Date().getFullYear()} Accorria. All rights reserved. | <a href="https://accorria.com" className="hover:text-amber-300">accorria.com</a></p>
             </div>
           </div>
         </footer>

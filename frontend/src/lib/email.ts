@@ -19,14 +19,14 @@ export interface BetaSignupData {
 }
 
 export async function sendBetaSignupNotification(signupData: BetaSignupData) {
-  if (!process.env.SENDGRID_API_KEY || !process.env.ADMIN_EMAIL) {
+  if (!process.env.SENDGRID_API_KEY || !process.env.SENDGRID_TO_EMAIL) {
     console.log('SendGrid not configured, skipping email notification');
     return;
   }
 
   const msg = {
-    to: process.env.ADMIN_EMAIL,
-    from: process.env.FROM_EMAIL || 'noreply@accorria.com',
+    to: process.env.SENDGRID_TO_EMAIL,
+    from: process.env.SENDGRID_FROM_EMAIL || 'preston@accorria.com',
     subject: `🎉 New Beta Signup: ${signupData.email}`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -76,7 +76,7 @@ export async function sendWelcomeEmail(signupData: BetaSignupData) {
 
   const msg = {
     to: signupData.email,
-    from: process.env.FROM_EMAIL || 'noreply@accorria.com',
+    from: process.env.SENDGRID_FROM_EMAIL || 'preston@accorria.com',
     subject: 'Welcome to Accorria Beta! 🚀',
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -84,16 +84,21 @@ export async function sendWelcomeEmail(signupData: BetaSignupData) {
         
         <p>Hi there!</p>
         
-        <p>Thanks for signing up for early access to the Accorria platform. We're excited to have you on board!</p>
+        <p>Thanks for signing up for early access to Accorria! I'm Preston, the founder, and I'm excited to have you on board.</p>
+        
+        <p>Accorria is an AI-powered platform that's revolutionizing how people buy and sell cars (and soon homes). We're building something special that will make the entire process faster, smarter, and more transparent.</p>
         
         <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
           <h3 style="color: #374151; margin-top: 0;">What's Next?</h3>
           <ul>
-            <li>We'll notify you as soon as early access is ready</li>
             <li>You'll be among the first to try our AI-powered listing platform</li>
-            <li>We'll send you exclusive updates and tips</li>
+            <li>We'll notify you as soon as early access is ready</li>
+            <li>I'll personally send you exclusive updates and behind-the-scenes insights</li>
+            <li>Your feedback will directly shape the product</li>
           </ul>
         </div>
+
+        <p>We're still gathering feedback and fine-tuning everything, so your input will be incredibly valuable. I'm personally committed to making this the best platform possible.</p>
 
         <p>In the meantime, feel free to follow us on social media for updates:</p>
         <ul>
@@ -101,9 +106,9 @@ export async function sendWelcomeEmail(signupData: BetaSignupData) {
           <li><a href="https://www.linkedin.com/company/accorria">LinkedIn</a></li>
         </ul>
 
-        <p>Thanks again for your interest in Accorria!</p>
+        <p>Thanks again for believing in what we're building!</p>
         
-        <p>Best regards,<br>The Accorria Team</p>
+        <p>Best regards,<br>Preston Eaton<br>Founder, Accorria</p>
       </div>
     `,
   };

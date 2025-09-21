@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import fs from 'fs';
+import path from 'path';
 
 // Initialize Supabase client with service role key
 function getSupabaseClient() {
@@ -61,6 +63,54 @@ export async function POST(request: NextRequest) {
       status: score >= 70 ? 'hot' : score >= 40 ? 'warm' : 'cold'
     };
 
+    // Check if Supabase is configured
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      console.log('Supabase not configured, saving to local file');
+      
+      // Save to local JSON file for now
+      const leadDataWithMeta = {
+        ...leadData,
+        id: `lead_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        ip_address: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
+        user_agent: request.headers.get('user-agent') || 'unknown'
+      };
+      
+      try {
+        const leadsPath = path.join(process.cwd(), '..', 'leads.json');
+        let leads = [];
+        
+        // Read existing leads
+        if (fs.existsSync(leadsPath)) {
+          const data = fs.readFileSync(leadsPath, 'utf8');
+          leads = JSON.parse(data);
+        }
+        
+        // Add new lead
+        leads.push(leadDataWithMeta);
+        
+        // Write back to file
+        fs.writeFileSync(leadsPath, JSON.stringify(leads, null, 2));
+        
+        console.log('Lead saved to local file:', leadDataWithMeta);
+        
+        return NextResponse.json({
+          success: true,
+          leadId: leadDataWithMeta.id,
+          score: leadDataWithMeta.score,
+          status: leadDataWithMeta.status,
+          message: 'Lead captured successfully (saved locally)'
+        });
+      } catch (error) {
+        console.error('Error saving lead to file:', error);
+        return NextResponse.json(
+          { error: 'Failed to save lead locally' },
+          { status: 500 }
+        );
+      }
+    }
+
     // Insert into Supabase
     const supabase = getSupabaseClient();
     const { data, error } = await supabase
@@ -101,7 +151,40 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50');
     const offset = parseInt(searchParams.get('offset') || '0');
 
-    // Get leads with pagination
+    // Check if Supabase is configured
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      console.log('Supabase not configured, reading from local file');
+      
+      try {
+        const leadsPath = path.join(process.cwd(), '..', 'leads.json');
+        let leads = [];
+        
+        // Read existing leads
+        if (fs.existsSync(leadsPath)) {
+          const data = fs.readFileSync(leadsPath, 'utf8');
+          leads = JSON.parse(data);
+        }
+        
+        // Sort by created_at descending and apply pagination
+        leads.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        const paginatedLeads = leads.slice(offset, offset + limit);
+        
+        return NextResponse.json({
+          success: true,
+          leads: paginatedLeads,
+          count: paginatedLeads.length,
+          total: leads.length
+        });
+      } catch (error) {
+        console.error('Error reading leads from file:', error);
+        return NextResponse.json(
+          { error: 'Failed to fetch leads from local storage' },
+          { status: 500 }
+        );
+      }
+    }
+
+    // Get leads with pagination from Supabase
     const supabase = getSupabaseClient();
     const { data, error } = await supabase
       .from('leads')

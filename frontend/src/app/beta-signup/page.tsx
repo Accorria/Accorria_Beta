@@ -22,6 +22,14 @@ export default function BetaSignup() {
       const role = urlParams.get('role');
       const source = urlParams.get('source');
       const focus = urlParams.get('focus');
+      const success = urlParams.get('success');
+      const duplicate = urlParams.get('duplicate');
+      
+      // If redirected from homepage with success, show success page
+      if (success === 'true') {
+        setIsSubmitted(true);
+        return;
+      }
       
       if (email || role || source || focus) {
         setFormData(prev => ({
@@ -59,6 +67,12 @@ export default function BetaSignup() {
       if (response.ok) {
         console.log('Beta signup successful:', result);
         setIsSubmitted(true);
+        
+        // If it's a duplicate signup, redirect with duplicate flag
+        if (result.already_exists) {
+          window.location.href = '/beta-signup?success=true&duplicate=true';
+          return;
+        }
       } else {
         console.error('Beta signup failed:', result);
         alert(result.error || 'Failed to sign up. Please try again.');
@@ -91,7 +105,10 @@ export default function BetaSignup() {
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Welcome to Accorria!</h2>
           <p className="text-gray-600 mb-6">
-            Thanks for joining the beta. You&apos;ll get early access to the Accorria platform as soon as we&apos;re ready.
+            {typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('duplicate') === 'true' 
+              ? "You're already signed up! We'll notify you when early access is ready."
+              : "Thanks for joining the beta. You'll get early access to the Accorria platform as soon as we're ready."
+            }
           </p>
           <div className="space-y-3">
             <p className="text-sm text-gray-500">
