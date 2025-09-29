@@ -72,7 +72,7 @@ export default function QAPage() {
         <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4">
           <div className="flex items-center gap-3">
             <img 
-              src="/AccorriaYwLOGO.png" 
+              src="/LogoinBLUEONEword.png" 
               alt="Accorria" 
               className="h-[175px] w-auto"
             />

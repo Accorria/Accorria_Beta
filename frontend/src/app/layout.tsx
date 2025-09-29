@@ -21,8 +21,13 @@ export const metadata: Metadata = {
   description:
     'The future of selling starts here. Secure listings, instant escrow, and AI-powered posting for cars, homes, and high-value items. Upload photos, we\'ll flip the rest.',
   icons: {
-    icon: '/AccorriaYwLOGO.png',
-    apple: '/AccorriaYwLOGO.png',
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/favicon-192x192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/favicon-512x512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: '/favicon-192x192.png',
+    shortcut: '/favicon.ico',
   },
   openGraph: {
     title: 'Accorria – #1 Trust-Native Listing Platform',
@@ -32,10 +37,10 @@ export const metadata: Metadata = {
     siteName: 'Accorria',
     images: [
       {
-        url: 'https://accorria.com/AccorriaYwLOGO.png',
-        width: 800,
-        height: 600,
-        alt: 'Accorria Logo',
+        url: 'https://accorria.com/LogoinBLUEONEword.png',
+        width: 1200,
+        height: 630,
+        alt: 'Accorria - Trust-Native Listing Platform',
       },
     ],
     locale: 'en_US',
@@ -46,7 +51,7 @@ export const metadata: Metadata = {
     title: 'Accorria – #1 Trust-Native Listing Platform',
     description:
       'The future of selling starts here. Secure listings, instant escrow, and AI-powered posting for cars, homes, and high-value items.',
-    images: ['https://accorria.com/AccorriaYwLOGO.png'],
+    images: ['https://accorria.com/LogoinBLUEONEword.png'],
   },
 };
 
@@ -58,7 +63,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <link rel="icon" href="/AccorriaYwLOGO.png" />
+        <link rel="icon" href="/favicon.ico" />
+        <link rel="apple-touch-icon" href="/favicon-192x192.png" />
+        <link rel="manifest" href="/manifest.json" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -67,7 +74,7 @@ export default function RootLayout({
               '@type': 'Organization',
               name: 'Accorria',
               url: 'https://accorria.com',
-              logo: 'https://accorria.com/AccorriaYwLOGO.png',
+              logo: 'https://accorria.com/LogoinBLUEONEword.png',
               description: 'The future of selling starts here. Secure listings, instant escrow, and AI-powered posting for cars, homes, and high-value items.',
               sameAs: [
                 'https://www.facebook.com/accorria',

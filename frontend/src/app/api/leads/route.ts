@@ -45,6 +45,27 @@ export async function POST(request: NextRequest) {
     if (body.survey_responses?.volume === '10+') score += 15;
     if (body.survey_responses?.challenge) score += 5;
 
+    // Extract qualifications from form data
+    const qualifications = {
+      wants_notifications: body.wants_notifications || body.qualifications?.wants_notifications || false,
+      wants_demo: body.wants_demo || body.qualifications?.wants_demo || false,
+      wants_beta_access: body.wants_beta_access || body.qualifications?.wants_beta_access || false,
+      wants_early_access: body.wants_early_access || body.qualifications?.wants_early_access || false,
+      signup_type: body.signup_type || body.qualifications?.signup_type || body.source,
+      interest_level: body.interest_level || body.qualifications?.interest_level || 'medium',
+      budget_range: body.budget_range || body.qualifications?.budget_range || body.survey_responses?.budget,
+      timeline: body.timeline || body.qualifications?.timeline || body.survey_responses?.timeline,
+      volume: body.volume || body.qualifications?.volume || body.survey_responses?.volume,
+      pain_points: body.pain_points || body.qualifications?.pain_points || (body.survey_responses?.challenge ? [body.survey_responses.challenge] : [])
+    };
+
+    // Boost score based on qualifications
+    if (qualifications.wants_demo) score += 15;
+    if (qualifications.wants_beta_access) score += 20;
+    if (qualifications.wants_early_access) score += 25;
+    if (qualifications.timeline === 'this_week') score += 20;
+    if (qualifications.volume && qualifications.volume.includes('10+')) score += 15;
+
     // Prepare lead data
     const leadData = {
       name: body.name || null,
@@ -60,6 +81,7 @@ export async function POST(request: NextRequest) {
       notes: body.notes || null,
       demo_engagement: body.demo_engagement || null,
       survey_responses: body.survey_responses || null,
+      qualifications: qualifications,
       status: score >= 70 ? 'hot' : score >= 40 ? 'warm' : 'cold'
     };
 

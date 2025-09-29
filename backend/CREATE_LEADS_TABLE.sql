@@ -1,22 +1,19 @@
--- 🎯 Accorria Leads Table - Simple One-Pipe System
--- Foundation for lead tracking and conversion
+-- 🚀 CREATE LEADS TABLE - Missing from Ultimate Beast Schema
+-- This table is needed for the leads API to work
 
--- Enable UUID extension
-create extension if not exists pgcrypto;
-
--- Create leads table
-create table if not exists public.leads (
-  id uuid primary key default gen_random_uuid(),
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
+-- Create the leads table
+CREATE TABLE IF NOT EXISTS public.leads (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
   
   -- Contact Info
   name text,
-  email text not null,
+  email text NOT NULL,
   phone text,
   
   -- Lead Source & Attribution
-  source text not null, -- 'hero_form', 'demo_page', 'qr_flyer', 'pricing_page'
+  source text NOT NULL,
   utm_campaign text,
   utm_source text,
   utm_medium text,
@@ -24,17 +21,17 @@ create table if not exists public.leads (
   utm_term text,
   
   -- Lead Qualification
-  score smallint default 50, -- 0-100 heuristic score
-  status text default 'new', -- 'new', 'contacted', 'booked', 'no_show', 'qualified', 'won', 'lost'
+  score smallint DEFAULT 50,
+  status text DEFAULT 'new',
   
   -- Additional Data
   notes text,
-  demo_engagement jsonb, -- Store demo interaction data
-  survey_responses jsonb, -- Store survey answers
+  demo_engagement jsonb,
+  survey_responses jsonb,
   
   -- Meeting Info
   meeting_booked_at timestamptz,
-  meeting_type text, -- 'discovery', 'demo', 'strategy'
+  meeting_type text,
   meeting_completed_at timestamptz,
   
   -- Conversion Tracking
@@ -43,46 +40,43 @@ create table if not exists public.leads (
   revenue decimal(10,2)
 );
 
--- Indexes for performance
-create index if not exists idx_leads_email on public.leads(email);
-create index if not exists idx_leads_created_at on public.leads(created_at);
-create index if not exists idx_leads_source on public.leads(source);
-create index if not exists idx_leads_status on public.leads(status);
-create index if not exists idx_leads_score on public.leads(score);
+-- Enable RLS
+ALTER TABLE public.leads ENABLE ROW LEVEL SECURITY;
 
--- RLS Policies
-alter table public.leads enable row level security;
+-- Create RLS policies
+DROP POLICY IF EXISTS "Allow public lead capture" ON public.leads;
+DROP POLICY IF EXISTS "Allow service role read access" ON public.leads;
+DROP POLICY IF EXISTS "Allow service role update access" ON public.leads;
+DROP POLICY IF EXISTS "Allow service role insert access" ON public.leads;
 
--- Service role can do everything (for API calls)
-create policy "service can do all"
-on public.leads
-for all
-to service_role
-using (true)
-with check (true);
+CREATE POLICY "Allow public lead capture" ON public.leads FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow service role read access" ON public.leads FOR SELECT USING (true);
+CREATE POLICY "Allow service role update access" ON public.leads FOR UPDATE USING (true);
+CREATE POLICY "Allow service role insert access" ON public.leads FOR INSERT WITH CHECK (true);
 
--- Authenticated users can read their own leads (if needed)
-create policy "users can read own leads"
-on public.leads
-for select
-to authenticated
-using (true);
+-- Grant permissions
+GRANT INSERT ON public.leads TO service_role;
+GRANT SELECT ON public.leads TO service_role;
+GRANT UPDATE ON public.leads TO service_role;
 
--- Update trigger for updated_at
-create or replace function update_updated_at_column()
-returns trigger as $$
-begin
-    new.updated_at = now();
-    return new;
-end;
-$$ language plpgsql;
+-- Create indexes for performance
+CREATE INDEX IF NOT EXISTS idx_leads_email ON public.leads(email);
+CREATE INDEX IF NOT EXISTS idx_leads_created_at ON public.leads(created_at);
+CREATE INDEX IF NOT EXISTS idx_leads_source ON public.leads(source);
+CREATE INDEX IF NOT EXISTS idx_leads_status ON public.leads(status);
+CREATE INDEX IF NOT EXISTS idx_leads_score ON public.leads(score);
 
-create trigger update_leads_updated_at
-    before update on public.leads
-    for each row
-    execute function update_updated_at_column();
+-- Create trigger for updated_at
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ language 'plpgsql' SECURITY DEFINER SET search_path = public;
 
--- Sample data for testing (remove in production)
-insert into public.leads (name, email, source, score, status) values
-('Test User', 'test@example.com', 'demo_page', 75, 'new'),
-('Demo Lead', 'demo@accorria.com', 'hero_form', 60, 'contacted');
+CREATE TRIGGER update_leads_updated_at BEFORE UPDATE ON public.leads
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Success message
+SELECT '✅ Leads table created successfully with RLS policies!' as status;

@@ -93,7 +93,7 @@ export default function Home() {
         <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4">
           <div className="flex items-center gap-3">
             <Image 
-              src="/AccorriaYwLOGO.png" 
+              src="/LogoinBLUEONEword.png" 
               alt="Accorria" 
               width={120}
               height={120}

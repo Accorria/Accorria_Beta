@@ -138,12 +138,11 @@ export default function BetaSignupsAdmin() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Beta Signups Admin</h1>
-          <p className="mt-2 text-gray-600">Manage and track early access signups</p>
-        </div>
+    <div>
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900">Beta Signups Admin</h1>
+        <p className="mt-2 text-gray-600">Manage and track early access signups</p>
+      </div>
 
         {/* Stats Cards */}
         {stats && (
@@ -297,7 +296,6 @@ export default function BetaSignupsAdmin() {
             <p className="text-gray-500">No signups yet</p>
           </div>
         )}
-      </div>
     </div>
   );
 }
