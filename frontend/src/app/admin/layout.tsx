@@ -100,14 +100,14 @@ export default function AdminLayout({
     <div className="min-h-screen bg-gray-50">
       <CRMSidebar isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
       
-      <div className="lg:pl-64">
+      <div className={`transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-0'}`}>
         <CRMHeader 
           onMenuToggle={() => setSidebarOpen(!sidebarOpen)}
           title="Accorria CRM"
           subtitle="Lead Management & Analytics"
         />
         
-        <main className="p-6">
+        <main className="p-6 pt-4">
           {/* Breadcrumb Navigation */}
           <nav className="mb-6">
             <ol className="flex items-center space-x-2 text-sm text-gray-500">
