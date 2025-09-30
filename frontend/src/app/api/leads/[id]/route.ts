@@ -3,10 +3,10 @@ import { getSupabaseClient } from '@/lib/supabase';
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const leadId = params.id;
+    const { id: leadId } = await params;
     
     console.log('🗑️ Deleting lead:', leadId);
     
@@ -65,10 +65,10 @@ export async function DELETE(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const leadId = params.id;
+    const { id: leadId } = await params;
     const updates = await request.json();
     
     console.log('📝 Updating lead:', leadId, updates);
