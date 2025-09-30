@@ -101,7 +101,7 @@ export default function EmailCampaignsPage() {
   }
 
   return (
-    <div>
+    <div className="min-h-screen bg-gray-50">
       <div className="mb-8 flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Email Campaigns</h2>

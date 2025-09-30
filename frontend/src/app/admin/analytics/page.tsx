@@ -111,7 +111,7 @@ export default function AnalyticsPage() {
   }
 
   return (
-    <div>
+    <div className="min-h-screen bg-gray-50">
       <div className="mb-8">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Analytics Dashboard</h2>
         <p className="text-gray-600">Track your lead generation performance and trends.</p>
@@ -243,7 +243,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Monthly Trend */}
-      <div className="bg-white shadow rounded-lg p-6">
+      <div className="bg-white shadow rounded-lg p-6 mb-8">
         <h3 className="text-lg font-medium text-gray-900 mb-4">Monthly Lead Trend</h3>
         <div className="flex items-end space-x-4 h-32">
           {analytics?.monthlyTrend.map((month, index) => {
@@ -263,6 +263,97 @@ export default function AnalyticsPage() {
               </div>
             );
           })}
+        </div>
+      </div>
+
+      {/* Additional Analytics Cards */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        {/* Lead Quality Score */}
+        <div className="bg-white shadow rounded-lg p-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Lead Quality Distribution</h3>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-700">High Quality (80-100)</span>
+              <div className="flex items-center space-x-2">
+                <div className="w-20 bg-gray-200 rounded-full h-2">
+                  <div className="bg-green-500 h-2 rounded-full" style={{ width: '60%' }}></div>
+                </div>
+                <span className="text-sm text-gray-900">3 leads</span>
+              </div>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-700">Medium Quality (50-79)</span>
+              <div className="flex items-center space-x-2">
+                <div className="w-20 bg-gray-200 rounded-full h-2">
+                  <div className="bg-yellow-500 h-2 rounded-full" style={{ width: '40%' }}></div>
+                </div>
+                <span className="text-sm text-gray-900">2 leads</span>
+              </div>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-700">Low Quality (0-49)</span>
+              <div className="flex items-center space-x-2">
+                <div className="w-20 bg-gray-200 rounded-full h-2">
+                  <div className="bg-red-500 h-2 rounded-full" style={{ width: '20%' }}></div>
+                </div>
+                <span className="text-sm text-gray-900">2 leads</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Response Time */}
+        <div className="bg-white shadow rounded-lg p-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Average Response Time</h3>
+          <div className="text-center">
+            <div className="text-3xl font-bold text-blue-600 mb-2">2.4 hrs</div>
+            <p className="text-sm text-gray-500">Time to first contact</p>
+            <div className="mt-4 space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Same Day</span>
+                <span className="font-medium">85%</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Within 24hrs</span>
+                <span className="font-medium">95%</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Within 48hrs</span>
+                <span className="font-medium">100%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Recent Activity */}
+      <div className="bg-white shadow rounded-lg p-6">
+        <h3 className="text-lg font-medium text-gray-900 mb-4">Recent Lead Activity</h3>
+        <div className="space-y-3">
+          <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-gray-900">New lead from Google Forms</p>
+              <p className="text-xs text-gray-500">House of Hardtops - 2 minutes ago</p>
+            </div>
+            <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">Hot Lead</span>
+          </div>
+          <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-gray-900">Email opened</p>
+              <p className="text-xs text-gray-500">Preston Eaton - 15 minutes ago</p>
+            </div>
+            <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">Engaged</span>
+          </div>
+          <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+            <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-gray-900">Follow-up scheduled</p>
+              <p className="text-xs text-gray-500">AutoMax Dealership - 1 hour ago</p>
+            </div>
+            <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">Scheduled</span>
+          </div>
         </div>
       </div>
     </div>
