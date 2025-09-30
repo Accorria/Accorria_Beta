@@ -42,6 +42,12 @@ export default function LeadsAdmin() {
   const [loading, setLoading] = useState(true);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [selectedLeads, setSelectedLeads] = useState<string[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [sourceFilter, setSourceFilter] = useState('all');
   const [stats, setStats] = useState({
     total: 0,
     thisWeek: 0,
@@ -58,6 +64,101 @@ export default function LeadsAdmin() {
   useEffect(() => {
     fetchLeads();
   }, []);
+
+  // Lead management functions
+  const deleteLead = async (leadId: string) => {
+    try {
+      const response = await fetch(`/api/leads/${leadId}`, {
+        method: 'DELETE',
+      });
+      
+      if (response.ok) {
+        setLeads(leads.filter(lead => lead.id !== leadId));
+        setShowDeleteModal(false);
+        setSelectedLead(null);
+        fetchLeads(); // Refresh stats
+      }
+    } catch (error) {
+      console.error('Error deleting lead:', error);
+    }
+  };
+
+  const updateLeadStatus = async (leadId: string, newStatus: string) => {
+    try {
+      const response = await fetch(`/api/leads/${leadId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      
+      if (response.ok) {
+        setLeads(leads.map(lead => 
+          lead.id === leadId ? { ...lead, status: newStatus } : lead
+        ));
+      }
+    } catch (error) {
+      console.error('Error updating lead status:', error);
+    }
+  };
+
+  const exportLeadsToCSV = () => {
+    const csvContent = [
+      ['Name', 'Email', 'Phone', 'Source', 'Status', 'Score', 'Created At', 'Dealership', 'Volume', 'Budget'].join(','),
+      ...filteredLeads.map(lead => [
+        lead.name || '',
+        lead.email,
+        lead.phone || '',
+        lead.source,
+        lead.status,
+        lead.score,
+        new Date(lead.created_at).toLocaleDateString(),
+        lead.survey_responses?.dealership_name || '',
+        lead.survey_responses?.monthly_volume || '',
+        lead.survey_responses?.willingness_to_pay || ''
+      ].map(field => `"${field}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `leads-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const toggleLeadSelection = (leadId: string) => {
+    setSelectedLeads(prev => 
+      prev.includes(leadId) 
+        ? prev.filter(id => id !== leadId)
+        : [...prev, leadId]
+    );
+  };
+
+  const selectAllLeads = () => {
+    setSelectedLeads(filteredLeads.map(lead => lead.id));
+  };
+
+  const clearSelection = () => {
+    setSelectedLeads([]);
+  };
+
+  const bulkDeleteLeads = async () => {
+    try {
+      const promises = selectedLeads.map(leadId => 
+        fetch(`/api/leads/${leadId}`, { method: 'DELETE' })
+      );
+      
+      await Promise.all(promises);
+      setLeads(leads.filter(lead => !selectedLeads.includes(lead.id)));
+      setSelectedLeads([]);
+      fetchLeads(); // Refresh stats
+    } catch (error) {
+      console.error('Error bulk deleting leads:', error);
+    }
+  };
 
   const fetchLeads = async () => {
     try {
@@ -143,6 +244,19 @@ export default function LeadsAdmin() {
       setLoading(false);
     }
   };
+
+  // Filter leads based on search and filters
+  const filteredLeads = leads.filter(lead => {
+    const matchesSearch = searchTerm === '' || 
+      lead.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      lead.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      lead.survey_responses?.dealership_name?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesStatus = statusFilter === 'all' || lead.status === statusFilter;
+    const matchesSource = sourceFilter === 'all' || lead.source === sourceFilter;
+    
+    return matchesSearch && matchesStatus && matchesSource;
+  });
 
   if (loading) {
     return (
@@ -279,6 +393,84 @@ export default function LeadsAdmin() {
         </div>
       </div>
 
+      {/* Filters and Actions */}
+      <div className="bg-white shadow rounded-lg p-6 mb-8">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
+          {/* Search and Filters */}
+          <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+              <input
+                type="text"
+                placeholder="Search leads..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="block w-64 pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+              />
+            </div>
+            
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="block w-32 px-3 py-2 border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+            >
+              <option value="all">All Status</option>
+              <option value="hot">Hot</option>
+              <option value="warm">Warm</option>
+              <option value="cold">Cold</option>
+            </select>
+            
+            <select
+              value={sourceFilter}
+              onChange={(e) => setSourceFilter(e.target.value)}
+              className="block w-40 px-3 py-2 border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+            >
+              <option value="all">All Sources</option>
+              <option value="google_forms">Google Forms</option>
+              <option value="chatbot">Chatbot</option>
+              <option value="website">Website</option>
+            </select>
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center space-x-3">
+            {selectedLeads.length > 0 && (
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-600">
+                  {selectedLeads.length} selected
+                </span>
+                <button
+                  onClick={bulkDeleteLeads}
+                  className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                >
+                  Delete Selected
+                </button>
+                <button
+                  onClick={clearSelection}
+                  className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  Clear
+                </button>
+              </div>
+            )}
+            
+            <button
+              onClick={exportLeadsToCSV}
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Export CSV
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Leads Table */}
       <div className="bg-white shadow overflow-hidden sm:rounded-md">
         <div className="px-4 py-5 sm:px-6">
@@ -288,7 +480,7 @@ export default function LeadsAdmin() {
           </p>
         </div>
         
-        {leads.length === 0 ? (
+        {filteredLeads.length === 0 ? (
           <div className="text-center py-12">
             <div className="text-gray-400 text-6xl mb-4">📊</div>
             <h3 className="text-lg font-medium text-gray-900 mb-2">No leads yet</h3>
@@ -304,6 +496,14 @@ export default function LeadsAdmin() {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <input
+                      type="checkbox"
+                      checked={selectedLeads.length === filteredLeads.length && filteredLeads.length > 0}
+                      onChange={selectedLeads.length === filteredLeads.length ? clearSelection : selectAllLeads}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                  </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Source</th>
@@ -315,8 +515,16 @@ export default function LeadsAdmin() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {leads.map((lead) => (
+                {filteredLeads.map((lead) => (
                   <tr key={lead.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <input
+                        type="checkbox"
+                        checked={selectedLeads.includes(lead.id)}
+                        onChange={() => toggleLeadSelection(lead.id)}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       {lead.name || 'N/A'}
                     </td>
@@ -428,15 +636,35 @@ export default function LeadsAdmin() {
                       {new Date(lead.created_at).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <button
-                        onClick={() => {
-                          setSelectedLead(lead);
-                          setShowDetailModal(true);
-                        }}
-                        className="text-blue-600 hover:text-blue-900 font-medium"
-                      >
-                        View Details
-                      </button>
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => {
+                            setSelectedLead(lead);
+                            setShowDetailModal(true);
+                          }}
+                          className="text-blue-600 hover:text-blue-900 font-medium"
+                        >
+                          View
+                        </button>
+                        <select
+                          value={lead.status}
+                          onChange={(e) => updateLeadStatus(lead.id, e.target.value)}
+                          className="text-xs border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        >
+                          <option value="cold">Cold</option>
+                          <option value="warm">Warm</option>
+                          <option value="hot">Hot</option>
+                        </select>
+                        <button
+                          onClick={() => {
+                            setSelectedLead(lead);
+                            setShowDeleteModal(true);
+                          }}
+                          className="text-red-600 hover:text-red-900 font-medium"
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -619,6 +847,45 @@ export default function LeadsAdmin() {
                     </div>
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && selectedLead && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div className="mt-3 text-center">
+              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
+                <svg className="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mt-4">Delete Lead</h3>
+              <div className="mt-2 px-7 py-3">
+                <p className="text-sm text-gray-500">
+                  Are you sure you want to delete <strong>{selectedLead.name || selectedLead.email}</strong>? 
+                  This action cannot be undone.
+                </p>
+              </div>
+              <div className="items-center px-4 py-3">
+                <button
+                  onClick={() => deleteLead(selectedLead.id)}
+                  className="px-4 py-2 bg-red-600 text-white text-base font-medium rounded-md w-24 mr-2 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-300"
+                >
+                  Delete
+                </button>
+                <button
+                  onClick={() => {
+                    setShowDeleteModal(false);
+                    setSelectedLead(null);
+                  }}
+                  className="px-4 py-2 bg-gray-300 text-gray-800 text-base font-medium rounded-md w-24 hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-300"
+                >
+                  Cancel
+                </button>
               </div>
             </div>
           </div>

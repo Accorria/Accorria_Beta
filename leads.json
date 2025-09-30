@@ -169,5 +169,53 @@
     "updated_at": "2025-09-28T04:39:33.329Z",
     "ip_address": "::ffff:127.0.0.1",
     "user_agent": "curl/8.1.2"
+  },
+  {
+    "name": "Test Dealer",
+    "email": "testdealer@example.com",
+    "phone": "555-123-4567",
+    "source": "google_forms",
+    "utm_campaign": null,
+    "utm_source": null,
+    "utm_medium": null,
+    "utm_content": null,
+    "utm_term": null,
+    "score": 100,
+    "notes": null,
+    "demo_engagement": null,
+    "survey_responses": {
+      "dealership_name": "Test Auto Group",
+      "role": "General Manager",
+      "city": "Austin, TX",
+      "monthly_volume": "50+",
+      "platforms_used": [
+        "Facebook Marketplace",
+        "Craigslist",
+        "AutoTrader"
+      ],
+      "biggest_pain_point": "Posting across multiple platforms takes too long",
+      "willingness_to_pay": "$1,000+",
+      "interest_confirmed": "Yes — I want to reserve early access to Accorria and receive updates about pricing, launch, and next steps."
+    },
+    "qualifications": {
+      "wants_notifications": true,
+      "wants_demo": true,
+      "wants_beta_access": true,
+      "wants_early_access": true,
+      "signup_type": "google_forms",
+      "interest_level": "medium",
+      "budget_range": "$1,000+",
+      "timeline": "asap",
+      "volume": "50+",
+      "pain_points": [
+        "Posting across multiple platforms takes too long"
+      ]
+    },
+    "status": "hot",
+    "id": "lead_1759120832768_tpyvemu61",
+    "created_at": "2025-09-29T04:40:32.768Z",
+    "updated_at": "2025-09-29T04:40:32.768Z",
+    "ip_address": "::ffff:127.0.0.1",
+    "user_agent": "curl/8.1.2"
   }
 ]

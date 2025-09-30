@@ -7,6 +7,13 @@
 const CRM_API_URL = 'https://accorria.com/api/leads'; // Your live Vercel deployment
 const LOCAL_CRM_URL = 'http://localhost:3002/api/leads'; // For local testing (not used by Google Apps Script)
 
+// SendGrid Configuration
+const SENDGRID_API_KEY = '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';
+const SENDGRID_FROM_EMAIL = 'noreply@accorria.com';
+const SENDGRID_TEMPLATE_ID = 'd-REPLACE_WITH_YOUR_TEMPLATE_ID'; // You'll need to create this template
+const FORM_LINK = 'https://forms.gle/YOUR_FORM_ID'; // Replace with your actual form link
+const CRM_WEBHOOK_URL = 'https://accorria.com/api/email-events'; // For tracking email engagement
+
 // Function that runs when form is submitted
 function onFormSubmit(e) {
   try {
@@ -89,6 +96,9 @@ function processFormResponse(response) {
     
     // Send to CRM API
     sendToCRM(leadData);
+    
+    // Send confirmation email to dealer
+    sendDealerConfirmationEmail(leadData);
     
     console.log('Lead data processed successfully:', leadData);
     
@@ -289,6 +299,59 @@ function sendErrorNotification(error, formData) {
   );
 }
 
+// Send confirmation email to dealer using SendGrid
+function sendDealerConfirmationEmail(leadData) {
+  try {
+    console.log('Sending confirmation email to dealer:', leadData.email);
+    
+    const emailData = {
+      personalizations: [{
+        to: [{ email: leadData.email }],
+        dynamic_template_data: {
+          dealer_name: leadData.survey_responses.dealership_name || leadData.name,
+          form_link: FORM_LINK,
+          website_url: 'https://accorria.com',
+          pain_point: leadData.survey_responses.biggest_pain_point,
+          volume: leadData.survey_responses.monthly_volume,
+          budget: leadData.survey_responses.willingness_to_pay
+        }
+      }],
+      from: { 
+        email: SENDGRID_FROM_EMAIL, 
+        name: 'Preston at Accorria' 
+      },
+      template_id: SENDGRID_TEMPLATE_ID,
+      categories: ['accorria', 'dealer-confirmation'],
+      custom_args: {
+        source: 'google_form',
+        lead_id: leadData.id || 'unknown',
+        score: leadData.score,
+        dealership: leadData.survey_responses.dealership_name || 'Unknown',
+        email: leadData.email
+      }
+    };
+    
+    const response = UrlFetchApp.fetch('https://api.sendgrid.com/v3/mail/send', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + SENDGRID_API_KEY,
+        'Content-Type': 'application/json'
+      },
+      payload: JSON.stringify(emailData)
+    });
+    
+    if (response.getResponseCode() === 202) {
+      console.log('Confirmation email sent successfully to:', leadData.email);
+    } else {
+      console.error('Failed to send confirmation email:', response.getContentText());
+    }
+    
+  } catch (error) {
+    console.error('Error sending confirmation email:', error);
+    // Don't throw error - we don't want email failures to break the lead capture
+  }
+}
+
 // Test function to manually trigger the script
 function testIntegration() {
   // Create a mock form submission event
@@ -338,4 +401,22 @@ function testIntegration() {
   };
   
   onFormSubmit(mockEvent);
+}
+
+// Test function specifically for SendGrid email
+function testSendGridEmail() {
+  const testLeadData = {
+    email: 'preston@accorria.com', // Send to yourself for testing
+    name: 'Test Dealer',
+    score: 85,
+    survey_responses: {
+      dealership_name: 'House of Hardtops',
+      biggest_pain_point: 'Posting across multiple platforms takes too long',
+      monthly_volume: '50+',
+      willingness_to_pay: '$1,000+'
+    }
+  };
+  
+  console.log('Testing SendGrid email...');
+  sendDealerConfirmationEmail(testLeadData);
 }
