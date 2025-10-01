@@ -66,23 +66,12 @@ export async function POST(request: NextRequest) {
     if (qualifications.timeline === 'this_week') score += 20;
     if (qualifications.volume && qualifications.volume.includes('10+')) score += 15;
 
-    // Prepare lead data
+    // Prepare lead data - minimal fields only
     const leadData = {
       name: body.name || null,
       email: body.email,
       phone: body.phone || null,
-      source: body.source || 'web_form',
-      utm_campaign: body.utm?.campaign || null,
-      utm_source: body.utm?.source || null,
-      utm_medium: body.utm?.medium || null,
-      utm_content: body.utm?.content || null,
-      utm_term: body.utm?.term || null,
-      score: Math.min(100, Math.max(0, score)), // Clamp between 0-100
-      notes: body.notes || null,
-      demo_engagement: body.demo_engagement || null,
-      survey_responses: body.survey_responses || null,
-      qualifications: qualifications,
-      status: score >= 70 ? 'hot' : score >= 40 ? 'warm' : 'cold'
+      source: body.source || 'web_form'
     };
 
     // Check if Supabase is configured
