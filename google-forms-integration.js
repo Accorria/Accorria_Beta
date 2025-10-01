@@ -11,7 +11,7 @@ const LOCAL_CRM_URL = 'http://localhost:3002/api/leads'; // For local testing (n
 const SENDGRID_API_KEY = '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';
 const SENDGRID_FROM_EMAIL = 'noreply@accorria.com';
 const SENDGRID_TEMPLATE_ID = 'd-REPLACE_WITH_YOUR_TEMPLATE_ID'; // You'll need to create this template
-const FORM_LINK = 'https://forms.gle/YOUR_FORM_ID'; // Replace with your actual form link
+const FORM_LINK = 'https://docs.google.com/forms/u/0/d/e/1FAIpQLScpxtl9bTsI5LmU0pNq79KdpVS_nsTd9Ka-fRaxRzVQDUibHQ/formResponse'; // Your actual form link
 const CRM_WEBHOOK_URL = 'https://accorria.com/api/email-events'; // For tracking email engagement
 
 // Function that runs when form is submitted
