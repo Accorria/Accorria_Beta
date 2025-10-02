@@ -840,10 +840,10 @@ export default function LeadsAdmin() {
                   <h4 className="font-semibold text-gray-900 mb-3">⏰ Timestamps</h4>
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                      <span className="font-medium text-gray-700">Created:</span> {new Date(selectedLead.created_at).toLocaleString()}
+                      <span className="font-medium text-gray-700">Created:</span> <span className="text-gray-900 font-medium">{new Date(selectedLead.created_at).toLocaleString()}</span>
                     </div>
                     <div>
-                      <span className="font-medium text-gray-700">Updated:</span> {new Date(selectedLead.updated_at).toLocaleString()}
+                      <span className="font-medium text-gray-700">Updated:</span> <span className="text-gray-900 font-medium">{new Date(selectedLead.updated_at).toLocaleString()}</span>
                     </div>
                   </div>
                 </div>
