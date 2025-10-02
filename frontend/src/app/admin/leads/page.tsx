@@ -698,19 +698,19 @@ export default function LeadsAdmin() {
                   <h4 className="font-semibold text-gray-900 mb-3">Basic Information</h4>
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                      <span className="font-medium text-gray-700">Name:</span> {selectedLead.name || 'N/A'}
+                      <span className="font-medium text-gray-700">Name:</span> <span className="text-gray-900 font-medium">{selectedLead.name || 'N/A'}</span>
                     </div>
                     <div>
-                      <span className="font-medium text-gray-700">Email:</span> {selectedLead.email}
+                      <span className="font-medium text-gray-700">Email:</span> <span className="text-gray-900 font-medium">{selectedLead.email}</span>
                     </div>
                     <div>
-                      <span className="font-medium text-gray-700">Phone:</span> {selectedLead.phone || 'N/A'}
+                      <span className="font-medium text-gray-700">Phone:</span> <span className="text-gray-900 font-medium">{selectedLead.phone || 'N/A'}</span>
                     </div>
                     <div>
-                      <span className="font-medium text-gray-700">Source:</span> {selectedLead.source}
+                      <span className="font-medium text-gray-700">Source:</span> <span className="text-gray-900 font-medium">{selectedLead.source}</span>
                     </div>
                     <div>
-                      <span className="font-medium text-gray-700">Score:</span> {selectedLead.score}/100
+                      <span className="font-medium text-gray-700">Score:</span> <span className="text-gray-900 font-medium">{selectedLead.score}/100</span>
                     </div>
                     <div>
                       <span className="font-medium text-gray-700">Status:</span> 
@@ -732,42 +732,42 @@ export default function LeadsAdmin() {
                     <div className="space-y-3 text-sm">
                       {selectedLead.survey_responses.dealership_name && (
                         <div>
-                          <span className="font-medium text-gray-700">Dealership Name:</span> {selectedLead.survey_responses.dealership_name}
+                          <span className="font-medium text-gray-700">Dealership Name:</span> <span className="text-gray-900 font-medium">{selectedLead.survey_responses.dealership_name}</span>
                         </div>
                       )}
                       {selectedLead.survey_responses.role && (
                         <div>
-                          <span className="font-medium text-gray-700">Role:</span> {selectedLead.survey_responses.role}
+                          <span className="font-medium text-gray-700">Role:</span> <span className="text-gray-900 font-medium">{selectedLead.survey_responses.role}</span>
                         </div>
                       )}
                       {selectedLead.survey_responses.city && (
                         <div>
-                          <span className="font-medium text-gray-700">City:</span> {selectedLead.survey_responses.city}
+                          <span className="font-medium text-gray-700">City:</span> <span className="text-gray-900 font-medium">{selectedLead.survey_responses.city}</span>
                         </div>
                       )}
                       {selectedLead.survey_responses.monthly_volume && (
                         <div>
-                          <span className="font-medium text-gray-700">Monthly Volume:</span> {selectedLead.survey_responses.monthly_volume}
+                          <span className="font-medium text-gray-700">Monthly Volume:</span> <span className="text-gray-900 font-medium">{selectedLead.survey_responses.monthly_volume}</span>
                         </div>
                       )}
                       {selectedLead.survey_responses.platforms_used && (
                         <div>
-                          <span className="font-medium text-gray-700">Platforms Used:</span> {Array.isArray(selectedLead.survey_responses.platforms_used) ? selectedLead.survey_responses.platforms_used.join(', ') : selectedLead.survey_responses.platforms_used}
+                          <span className="font-medium text-gray-700">Platforms Used:</span> <span className="text-gray-900 font-medium">{Array.isArray(selectedLead.survey_responses.platforms_used) ? selectedLead.survey_responses.platforms_used.join(', ') : selectedLead.survey_responses.platforms_used}</span>
                         </div>
                       )}
                       {selectedLead.survey_responses.biggest_pain_point && (
                         <div>
-                          <span className="font-medium text-gray-700">Biggest Pain Point:</span> {selectedLead.survey_responses.biggest_pain_point}
+                          <span className="font-medium text-gray-700">Biggest Pain Point:</span> <span className="text-gray-900 font-medium">{selectedLead.survey_responses.biggest_pain_point}</span>
                         </div>
                       )}
                       {selectedLead.survey_responses.willingness_to_pay && (
                         <div>
-                          <span className="font-medium text-gray-700">Willingness to Pay:</span> {selectedLead.survey_responses.willingness_to_pay}
+                          <span className="font-medium text-gray-700">Willingness to Pay:</span> <span className="text-gray-900 font-medium">{selectedLead.survey_responses.willingness_to_pay}</span>
                         </div>
                       )}
                       {selectedLead.survey_responses.interest_confirmed && (
                         <div>
-                          <span className="font-medium text-gray-700">Interest Confirmed:</span> {selectedLead.survey_responses.interest_confirmed}
+                          <span className="font-medium text-gray-700">Interest Confirmed:</span> <span className="text-gray-900 font-medium">{selectedLead.survey_responses.interest_confirmed}</span>
                         </div>
                       )}
                     </div>
@@ -831,7 +831,7 @@ export default function LeadsAdmin() {
                 {selectedLead.notes && (
                   <div className="bg-yellow-50 p-4 rounded-lg">
                     <h4 className="font-semibold text-gray-900 mb-3">📝 Notes</h4>
-                    <p className="text-sm text-gray-700">{selectedLead.notes}</p>
+                    <p className="text-sm text-gray-900 font-medium">{selectedLead.notes}</p>
                   </div>
                 )}
 
