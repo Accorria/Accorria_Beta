@@ -11,7 +11,8 @@ const LOCAL_CRM_URL = 'http://localhost:3002/api/leads'; // For local testing (n
 const SENDGRID_API_KEY = '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';
 const SENDGRID_FROM_EMAIL = 'noreply@accorria.com';
 const SENDGRID_TEMPLATE_ID = 'd-REPLACE_WITH_YOUR_TEMPLATE_ID'; // You'll need to create this template
-const FORM_LINK = 'https://docs.google.com/forms/u/0/d/e/1FAIpQLScpxtl9bTsI5LmU0pNq79KdpVS_nsTd9Ka-fRaxRzVQDUibHQ/formResponse'; // Your actual form link
+const SENDGRID_FOLLOWUP_TEMPLATE_ID = 'd-b371da7e588146fcb2d62d08aa28faed'; // Dealer Follow-Up Email template
+const FORM_LINK = 'https://forms.gle/6FHda3Y5q8y4vs5D6'; // Accorria Dealer Early Access form
 const CRM_WEBHOOK_URL = 'https://accorria.com/api/email-events'; // For tracking email engagement
 
 // Function that runs when form is submitted
@@ -403,6 +404,102 @@ function testIntegration() {
   onFormSubmit(mockEvent);
 }
 
+// Send follow-up email after phone call using SendGrid
+function sendDealerFollowUpEmail(leadData) {
+  try {
+    console.log('Sending follow-up email to dealer after phone call:', leadData.email);
+    
+    const emailData = {
+      personalizations: [{
+        to: [{ email: leadData.email }],
+        dynamic_template_data: {
+          dealer_name: leadData.survey_responses.dealership_name || leadData.name,
+          form_link: FORM_LINK,
+          website_url: 'https://accorria.com',
+          pain_point: leadData.survey_responses.biggest_pain_point,
+          volume: leadData.survey_responses.monthly_volume,
+          budget: leadData.survey_responses.willingness_to_pay
+        }
+      }],
+      from: { 
+        email: SENDGRID_FROM_EMAIL, 
+        name: 'Preston at Accorria' 
+      },
+      template_id: SENDGRID_FOLLOWUP_TEMPLATE_ID, // New template for follow-up emails
+      categories: ['accorria', 'dealer-followup'],
+      custom_args: {
+        source: 'phone_call_followup',
+        lead_id: leadData.id || 'unknown',
+        score: leadData.score,
+        dealership: leadData.survey_responses.dealership_name || 'Unknown',
+        email: leadData.email
+      }
+    };
+    
+    const response = UrlFetchApp.fetch('https://api.sendgrid.com/v3/mail/send', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + SENDGRID_API_KEY,
+        'Content-Type': 'application/json'
+      },
+      payload: JSON.stringify(emailData)
+    });
+    
+    if (response.getResponseCode() === 202) {
+      console.log('Follow-up email sent successfully to:', leadData.email);
+      
+      // Send notification to admin about follow-up email sent
+      sendFollowUpNotification(leadData);
+      
+    } else {
+      console.error('Failed to send follow-up email:', response.getContentText());
+    }
+    
+  } catch (error) {
+    console.error('Error sending follow-up email:', error);
+    // Don't throw error - we don't want email failures to break the process
+  }
+}
+
+// Send notification to admin when follow-up email is sent
+function sendFollowUpNotification(leadData) {
+  const subject = `📞 Follow-up Email Sent: ${leadData.name} (Score: ${leadData.score})`;
+  const body = `
+    <h2>Follow-up Email Sent After Phone Call</h2>
+    
+    <h3>Dealer Details:</h3>
+    <ul>
+      <li><strong>Name:</strong> ${leadData.name}</li>
+      <li><strong>Email:</strong> ${leadData.email}</li>
+      <li><strong>Phone:</strong> ${leadData.phone || 'Not provided'}</li>
+      <li><strong>Dealership:</strong> ${leadData.survey_responses.dealership_name}</li>
+      <li><strong>City:</strong> ${leadData.survey_responses.city}</li>
+      <li><strong>Monthly Volume:</strong> ${leadData.survey_responses.monthly_volume}</li>
+      <li><strong>Budget:</strong> ${leadData.survey_responses.willingness_to_pay}</li>
+      <li><strong>Pain Point:</strong> ${leadData.survey_responses.biggest_pain_point}</li>
+    </ul>
+    
+    <h3>Lead Status:</h3>
+    <ul>
+      <li><strong>Score:</strong> ${leadData.score}/100</li>
+      <li><strong>Status:</strong> ${leadData.status.toUpperCase()}</li>
+      <li><strong>Follow-up Sent:</strong> ${new Date().toLocaleString()}</li>
+    </ul>
+    
+    <p><strong>Next Steps:</strong> The dealer has received the follow-up email with early access confirmation. Monitor their form completion and engagement.</p>
+  `;
+  
+  // Send email to admin (you)
+  GmailApp.sendEmail(
+    'preston@accorria.com', // Your email
+    subject,
+    '',
+    {
+      htmlBody: body
+    }
+  );
+}
+
 // Test function specifically for SendGrid email
 function testSendGridEmail() {
   const testLeadData = {
@@ -419,4 +516,22 @@ function testSendGridEmail() {
   
   console.log('Testing SendGrid email...');
   sendDealerConfirmationEmail(testLeadData);
+}
+
+// Test function for follow-up email
+function testFollowUpEmail() {
+  const testLeadData = {
+    email: 'preston@accorria.com', // Send to yourself for testing
+    name: 'Test Dealer',
+    score: 85,
+    survey_responses: {
+      dealership_name: 'House of Hardtops',
+      biggest_pain_point: 'Posting across multiple platforms takes too long',
+      monthly_volume: '50+',
+      willingness_to_pay: '$1,000+'
+    }
+  };
+  
+  console.log('Testing follow-up email...');
+  sendDealerFollowUpEmail(testLeadData);
 }

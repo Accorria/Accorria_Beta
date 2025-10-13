@@ -265,7 +265,7 @@ export default function SettingsPage() {
                 rows={3}
                 value={settings.emailTemplates.welcomeEmail}
                 onChange={(e) => updateSettings('emailTemplates', 'welcomeEmail', e.target.value)}
-                className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
                 placeholder="Enter welcome email template"
               />
             </div>
@@ -276,7 +276,7 @@ export default function SettingsPage() {
                 rows={3}
                 value={settings.emailTemplates.followUpEmail}
                 onChange={(e) => updateSettings('emailTemplates', 'followUpEmail', e.target.value)}
-                className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
                 placeholder="Enter follow-up email template"
               />
             </div>
@@ -287,7 +287,7 @@ export default function SettingsPage() {
                 rows={3}
                 value={settings.emailTemplates.confirmationEmail}
                 onChange={(e) => updateSettings('emailTemplates', 'confirmationEmail', e.target.value)}
-                className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
                 placeholder="Enter confirmation email template"
               />
             </div>

@@ -15,3 +15,4 @@ export function getSupabaseClient() {
 
 // Export default client for backward compatibility
 export default getSupabaseClient;
+

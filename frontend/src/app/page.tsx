@@ -1,7 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import React, { useState } from "react";
 import Link from 'next/link';
 import Image from 'next/image';
 import Chatbot from '@/components/Chatbot';
@@ -9,565 +8,402 @@ import { useAuth } from '@/contexts/AuthContext';
 import { AuthModal } from '@/components/AuthModal';
 
 /**
- * Accorria Landing v2 (single-file mock)
- * - Hybrid light/dark look (hero dark, body light)
- * - Hero "swoop" motion cycling: Car → Home → Handshake
- * - "How it works" with icons
- * - Feature highlights
- * - Pricing teaser
- * - Floating Chatbot mock (bottom-right)
- * - Mobile-first, Tailwind-only
- *
- * Drop-in for Next.js / React. Tailwind required.
+ * Accorria - Modern Startup Design
+ * Clean, minimal, conversion-focused
+ * Inspired by top tech startups
  */
 
-const IMAGES = [
-  {
-    title: "List a car in minutes",
-    caption: "Upload photos, VIN, or specs — we prep the post.",
-    url: "/Car in garage.png",
-    alt: "Car in a modern garage"
-  },
-  {
-    title: "Price your home with guidance",
-    caption: "Guided copy + comps to post confidently.",
-    url: "/ModernHome.png",
-    alt: "Modern home exterior"
-  },
-  {
-    title: "Close the deal, safer",
-    caption: "We coach replies. Escrow support coming soon.",
-    url: "/Posted.png",
-    alt: "Deal closing and payment"
-  }
-];
+// Modern startup design components
+const CheckIcon = () => (
+  <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+  </svg>
+);
 
-const Icon = ({ name, className = "w-5 h-5" }: { name: string; className?: string }) => {
-  const paths: Record<string, string> = {
-    upload:
-      "M3 12a1 1 0 0 1 1-1h4V5a1 1 0 1 1 2 0v6h4a1 1 0 1 1 0 2H10v6a1 1 0 1 1-2 0v-6H4a1 1 0 0 1-1-1Z",
-    magic:
-      "M6 3l2 4 4 2-4 2-2 4-2-4-4-2 4-2 2-4Zm10 2 2 2 2-2 2 2-2 2 2 2-2 2-2-2-2 2-2-2 2-2-2-2 2-2Z",
-    post:
-      "M3 5a2 2 0 0 1 2-2h14a1 1 0 1 1 0 2H5v14a1 1 0 1 1-2 0V5Zm4 4h12a1 1 0 1 1 0 2H7a1 1 0 1 1 0-2Zm0 6h8a1 1 0 1 1 0 2H7a1 1 0 1 1 0-2Z",
-    bolt:
-      "M11 2l-6 10h6l-2 10 8-12h-6l4-8z",
-    shield:
-      "M12 2l8 4v6c0 5-3.5 9.5-8 10-4.5-.5-8-5-8-10V6l8-4Zm0 6a4 4 0 0 0-4 4 1 1 0 1 0 2 0 2 2 0 0 1 4 0c0 1.7-.9 3.2-2.3 4.1a1 1 0 0 0-.5.86V19a1 1 0 1 0 2 0v-1.04c1.95-1.3 3.3-3.48 3.3-5.96A4 4 0 0 0 12 8Z",
-    chat:
-      "M4 3h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H9l-5 4v-4H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"
-  };
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden>
-      <path d={paths[name]} />
-    </svg>
-  );
-};
-
-function useCarousel(len: number, interval = 3800) {
-  const [idx, setIdx] = useState(0);
-  useEffect(() => {
-    const id = setInterval(() => setIdx((i) => (i + 1) % len), interval);
-    return () => clearInterval(id);
-  }, [len, interval]);
-  return idx;
-}
+const ArrowRight = () => (
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+  </svg>
+);
 
 
 export default function Home() {
-  const idx = useCarousel(IMAGES.length);
-  const hero = IMAGES[idx];
   const { user } = useAuth();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode] = useState<'login' | 'register'>('login');
 
   const handleAuthSuccess = () => {
-    // User successfully logged in or registered
     console.log('Authentication successful');
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-900 to-slate-50 text-slate-100" style={{ background: 'linear-gradient(to bottom, #0f172a, #0f172a, #f8fafc)' }} suppressHydrationWarning={true}>
-      {/* NAV */}
-      <header className="sticky top-0 z-30 backdrop-blur supports-[backdrop-filter]:bg-slate-900/70">
-        <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4">
-          <div className="flex items-center gap-3">
-            <Image 
-              src="/LogoinBLUEONEword.png" 
-              alt="Accorria" 
-              width={120}
-              height={120}
-              className="h-[120px] w-auto"
-              priority
-            />
-          </div>
-          <div className="hidden gap-6 text-sm text-slate-200/80 md:flex">
-            <Link href="/" className="hover:text-white">Home</Link>
-            <Link href="/how-it-works" className="hover:text-white">How it works</Link>
-            <Link href="/demo" className="hover:text-white">Book Live Demo</Link>
-            <Link href="/get-paid" className="hover:text-white">Get Paid</Link>
-            <Link href="/qa" className="hover:text-white">Q&A</Link>
-          </div>
-          {user ? (
-            <Link href="/dashboard" className="rounded-lg bg-amber-400 px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-amber-300">
-              Dashboard
-            </Link>
-          ) : (
-            <div className="flex gap-2">
-              <Link href="/login" className="rounded-lg border border-white/20 px-3 py-2 text-sm font-semibold text-white/90 hover:bg-white/5">
-                Sign In
-              </Link>
-              <Link href="/beta-signup" className="rounded-lg bg-amber-400 px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-amber-300">
-                Join Waitlist
-              </Link>
+    <div className="min-h-screen bg-white" suppressHydrationWarning={true}>
+      {/* Modern Navigation */}
+      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100">
+        <nav className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center">
+              <Image 
+                src="/LogoinBLUEONEword.png" 
+                alt="Accorria" 
+                width={120}
+                height={40}
+                className="h-8 w-auto"
+                priority
+              />
             </div>
-          )}
+            
+            <div className="hidden md:flex items-center space-x-8">
+              <Link href="/about" className="text-gray-600 hover:text-gray-900 text-sm font-medium">About</Link>
+              <Link href="/how-it-works" className="text-gray-600 hover:text-gray-900 text-sm font-medium">How it works</Link>
+              <Link href="/demo" className="text-gray-600 hover:text-gray-900 text-sm font-medium">Demo</Link>
+            </div>
+            
+            <div className="flex items-center space-x-4">
+              {user ? (
+                <Link href="/dashboard" className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
+                  Dashboard
+                </Link>
+              ) : (
+                <>
+                  <Link href="/login" className="text-gray-600 hover:text-gray-900 text-sm font-medium">
+                    Sign in
+                  </Link>
+                  <Link href="/beta-signup" className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
+                    Get started
+                  </Link>
+                </>
+              )}
+            </div>
+          </div>
         </nav>
       </header>
 
-      {/* HERO */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 -z-10 bg-[radial-gradient(60%_50%_at_50%_0%,rgba(255,255,255,0.08),rgba(2,6,23,0.2)_60%,rgba(2,6,23,1)_100%)]" />
-
-        <div className="mx-auto grid max-w-7xl grid-cols-1 items-center gap-10 px-4 py-16 md:grid-cols-2 md:py-24">
-          <div>
-            <h1 className="text-3xl font-extrabold leading-tight md:text-5xl">
-              #1 Trust-Native Listing Platform
-            </h1>
-            <h2 className="mt-6 max-w-4xl text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-extrabold leading-tight bg-gradient-to-r from-amber-400 via-orange-400 to-red-400 bg-clip-text text-transparent drop-shadow-2xl">
-              The Future of Selling. Starts Here.
-            </h2>
-
-            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-              <Link href="/how-it-works" className="rounded-lg border border-white/20 px-4 py-2 font-semibold text-white/90 hover:bg-white/5">
-                Learn How It Works
-              </Link>
-              <Link href="/demo" className="rounded-lg border border-white/20 px-4 py-2 font-semibold text-white/90 hover:bg-white/5">Book Live Demo</Link>
-            </div>
-
-            {/* Newsletter Signup */}
-            <div className="mt-8 p-6 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20">
-              <h3 className="text-lg font-semibold text-white mb-2">🚀 Stay ahead. Get early access to Accorria.</h3>
-              <p className="text-white/80 text-sm mb-4">Be the first to know about new features, pricing updates, and exclusive offers.</p>
-              <form 
-                onSubmit={async (e) => {
-                  e.preventDefault();
-                  const formData = new FormData(e.currentTarget);
-                  const email = formData.get('email') as string;
-                  
-                  if (!email) return;
-                  
-                  try {
-                    const response = await fetch('/api/beta-signup', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        email,
-                        role: 'individual',
-                        source: 'homepage',
-                        focus: 'general'
-                      })
-                    });
-                    
-                    const result = await response.json();
-                    
-                    if (result.success) {
-                      // Redirect to the beautiful success page
-                      window.location.href = '/beta-signup?success=true';
-                    } else if (result.error && result.error.includes('duplicate')) {
-                      // Redirect to success page for duplicates too
-                      window.location.href = '/beta-signup?success=true&duplicate=true';
-                    } else {
-                      // Show error message
-                      const errorDiv = document.createElement('div');
-                      errorDiv.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
-                      errorDiv.textContent = 'Something went wrong. Please try again.';
-                      document.body.appendChild(errorDiv);
-                      
-                      setTimeout(() => {
-                        document.body.removeChild(errorDiv);
-                      }, 5000);
-                    }
-                  } catch (error) {
-                    console.error('Signup error:', error);
-                    
-                    // Show error message
-                    const errorDiv = document.createElement('div');
-                    errorDiv.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
-                    errorDiv.textContent = 'Something went wrong. Please try again.';
-                    document.body.appendChild(errorDiv);
-                    
-                    setTimeout(() => {
-                      document.body.removeChild(errorDiv);
-                    }, 5000);
-                  }
-                }}
-                className="flex flex-col sm:flex-row gap-3"
-              >
-                <input 
-                  name="email"
-                  type="email" 
-                  placeholder="Enter your email" 
-                  required
-                  className="flex-1 px-4 py-3 rounded-lg bg-white/20 border border-white/30 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-amber-400 text-base"
-                />
-                <button 
-                  type="submit"
-                  className="px-6 py-3 bg-amber-500 text-white rounded-lg font-semibold hover:bg-amber-600 transition-colors text-base"
-                >
-                  Subscribe
-                </button>
-              </form>
-            </div>
-
-          </div>
-
-          {/* Hero carousel with swoop motion */}
-          <div className="relative h-[320px] w-full overflow-hidden rounded-2xl bg-slate-800 shadow-2xl md:h-[420px]">
-            <AnimatePresence mode="popLayout">
-              <motion.img
-                key={hero.url}
-                src={hero.url}
-                alt={hero.alt}
-                className="absolute inset-0 h-full w-full object-cover"
-                initial={{ x: 80, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                exit={{ x: -80, opacity: 0 }}
-                transition={{ duration: 0.7, ease: "easeInOut" }}
-              />
-            </AnimatePresence>
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4 text-white">
-              <div className="text-sm font-semibold uppercase tracking-wide text-amber-300">{idx === 0 ? "Car" : idx === 1 ? "Home" : "Deal"}</div>
-              <div className="text-lg font-bold">{hero.title}</div>
-              <div className="text-sm text-white/80">{hero.caption}</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* HOW IT WORKS */}
-      <section id="how" className="bg-slate-50 text-slate-900">
-        <div className="mx-auto max-w-7xl px-4 py-16">
-          <h2 className="text-2xl font-bold md:text-3xl">How it works</h2>
-          
-
-          <div className="mt-8 grid gap-6 md:grid-cols-3">
-            <Card icon="upload" title="Upload" desc="Upload photos, select the ones you want analyzed. Your agent pulls details from the images + VIN/address and builds the foundation for your listing." />
-            <Card icon="magic" title="Generate" desc="AI crafts the full listing: title, description, price guidance, and marketplace-ready post." />
-            <Card icon="post" title="Post & Close" desc="Publish once → Accorria helps you cross-post everywhere. Sell via escrow for safer payments or in person your choice." />
-          </div>
-        </div>
-      </section>
-
-      {/* HIGHLIGHTS */}
-      <section className="bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-14">
-          <div className="grid gap-6 md:grid-cols-3">
-            <Feature title="Faster listings" desc="From photos to posting in minutes, not hours." />
-            <Feature title="Smarter negotiations" desc="Your personal AI Negotiator Agent connects to Facebook Messenger and automatically responds to buyer inquiries, reducing back-and-forth and keeping buyers serious." />
-            <Feature title="Safer closings" desc="Built-in escrow for cars now, homes next. Future-proof with optional digital certificates coming." />
-          </div>
-        </div>
-      </section>
-
-      {/* HERO IMAGE SECTION */}
-      <section className="bg-gradient-to-br from-slate-900 to-gray-900">
-        <div className="mx-auto max-w-7xl px-4 py-16">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div>
-              <h2 className="text-3xl font-bold text-white mb-6">See It In Action</h2>
-              <p className="text-lg text-gray-300 mb-8">
-                Watch how Accorria transforms your photos into perfect listings in seconds. 
-                Real users, real results, real savings.
-              </p>
-              <div className="flex gap-4">
-                <Link href="/demo" className="bg-amber-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-amber-600 transition-colors">
-                  Book Live Demo
-                </Link>
-                <Link href="/dashboard" className="border border-white/20 text-white px-6 py-3 rounded-lg font-semibold hover:bg-white/10 transition-colors">
-                  Try It Now
-                </Link>
-              </div>
-            </div>
-            <div className="relative">
-              <div className="bg-gray-800 rounded-2xl p-8 text-center">
-                <div className="w-full h-64 rounded-lg overflow-hidden mb-4">
-                  <Image 
-                    src="/Analizing Photos.png" 
-                    alt="AI analyzing photos to generate perfect listing" 
-                    width={400}
-                    height={256}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <p className="text-gray-400 text-sm">Upload photos → AI analysis → Perfect listing</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* GET PAID TEASER SECTION */}
-      <section className="bg-gradient-to-r from-amber-50 to-orange-50">
-        <div className="mx-auto max-w-7xl px-4 py-16">
-          <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 rounded-full bg-amber-100 px-4 py-2 text-sm font-semibold text-amber-800 mb-4">
-              💰 Coming Soon
-            </div>
-            <h2 className="text-3xl font-bold text-slate-900 mb-4">
-              A New Way to Get Paid
-            </h2>
-            <p className="text-xl text-slate-800 max-w-3xl mx-auto">
-              Skip the bank delays. Skip the scams. Get paid instantly when deals close cars, homes, rentals. Blockchain-powered settlements within 48 hours.
-            </p>
-          </div>
-          
-          <div className="grid md:grid-cols-3 gap-8 mb-8">
-            <div className="text-center">
-              <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl">⚡</span>
-              </div>
-              <h3 className="font-semibold text-slate-900 mb-2">48-Hour Payments</h3>
-              <p className="text-slate-800">No more waiting weeks for bank transfers</p>
-            </div>
-            <div className="text-center">
-              <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl">🔐</span>
-              </div>
-              <h3 className="font-semibold text-slate-900 mb-2">Funds Locked</h3>
-              <p className="text-slate-800">Smart contracts hold payment until deal closes</p>
-            </div>
-            <div className="text-center">
-              <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl">🛡️</span>
-              </div>
-              <h3 className="font-semibold text-slate-900 mb-2">No Scams</h3>
-              <p className="text-slate-800">Blockchain verification prevents fraud</p>
-            </div>
-          </div>
-          
+      {/* Modern Hero Section */}
+      <section className="relative bg-gradient-to-br from-blue-50 to-indigo-100 py-20 lg:py-32">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center">
-            <Link href="/get-paid" className="inline-flex items-center gap-2 rounded-lg bg-amber-500 px-6 py-3 font-semibold text-white hover:bg-amber-600 transition-colors">
-              <span>Learn How It Works</span>
-              <span className="text-sm">→</span>
-            </Link>
-            <p className="text-sm text-slate-700 mt-3">See how blockchain makes deals safer and faster</p>
-          </div>
-        </div>
-      </section>
-
-      {/* PRICING TEASER */}
-      {/* Why It Works Better */}
-      <section className="bg-gradient-to-br from-amber-50 to-orange-50">
-        <div className="mx-auto max-w-7xl px-4 py-16">
-          <div className="text-center">
-            <h2 className="text-3xl font-bold md:text-4xl text-gray-900">Why It Works Better</h2>
-            <p className="mt-4 text-lg text-gray-700 max-w-3xl mx-auto">
-              We&apos;re the trust layer for high-value listings. Upload photos → AI listing, Shield verification, escrow you can paste as a link, and optional digital-twin certificates for provenance.
-            </p>
-          </div>
-          
-          <div className="mt-12 grid gap-8 md:grid-cols-3">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl">⚡</span>
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">10x Faster</h3>
-              <p className="text-gray-600">AI generates perfect listings in seconds. No more hours writing descriptions or taking photos.</p>
-            </div>
-            <div className="text-center">
-              <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl">🎯</span>
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Better Results</h3>
-              <p className="text-gray-600">Smart pricing, multi-platform posting, and automated negotiation get you top dollar.</p>
-            </div>
-            <div className="text-center">
-              <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl">🛡️</span>
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Safer Deals</h3>
-              <p className="text-gray-600">Built-in escrow, ID verification, and title checks protect both buyers and sellers.</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-
-      {/* This Changes Everything */}
-      <section className="bg-white text-slate-900">
-        <div className="mx-auto max-w-7xl px-4 py-16">
-          <div className="text-center">
-            <h2 className="text-3xl font-bold md:text-4xl mb-4 text-slate-900">Why This Changes Everything</h2>
-            <p className="text-lg text-slate-600 max-w-3xl mx-auto mb-12">
-              We&apos;re not just another listing platform. We&apos;re the trust layer that makes high-value transactions safe, fast, and profitable for everyone.
-            </p>
-          </div>
-          
-          <div className="grid md:grid-cols-2 gap-12">
-            <div>
-              <h3 className="text-2xl font-bold mb-6 text-slate-900">🚗 Car Sales</h3>
-              <div className="space-y-4">
-                <div className="flex items-start">
-                  <span className="text-amber-400 mr-3">✓</span>
-                  <div>
-                    <h4 className="font-semibold text-slate-900">Perfect For</h4>
-                    <p className="text-slate-600 text-sm">Individual sellers, flippers, dealers, and anyone who wants to sell cars faster and safer</p>
-                  </div>
-                </div>
-                <div className="flex items-start">
-                  <span className="text-amber-400 mr-3">✓</span>
-                  <div>
-                    <h4 className="font-semibold text-slate-900">AI-Powered Listings</h4>
-                    <p className="text-slate-600 text-sm">Upload 20 photos, pick the best 4, get a perfect description in seconds</p>
-                  </div>
-                </div>
-                <div className="flex items-start">
-                  <span className="text-amber-400 mr-3">✓</span>
-                  <div>
-                    <h4 className="font-semibold text-slate-900">Multi-Platform Posting</h4>
-                    <p className="text-slate-600 text-sm">Post to Facebook, Craigslist, OfferUp with one click</p>
-                  </div>
-                </div>
-                <div className="flex items-start">
-                  <span className="text-amber-400 mr-3">✓</span>
-                  <div>
-                    <h4 className="font-semibold text-slate-900">Built-in Escrow</h4>
-                    <p className="text-slate-600 text-sm">1.0% escrow fee (min $39, cap $149) - secure payments for all transactions</p>
-                  </div>
-                </div>
-              </div>
+            {/* Beta Badge */}
+            <div className="inline-flex items-center rounded-full bg-blue-100 px-4 py-2 text-sm font-medium text-blue-800 mb-8">
+              <span className="relative flex h-2 w-2 mr-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+              </span>
+              Private Beta - Cars Only
             </div>
             
-            <div>
-              <h3 className="text-2xl font-bold mb-6 text-slate-900">🏠 Home Sales</h3>
-              <div className="space-y-4">
-                <div className="flex items-start">
-                  <span className="text-amber-400 mr-3">✓</span>
-                  <div>
-                    <h4 className="font-semibold text-slate-900">Perfect For</h4>
-                    <p className="text-slate-600 text-sm">FSBO sellers, investors, landlords, and anyone avoiding 5.5% agent commissions</p>
-                  </div>
-                </div>
-                <div className="flex items-start">
-                  <span className="text-amber-400 mr-3">✓</span>
-                  <div>
-                    <h4 className="font-semibold text-slate-900">Massive Savings</h4>
-                    <p className="text-slate-600 text-sm">$50k home: $395 vs $2,750 agent fee = $2,355 saved</p>
-                  </div>
-                </div>
-                <div className="flex items-start">
-                  <span className="text-amber-400 mr-3">✓</span>
-                  <div>
-                    <h4 className="font-semibold text-slate-900">Digital Deed Twins</h4>
-                    <p className="text-slate-600 text-sm">Optional digital certificates for faster resale and clean provenance</p>
-                  </div>
-                </div>
-                <div className="flex items-start">
-                  <span className="text-amber-400 mr-3">✓</span>
-                  <div>
-                    <h4 className="font-semibold text-slate-900">High-Value Items</h4>
-                    <p className="text-slate-600 text-sm">Boats, RVs, equipment, luxury items - all with the same trust layer</p>
-                  </div>
-                </div>
+            {/* Main Headline */}
+            <h1 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-6xl lg:text-7xl">
+              Stop wasting time on
+              <br />
+              tire-kickers and lowballers
+            </h1>
+            
+            {/* Subheadline */}
+            <p className="mt-6 text-lg leading-8 text-gray-600 max-w-3xl mx-auto">
+              Upload photos, set your price threshold, and let Accorria handle the rest. 
+              Only see serious buyers who are ready to buy at your price.
+            </p>
+            
+            {/* CTA Buttons */}
+            <div className="mt-10 flex items-center justify-center gap-x-6">
+              <Link 
+                href="/beta-signup" 
+                className="rounded-md bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 transition-colors"
+              >
+                Get started free
+              </Link>
+              <Link 
+                href="/demo" 
+                className="text-sm font-semibold leading-6 text-gray-900 hover:text-blue-600 transition-colors flex items-center gap-2"
+              >
+                Watch demo <ArrowRight />
+              </Link>
+            </div>
+            
+            {/* Trust Indicators */}
+            <div className="mt-16 flex items-center justify-center gap-x-8 text-sm text-gray-500">
+              <div className="flex items-center gap-2">
+                <CheckIcon />
+                <span>No credit card required</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckIcon />
+                <span>Setup in 2 minutes</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckIcon />
+                <span>Cancel anytime</span>
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* How It Works */}
+      <section className="py-20 bg-white">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+              How it works
+            </h2>
+            <p className="mt-4 text-lg text-gray-600">
+              Three simple steps to stop wasting time on unqualified buyers
+            </p>
+          </div>
           
-          <div className="mt-12 text-center">
-            <div className="bg-gradient-to-r from-amber-500 to-orange-500 rounded-2xl p-8">
-              <h3 className="text-2xl font-bold text-white mb-4">The Safe Cashier</h3>
-              <p className="text-lg text-white/90 max-w-2xl mx-auto">
-                &ldquo;We&apos;re the safe cashier. You sell for your price, we keep you safe for a tiny fee. 
-                Cars: 1% (min $39, cap $149). Homes: 0.35% (min $395, cap $995). 
-                Token is optional—use it when you want faster deals and a clean digital certificate.&rdquo;
+          <div className="mt-16 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="text-center">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-blue-100">
+                <span className="text-2xl">📸</span>
+              </div>
+              <h3 className="mt-6 text-lg font-semibold text-gray-900">1. Upload photos & details</h3>
+              <p className="mt-2 text-gray-600">
+                Take 5-20 photos of your vehicle. Add mileage, condition notes (rebuilt title, fixed bumper, alternator, etc.).
+              </p>
+            </div>
+            
+            <div className="text-center">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-blue-100">
+                <span className="text-2xl">🤖</span>
+              </div>
+              <h3 className="mt-6 text-lg font-semibold text-gray-900">2. Set your price threshold</h3>
+              <p className="mt-2 text-gray-600">
+                Set your asking price ($10,000) and minimum acceptable price ($8,000). Accorria coordinates everything else.
+              </p>
+            </div>
+            
+            <div className="text-center">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-blue-100">
+                <span className="text-2xl">💰</span>
+              </div>
+              <h3 className="mt-6 text-lg font-semibold text-gray-900">3. Only see serious buyers</h3>
+              <p className="mt-2 text-gray-600">
+                Accorria posts to all marketplaces and filters your inbox. You only see qualified buyers ready to buy at your price.
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* FAQ */}
-      <section id="faq" className="bg-slate-50">
-        <div className="mx-auto max-w-7xl px-4 py-16">
+      {/* Features */}
+      <section className="py-20 bg-gray-50">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center">
-            <h2 className="text-3xl font-bold md:text-4xl text-black">Frequently Asked Questions</h2>
-            <p className="mt-4 text-lg text-slate-700 max-w-3xl mx-auto">
-              Everything you need to know about Accorria&apos;s trust-native listing platform.
+            <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+              Stop wasting time on unqualified buyers
+            </h2>
+            <p className="mt-4 text-lg text-gray-600">
+              Our unified inbox filters out tire-kickers, lowballers, and &quot;is it still available?&quot; messages
             </p>
           </div>
           
-          <div className="mt-12 grid md:grid-cols-2 gap-8">
-            <div className="space-y-6">
-              <div className="bg-white rounded-lg p-6 shadow-sm">
-                <h3 className="font-semibold text-slate-900 mb-2">Do I need a dealer license?</h3>
-                <p className="text-slate-800">No — Accorria works for individual sellers, flippers, and dealers. We help anyone sell faster and safer.</p>
+          <div className="mt-16 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="bg-white rounded-lg p-6 shadow-sm">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-md bg-blue-500">
+                    <span className="text-white text-lg">⚡</span>
+                  </div>
+                </div>
+                <div className="ml-4">
+                  <h3 className="text-lg font-medium text-gray-900">Smart Inbox Filtering</h3>
+                </div>
               </div>
-              <div className="bg-white rounded-lg p-6 shadow-sm">
-                <h3 className="font-semibold text-slate-900 mb-2">Is this a new marketplace?</h3>
-                <p className="text-slate-800">No — we enhance existing platforms like Facebook Marketplace and Craigslist with AI tools, escrow, and verification.</p>
-              </div>
-              <div className="bg-white rounded-lg p-6 shadow-sm">
-                <h3 className="font-semibold text-slate-900 mb-2">What is Shield Verify?</h3>
-                <p className="text-slate-800">Shield Verify checks seller ID and title/deed status, then provides an escrow link you can paste anywhere. $19 for cars, $49 for homes.</p>
-              </div>
-              <div className="bg-white rounded-lg p-6 shadow-sm">
-                <h3 className="font-semibold text-slate-900 mb-2">What are digital twins?</h3>
-                <p className="text-slate-800">Optional digital certificates that prove ownership and transaction history. Great for investors, landlords, and repeat sellers who want provenance.</p>
-              </div>
+              <p className="mt-4 text-gray-600">
+                Never see &quot;is it still available?&quot; or lowball offers. Only serious buyers who meet your price threshold.
+              </p>
             </div>
-            <div className="space-y-6">
-              <div className="bg-white rounded-lg p-6 shadow-sm">
-                <h3 className="font-semibold text-slate-900 mb-2">How does escrow work?</h3>
-                <p className="text-slate-800">SafePay escrow is included! Cars: 1.0% (min $39, cap $149). Homes: 0.35% (min $395, cap $995). No crypto needed - buyers pay via ACH/card.</p>
+            
+            <div className="bg-white rounded-lg p-6 shadow-sm">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-md bg-blue-500">
+                    <span className="text-white text-lg">🛡️</span>
+                  </div>
+                </div>
+                <div className="ml-4">
+                  <h3 className="text-lg font-medium text-gray-900">Multi-Platform Posting</h3>
+                </div>
               </div>
-              <div className="bg-white rounded-lg p-6 shadow-sm">
-                <h3 className="font-semibold text-slate-900 mb-2">Does it work on mobile?</h3>
-                <p className="text-slate-800">Yes — the entire flow is built mobile-first and works perfectly on phones. Upload photos, get AI listings, post anywhere.</p>
+              <p className="mt-4 text-gray-600">
+                Automatically posts to Facebook Marketplace, Craigslist, OfferUp, and more with one click.
+              </p>
+            </div>
+            
+            <div className="bg-white rounded-lg p-6 shadow-sm">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-md bg-blue-500">
+                    <span className="text-white text-lg">🎯</span>
+                  </div>
+                </div>
+                <div className="ml-4">
+                  <h3 className="text-lg font-medium text-gray-900">Qualified Buyers Only</h3>
+                </div>
               </div>
-              <div className="bg-white rounded-lg p-6 shadow-sm">
-                <h3 className="font-semibold text-slate-900 mb-2">Can I post to multiple marketplaces?</h3>
-                <p className="text-slate-800">Yes — Facebook now, Craigslist and OfferUp coming next. One listing, multiple platforms, all managed from one place.</p>
-              </div>
-              <div className="bg-white rounded-lg p-6 shadow-sm">
-                <h3 className="font-semibold text-slate-900 mb-2">When should I use tokens?</h3>
-                <p className="text-slate-800">Use tokens for investors, landlords, repeat sellers, or high-value assets where you want faster resale/rental payouts and clean provenance.</p>
+              <p className="mt-4 text-gray-600">
+                See only buyers like &quot;Julie wants to test drive and has pre-approved financing&quot; or &quot;Samantha offers $9,500 for Friday pickup.&quot;
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Pain Point Section */}
+      <section className="py-20 bg-red-50">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+              The dealership problem
+            </h2>
+            <p className="mt-4 text-lg text-gray-600">
+              Dealers waste hours every day on unqualified buyers
+            </p>
+          </div>
+          
+          <div className="mt-16 grid grid-cols-1 gap-8 lg:grid-cols-2">
+            <div className="bg-white rounded-lg p-8 shadow-sm border-l-4 border-red-500">
+              <h3 className="text-xl font-semibold text-gray-900 mb-4">❌ What dealers deal with now:</h3>
+              <ul className="space-y-3 text-gray-600">
+                <li>• &quot;Is it still available?&quot; (50+ times per listing)</li>
+                <li>• &quot;What&apos;s your lowest price?&quot; (ignoring asking price)</li>
+                <li>• &quot;Will you take $7,000?&quot; (on a $10,000 car)</li>
+                <li>• &quot;How many miles per gallon?&quot; (already in description)</li>
+                <li>• &quot;Can I see more photos?&quot; (20+ photos already posted)</li>
+                <li>• Hours spent responding to tire-kickers daily</li>
+              </ul>
+            </div>
+            
+            <div className="bg-white rounded-lg p-8 shadow-sm border-l-4 border-green-500">
+              <h3 className="text-xl font-semibold text-gray-900 mb-4">✅ With Accorria:</h3>
+              <ul className="space-y-3 text-gray-600">
+                <li>• &quot;Julie wants to test drive, has pre-approved financing&quot;</li>
+                <li>• &quot;Samantha offers $9,500 for Friday pickup&quot;</li>
+                <li>• &quot;Mike is ready to buy at asking price, cash in hand&quot;</li>
+                <li>• &quot;Sarah scheduled inspection for tomorrow at 2pm&quot;</li>
+                <li>• Only serious buyers who meet your price threshold</li>
+                <li>• Save 3-5 hours per day on unqualified leads</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Team Section */}
+      <section className="py-20 bg-white">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+              Meet the founder
+            </h2>
+            <p className="mt-4 text-lg text-gray-600">
+              Built by someone who understands the challenges of selling cars
+            </p>
+          </div>
+          
+          <div className="mt-16 flex justify-center">
+            <div className="bg-gray-50 rounded-2xl p-8 max-w-2xl">
+              <div className="flex flex-col md:flex-row items-center gap-6">
+                <div className="flex-shrink-0">
+                  <Image 
+                    src="/Preston Eaton Founder.jpg" 
+                    alt="Preston Eaton, Founder & CEO" 
+                    width={128}
+                    height={128}
+                    className="w-32 h-32 rounded-full object-cover border-4 border-blue-200"
+                  />
+                </div>
+                <div className="text-center md:text-left">
+                  <h3 className="text-xl font-bold text-gray-900">Preston Eaton</h3>
+                  <p className="text-blue-600 font-semibold mb-3">Founder & CEO</p>
+                  <p className="text-gray-600 mb-4">
+                    Serial entrepreneur with deep experience in automotive technology. 
+                    Founded Accorria to solve the trust and efficiency problems in the used car market.
+                  </p>
+                  <a 
+                    href="https://linkedin.com/in/prestoneaton" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                  >
+                    Connect on LinkedIn
+                  </a>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-                      <footer className="bg-slate-900 py-10 text-center text-sm text-slate-200">
-          <div className="max-w-7xl mx-auto px-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
-              <div>
-                <h3 className="font-semibold text-white mb-4">Company</h3>
-                <ul className="space-y-2">
-                  <li><Link href="/about" className="hover:text-amber-300">About</Link></li>
-                  <li><Link href="/contact" className="hover:text-amber-300">Contact</Link></li>
-                </ul>
-              </div>
-              <div>
-                <h3 className="font-semibold text-white mb-4">Support</h3>
-                <ul className="space-y-2">
-                  <li><Link href="/qa" className="hover:text-amber-300">FAQ</Link></li>
-                </ul>
-              </div>
-              <div>
-                <h3 className="font-semibold text-white mb-4">Legal</h3>
-                <ul className="space-y-2">
-                  <li><Link href="/privacy" className="hover:text-amber-300">Privacy Policy</Link></li>
-                  <li><Link href="/terms" className="hover:text-amber-300">Terms of Service</Link></li>
-                  <li><Link href="/cookies" className="hover:text-amber-300">Cookie Policy</Link></li>
-                </ul>
-              </div>
-            </div>
-            <div className="border-t border-slate-700 pt-8">
-              <p>© {new Date().getFullYear()} Accorria. All rights reserved. | <a href="https://accorria.com" className="hover:text-amber-300">accorria.com</a></p>
+      {/* CTA Section */}
+      <section className="bg-blue-600">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16">
+          <div className="text-center">
+            <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
+              Ready to sell your car faster?
+            </h2>
+            <p className="mt-4 text-lg text-blue-100">
+              Join hundreds of sellers who are already using Accorria to get better results
+            </p>
+            <div className="mt-8 flex items-center justify-center gap-x-6">
+              <Link 
+                href="/beta-signup" 
+                className="rounded-md bg-white px-6 py-3 text-sm font-semibold text-blue-600 shadow-sm hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white transition-colors"
+              >
+                Get started free
+              </Link>
+              <Link 
+                href="/demo" 
+                className="text-sm font-semibold leading-6 text-white hover:text-blue-100 transition-colors"
+              >
+                Watch demo <ArrowRight />
+              </Link>
             </div>
           </div>
-        </footer>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="bg-gray-900">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            <div className="col-span-1 md:col-span-2">
+              <Image 
+                src="/LogoinBLUEONEword.png" 
+                alt="Accorria" 
+                width={120}
+                height={40}
+                className="h-8 w-auto mb-4"
+              />
+              <p className="text-gray-400 text-sm max-w-md">
+                AI-powered car listings with escrow protection. Sell faster, safer, and for more money.
+              </p>
+            </div>
+            <div>
+              <h3 className="text-white font-semibold mb-4">Product</h3>
+              <ul className="space-y-2 text-sm">
+                <li><Link href="/how-it-works" className="text-gray-400 hover:text-white">How it works</Link></li>
+                <li><Link href="/demo" className="text-gray-400 hover:text-white">Demo</Link></li>
+                <li><Link href="/pricing" className="text-gray-400 hover:text-white">Pricing</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="text-white font-semibold mb-4">Company</h3>
+              <ul className="space-y-2 text-sm">
+                <li><Link href="/about" className="text-gray-400 hover:text-white">About</Link></li>
+                <li><Link href="/contact" className="text-gray-400 hover:text-white">Contact</Link></li>
+                <li><Link href="/privacy" className="text-gray-400 hover:text-white">Privacy</Link></li>
+              </ul>
+            </div>
+          </div>
+          <div className="border-t border-gray-800 mt-8 pt-8">
+            <p className="text-gray-400 text-sm text-center">
+              © {new Date().getFullYear()} Accorria. All rights reserved.
+            </p>
+          </div>
+        </div>
+      </footer>
 
       
 
@@ -581,52 +417,6 @@ export default function Home() {
         onSuccess={handleAuthSuccess}
         initialMode={authMode}
       />
-    </div>
-  );
-}
-
-function Card({ icon, title, desc }: { icon: string; title: string; desc: string }) {
-  // Map icons to corresponding photos
-  const getPhotoForIcon = (iconName: string) => {
-    switch (iconName) {
-      case 'upload':
-        return '/Selecting Photos.png';
-      case 'magic':
-        return '/Description.png';
-      case 'post':
-        return '/Fackbook posted.jpeg';
-      default:
-        return '/Selecting Photos.png';
-    }
-  };
-
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="flex items-center gap-3 mb-3">
-        <div className="rounded-xl bg-amber-100 p-2 text-amber-700">
-          <Icon name={icon} className="h-5 w-5" />
-        </div>
-        <div className="text-lg font-semibold">{title}</div>
-      </div>
-      <div className="w-full h-64 rounded-lg overflow-hidden mb-3">
-        <Image 
-          src={getPhotoForIcon(icon)} 
-          alt={`${title} process step`}
-          width={400}
-          height={256}
-          className="w-full h-full object-cover"
-        />
-      </div>
-      <p className="text-slate-600">{desc}</p>
-    </div>
-  );
-}
-
-function Feature({ title, desc }: { title: string; desc: string }) {
-  return (
-    <div className="rounded-2xl bg-slate-50 p-6 ring-1 ring-slate-200">
-      <div className="text-base font-semibold text-slate-900">{title}</div>
-      <p className="mt-1 text-slate-600">{desc}</p>
     </div>
   );
 }
