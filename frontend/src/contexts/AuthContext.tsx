@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { supabaseBrowser } from '../../lib/supabaseBrowser';
+import { supabase } from '../utils/supabase';
 import { User, Session, AuthError } from '@supabase/supabase-js';
 import { getAppUrl, getHomeUrl } from '../utils/urls';
 
@@ -38,7 +38,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [error, setError] = useState<string | null>(null);
   const [isEmailVerified, setIsEmailVerified] = useState(false);
 
-  const supabase = supabaseBrowser();
+  // Using the imported supabase client directly
 
   // Check for existing session on mount
   useEffect(() => {

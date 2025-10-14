@@ -8,6 +8,7 @@ import { EmailVerification } from '@/components/EmailVerification';
 import DashboardListing from '@/components/DashboardListing';
 import CreateListing from '@/components/listings/CreateListing';
 import Header from '@/components/Header';
+import DealerMode from '@/components/DealerMode';
 import { listingsService, Listing } from '@/services/listingsService';
 
 export default function Dashboard() {
@@ -176,6 +177,11 @@ export default function Dashboard() {
               📸 Post New Car
             </button>
           </div>
+        </div>
+
+        {/* Dealer Mode Section */}
+        <div className="px-4 mb-6">
+          <DealerMode userTier={user?.user_metadata?.subscription_tier || 'free_trial'} />
         </div>
 
 

@@ -12,4 +12,5 @@ from .platform_posting import router as platform_posting_router
 from .messages import router as messages_router
 from .replies import router as replies_router
 from .deals import router as deals_router
-from .chat import router as chat_router 
+from .chat import router as chat_router
+from .inventory import router as inventory_router 

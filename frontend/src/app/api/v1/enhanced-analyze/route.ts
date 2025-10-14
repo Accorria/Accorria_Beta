@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const BACKEND_URL = 'http://localhost:8000'; // Force local backend for development
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'https://accorria-backend-19949436301.us-central1.run.app';
+
+// Log the backend URL for debugging
+console.log('🔧 Enhanced Analyze API Route - Backend URL:', BACKEND_URL);
 
 export async function POST(request: NextRequest) {
   try {

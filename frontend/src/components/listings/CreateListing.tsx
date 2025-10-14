@@ -4,6 +4,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { useDropzone, FileRejection } from 'react-dropzone';
 import carDataRaw from '../../data/carData.json';
 import { api } from '../../utils/api';
+import { getBackendUrl, API_ENDPOINTS } from '../../config/api';
 const carData = carDataRaw as Record<string, string[]>;
 
 interface CreateListingProps {
@@ -413,8 +414,9 @@ export default function CreateListing({ onClose }: CreateListingProps) {
     try {
       // Test API connectivity first
       try {
-        const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-        const healthCheck = await api.authenticatedFetch(`${backendUrl}/health`);
+        const backendUrl = getBackendUrl();
+        console.log('Health check using backend URL:', backendUrl);
+        const healthCheck = await api.authenticatedFetch(API_ENDPOINTS.HEALTH);
         if (!healthCheck.ok) {
           throw new Error(`Backend health check failed: ${healthCheck.status}`);
         }
@@ -445,7 +447,7 @@ export default function CreateListing({ onClose }: CreateListingProps) {
       formData.append('aboutVehicle', carDetails.aboutVehicle || '');
       
             console.log('Sending analysis request with:', {
-        files: files.length,
+        files: selectedFiles.length,
         make: carDetails.make,
         model: carDetails.model,
         year: carDetails.year,
@@ -453,8 +455,9 @@ export default function CreateListing({ onClose }: CreateListingProps) {
       });
       
       // Call backend directly instead of going through frontend API route
-      const backendUrl = 'http://localhost:8000'; // Force local backend for development
-      const result = await api.postFormData(`${backendUrl}/api/v1/enhanced-analyze`, formData);
+      const backendUrl = getBackendUrl();
+      console.log('Using backend URL:', backendUrl);
+      const result = await api.postFormData(API_ENDPOINTS.ENHANCED_ANALYZE, formData);
       console.log('Analysis result:', result);
       setAnalysisResult(result as AnalysisResult);
       setShowAnalysis(true);
@@ -488,8 +491,8 @@ export default function CreateListing({ onClose }: CreateListingProps) {
       }
       // Run market analysis in background
       if (carDetails.make && carDetails.model) {
-        const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-        api.post(`${backendUrl}/api/v1/market-intelligence/analyze`, {
+        const backendUrl = getBackendUrl();
+        api.post(API_ENDPOINTS.MARKET_INTELLIGENCE_ANALYZE, {
           make: carDetails.make,
           model: carDetails.model,
           year: carDetails.year ? parseInt(carDetails.year) : undefined,

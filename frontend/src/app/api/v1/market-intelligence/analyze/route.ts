@@ -5,7 +5,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     
     // Get the backend URL from environment variable
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'https://accorria-backend-19949436301.us-central1.run.app';
     
     // Get the authorization header from the frontend request
     const authHeader = req.headers.get('authorization');

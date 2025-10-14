@@ -33,7 +33,8 @@ from app.api.v1 import (
     messages as messages_router,
     replies as replies_router,
     deals as deals_router,
-    chat as chat_router
+    chat as chat_router,
+    inventory as inventory_router
 )
 from app.middleware import rate_limit_middleware, cleanup_rate_limits
 from app.core.security import (
@@ -194,6 +195,7 @@ app.include_router(messages_router.router, prefix="/api/v1/messages", tags=["Mes
 app.include_router(replies_router.router, prefix="/api/v1", tags=["AI Replies"])
 app.include_router(deals_router.router, prefix="/api/v1", tags=["Deals"])
 app.include_router(chat_router.router, prefix="/api/v1/chat", tags=["Chat"])
+app.include_router(inventory_router.router, prefix="/api/v1", tags=["Inventory"])
 
 # Test endpoint
 @app.get("/test")

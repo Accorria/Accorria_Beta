@@ -140,6 +140,7 @@ export default function Home() {
         </div>
       </section>
 
+
       {/* How It Works */}
       <section className="py-20 bg-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">

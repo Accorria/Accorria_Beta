@@ -3,7 +3,7 @@ import { NextRequest } from "next/server";
 export async function POST(req: NextRequest) {
   try {
     // Get the backend URL from environment variable
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'https://accorria-backend-19949436301.us-central1.run.app';
     
     // Forward the request to the backend (including form data)
     const response = await fetch(`${backendUrl}/api/v1/platform-posting/analyze-and-post`, {
