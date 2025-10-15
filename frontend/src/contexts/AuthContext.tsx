@@ -73,7 +73,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Simple dev login - use "user" as email and "register" as password
       if (email === 'user' && password === 'register') {
         const mockUser: User = {
-          id: 'demo-user-123',
+          id: '00000000-0000-0000-0000-000000000123',
           email: 'demo@accorria.com',
           email_confirmed_at: new Date().toISOString(),
           created_at: new Date().toISOString(),
@@ -133,7 +133,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Simple dev login - use "user" as email and "register" as password
       if (email === 'user' && password === 'register') {
         const mockUser: User = {
-          id: 'demo-user-123',
+          id: '00000000-0000-0000-0000-000000000123',
           email: 'demo@accorria.com',
           email_confirmed_at: new Date().toISOString(),
           created_at: new Date().toISOString(),

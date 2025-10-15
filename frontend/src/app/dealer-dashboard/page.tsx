@@ -5,13 +5,11 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { EmailVerification } from '@/components/EmailVerification';
-import DashboardListing from '@/components/DashboardListing';
-import CreateListing from '@/components/listings/CreateListing';
 import Header from '@/components/Header';
 import DealerMode from '@/components/DealerMode';
 import { listingsService, Listing } from '@/services/listingsService';
 
-export default function Dashboard() {
+export default function DealerDashboard() {
   const { user, loading, isEmailVerified } = useAuth();
   const [listings, setListings] = useState<Listing[]>([]);
   const [stats, setStats] = useState({
@@ -21,9 +19,7 @@ export default function Dashboard() {
     totalRevenue: 0
   });
   const [logMsg, setLogMsg] = useState<string | null>(null);
-  const [showCreateListing, setShowCreateListing] = useState(false);
   const [isLoadingListings, setIsLoadingListings] = useState(true);
-  const [currentMode, setCurrentMode] = useState<'solo' | 'dealer'>('solo');
 
   // Load listings from Supabase database
   useEffect(() => {
@@ -72,36 +68,17 @@ export default function Dashboard() {
     loadListings();
   }, [user]);
 
-  // Refresh listings when a new one is created
-  const handleListingCreated = async () => {
-    try {
-      // Load listings and stats in parallel for better performance
-      const [userListings, listingStats] = await Promise.all([
-        listingsService.getUserListings(),
-        listingsService.getListingStats()
-      ]);
-      
-      setListings(userListings);
-      setStats(listingStats);
-      
-      setShowCreateListing(false);
-      setLogMsg('New listing created successfully!');
-    } catch (error) {
-      console.error('Failed to refresh listings:', error);
-      setLogMsg('Failed to refresh listings');
-    }
-  };
-
-
   // Show loading state
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Loading...</p>
+      <ThemeProvider>
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600 dark:text-gray-300">Loading...</p>
+          </div>
         </div>
-      </div>
+      </ThemeProvider>
     );
   }
 
@@ -116,7 +93,7 @@ export default function Dashboard() {
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
         <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 border border-gray-100 text-center">
           <h1 className="text-2xl font-bold text-gray-900 mb-4">Access Required</h1>
-          <p className="text-gray-600 mb-6">Please sign in to access your dashboard.</p>
+          <p className="text-gray-600 mb-6">Please sign in to access your dealer dashboard.</p>
           <div className="space-y-3">
             <Link 
               href="/login" 
@@ -144,11 +121,9 @@ export default function Dashboard() {
   return (
     <ThemeProvider>
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-        <Header currentMode={currentMode} onModeChange={(mode) => {
-          if (mode === 'dealer') {
-            window.location.href = '/dealer-dashboard';
-          } else {
-            setCurrentMode(mode);
+        <Header currentMode="dealer" onModeChange={(mode) => {
+          if (mode === 'solo') {
+            window.location.href = '/dashboard';
           }
         }} />
       
@@ -160,7 +135,19 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Enhanced Stats */}
+        {/* Dealer Header */}
+        <div className="px-4 py-6">
+          <div className="text-center mb-6">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+              🏢 Dealer Dashboard
+            </h1>
+            <p className="text-gray-600 dark:text-gray-300">
+              Manage your entire inventory with AI-powered listings
+            </p>
+          </div>
+        </div>
+
+        {/* Enhanced Stats for Dealers */}
         <div className="px-4 py-6">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
             <div className="bg-white dark:bg-gray-800 p-3 sm:p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
@@ -173,13 +160,13 @@ export default function Dashboard() {
               <div className="text-2xl font-bold text-green-600 dark:text-green-300">
                 {isLoadingListings ? '...' : stats.totalListings}
               </div>
-              <div className="text-xs text-gray-600 dark:text-gray-300">Total Listings</div>
+              <div className="text-xs text-gray-600 dark:text-gray-300">Total Inventory</div>
             </div>
             <div className="bg-white dark:bg-gray-800 p-3 sm:p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
               <div className="text-2xl font-bold text-orange-600 dark:text-orange-300">
                 {isLoadingListings ? '...' : stats.soldListings}
               </div>
-              <div className="text-xs text-gray-600 dark:text-gray-300">Cars Sold</div>
+              <div className="text-xs text-gray-600 dark:text-gray-300">Vehicles Sold</div>
             </div>
             <div className="bg-white dark:bg-gray-800 p-3 sm:p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
               <div className="text-2xl font-bold text-purple-600 dark:text-purple-300">
@@ -190,26 +177,31 @@ export default function Dashboard() {
           </div>
         </div>
 
+        {/* Dealer Mode Features */}
+        <div className="px-4 mb-6">
+          <DealerMode userTier={user?.user_metadata?.subscription_tier || 'free_trial'} />
+        </div>
 
-        {/* Quick Actions */}
+        {/* Quick Actions for Dealers */}
         <div className="px-4 mb-6">
           <div className="grid grid-cols-1 gap-3">
-            <button
-              onClick={() => setShowCreateListing(true)}
-              className="w-full bg-blue-500 dark:bg-blue-700 text-white py-4 rounded-xl font-semibold shadow-lg hover:bg-blue-600 dark:hover:bg-blue-800 transition-colors duration-200 text-center flex items-center justify-center gap-3"
-            >
-              📸 Post New Car
+            <button className="w-full bg-blue-500 dark:bg-blue-700 text-white py-4 rounded-xl font-semibold shadow-lg hover:bg-blue-600 dark:hover:bg-blue-800 transition-colors duration-200 text-center flex items-center justify-center gap-3">
+              📸 Add New Vehicle
+            </button>
+            <button className="w-full bg-green-500 dark:bg-green-700 text-white py-4 rounded-xl font-semibold shadow-lg hover:bg-green-600 dark:hover:bg-green-800 transition-colors duration-200 text-center flex items-center justify-center gap-3">
+              📊 Bulk Import CSV
+            </button>
+            <button className="w-full bg-purple-500 dark:bg-purple-700 text-white py-4 rounded-xl font-semibold shadow-lg hover:bg-purple-600 dark:hover:bg-purple-800 transition-colors duration-200 text-center flex items-center justify-center gap-3">
+              🚀 Post to All Platforms
             </button>
           </div>
         </div>
 
-
-
-        {/* Active Listings */}
+        {/* Inventory Overview */}
         {!isLoadingListings && listings.length > 0 && (
           <div className="px-4 mb-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Your Listings ({listings.length})</h2>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Inventory Overview ({listings.length})</h2>
               <Link
                 href="/listings"
                 className="text-sm text-blue-600 hover:text-blue-700 px-2 py-1 rounded border border-blue-200 hover:border-blue-300 transition-colors"
@@ -218,75 +210,41 @@ export default function Dashboard() {
               </Link>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {listings.slice(0, 2).map((listing) => (
-                <DashboardListing key={listing.id} listing={listing} />
+              {listings.slice(0, 4).map((listing) => (
+                <div key={listing.id} className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-semibold text-gray-900 dark:text-white">{listing.title}</h3>
+                    <span className="text-sm text-green-600 dark:text-green-400 font-medium">${listing.price?.toLocaleString()}</span>
+                  </div>
+                  <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">{listing.description}</p>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-500 dark:text-gray-400">Status: {listing.status}</span>
+                    <div className="flex gap-2">
+                      <button className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 px-2 py-1 rounded">Edit</button>
+                      <button className="text-xs bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-400 px-2 py-1 rounded">Post</button>
+                    </div>
+                  </div>
+                </div>
               ))}
             </div>
           </div>
         )}
 
-        {/* Loading state for listings */}
-        {isLoadingListings && (
-          <div className="px-4 mb-6">
-            <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-              <p className="text-gray-600 dark:text-gray-400">Loading your listings...</p>
-            </div>
-          </div>
-        )}
-
-        {/* Empty state */}
+        {/* Empty State */}
         {!isLoadingListings && listings.length === 0 && (
           <div className="px-4 mb-6">
-            <div className="text-center py-8">
-              <div className="text-6xl mb-4">🚗</div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No listings yet</h3>
-              <p className="text-gray-600 dark:text-gray-400 mb-4">Start by posting your first car!</p>
-              <button
-                onClick={() => setShowCreateListing(true)}
-                className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors"
-              >
-                Create Your First Listing
+            <div className="text-center py-12">
+              <div className="text-6xl mb-4">🏢</div>
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No Inventory Yet</h3>
+              <p className="text-gray-600 dark:text-gray-300 mb-6">Start building your dealer inventory by importing your vehicles.</p>
+              <button className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors">
+                Import Inventory
               </button>
             </div>
           </div>
         )}
-
       </main>
-
-      {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-4 py-2">
-        <div className="flex justify-around items-center">
-          <Link href="/dashboard" className="flex flex-col items-center py-2 text-blue-600 dark:text-blue-400">
-            <span className="text-2xl">🏠</span>
-            <span className="text-xs mt-1">Home</span>
-          </Link>
-          <Link href="/listings" className="flex flex-col items-center py-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400">
-            <span className="text-2xl">🚗</span>
-            <span className="text-xs mt-1">Listings</span>
-          </Link>
-          <Link href="/messages" className="flex flex-col items-center py-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400">
-            <span className="text-2xl">💬</span>
-            <span className="text-xs mt-1">Messages</span>
-          </Link>
-          <Link href="/analytics" className="flex flex-col items-center py-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400">
-            <span className="text-2xl">📊</span>
-            <span className="text-xs mt-1">Analytics</span>
-          </Link>
-          <Link href="/market-intel" className="flex flex-col items-center py-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400">
-            <span className="text-2xl">🔍</span>
-            <span className="text-xs mt-1">Market Intel</span>
-          </Link>
-        </div>
-      </nav>
-
-      {/* Create Listing Modal */}
-      {showCreateListing && (
-        <CreateListing 
-          onClose={() => setShowCreateListing(false)}
-        />
-      )}
-      </div>
+    </div>
     </ThemeProvider>
   );
 }

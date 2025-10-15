@@ -5,6 +5,7 @@ import { useDropzone, FileRejection } from 'react-dropzone';
 import carDataRaw from '../../data/carData.json';
 import { api } from '../../utils/api';
 import { getBackendUrl, API_ENDPOINTS } from '../../config/api';
+import { ListingsService } from '../../services/listingsService';
 const carData = carDataRaw as Record<string, string[]>;
 
 interface CreateListingProps {
@@ -103,6 +104,8 @@ export default function CreateListing({ onClose }: CreateListingProps) {
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [isPosting, setIsPosting] = useState(false);
   const [selectedPricingTier, setSelectedPricingTier] = useState<'quick' | 'market' | 'premium' | null>(null);
+  const [postSuccess, setPostSuccess] = useState(false);
+  const [postResult, setPostResult] = useState<{successCount: number, totalCount: number} | null>(null);
 
 
   const onDrop = useCallback(async (acceptedFiles: File[], rejectedFiles: FileRejection[]) => {
@@ -222,55 +225,64 @@ export default function CreateListing({ onClose }: CreateListingProps) {
       return;
     }
     
-    // Convert images to base64 for persistent storage
-    const imagePromises = files.map(file => {
-      return new Promise<string>((resolve) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          resolve(reader.result as string);
-        };
-        reader.readAsDataURL(file);
+    setIsPosting(true);
+    
+    try {
+      // Convert images to base64 for persistent storage
+      const imagePromises = files.map(file => {
+        return new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            resolve(reader.result as string);
+          };
+          reader.readAsDataURL(file);
+        });
       });
-    });
-    
-    const imageUrls = await Promise.all(imagePromises);
-    
-    // Create test listing data
-    const testListing = {
-      id: Date.now().toString(),
-      title: `${carDetails.year} ${carDetails.make} ${carDetails.model}`,
-      make: carDetails.make,
-      model: carDetails.model,
-      year: carDetails.year,
-      price: selectedPricingTier === 'quick' ? Math.floor(parseInt(carDetails.price) * 0.85) :
-             selectedPricingTier === 'premium' ? Math.floor(parseInt(carDetails.price) * 1.15) :
-             parseInt(carDetails.price),
-      description: carDetails.finalDescription,
-      finalDescription: carDetails.finalDescription, // AI-generated description
-      detectedFeatures: analysisResult?.detected?.features || [], // AI-detected features
-      aiAnalysis: analysisResult?.ai_analysis || '', // Raw AI analysis
-      images: imageUrls, // Use base64 URLs instead of blob URLs
-      mileage: carDetails.mileage,
-      titleStatus: carDetails.titleStatus,
-      postedAt: new Date().toISOString(),
-      status: 'active',
-      platforms: selectedPlatforms.length > 0 ? selectedPlatforms : ['facebook_marketplace'],
-      messages: 0,
-      clicks: Math.floor(Math.random() * 20) + 5 // Random initial views
-    };
-    
-    // Store in localStorage for demo (in real app, this would go to database)
-    const existingListings = JSON.parse(localStorage.getItem('testListings') || '[]');
-    existingListings.unshift(testListing);
-    localStorage.setItem('testListings', JSON.stringify(existingListings));
-    
-    // Close modal and navigate to dashboard immediately
-    onClose();
-    
-    // Force dashboard to refresh and show new listing
-    setTimeout(() => {
-      window.location.reload();
-    }, 100);
+      
+      const imageUrls = await Promise.all(imagePromises);
+      
+      // Calculate price based on selected tier
+      const basePrice = parseInt(carDetails.price || '0');
+      const finalPrice = selectedPricingTier === 'quick' ? Math.floor(basePrice * 0.85) :
+                        selectedPricingTier === 'premium' ? Math.floor(basePrice * 1.15) :
+                        basePrice;
+      
+      // Create listing data for database
+      const listingData = {
+        title: `${carDetails.year} ${carDetails.make} ${carDetails.model}`,
+        description: carDetails.finalDescription,
+        price: finalPrice,
+        platforms: selectedPlatforms.length > 0 ? selectedPlatforms : ['accorria'],
+        status: 'active',
+        images: imageUrls,
+        make: carDetails.make,
+        model: carDetails.model,
+        year: carDetails.year,
+        mileage: carDetails.mileage,
+        condition: 'good',
+        location: 'Detroit, MI'
+      };
+      
+      // Use the listingsService to create the listing
+      const listingsService = new ListingsService();
+      const createdListing = await listingsService.createListing(listingData);
+      
+      if (createdListing) {
+        console.log('Listing created successfully:', createdListing);
+        
+        // Show success state
+        setPostResult({ successCount: 1, totalCount: 1 });
+        setPostSuccess(true);
+      } else {
+        throw new Error('Failed to create listing');
+      }
+      
+    } catch (error) {
+      console.error('Error creating listing:', error);
+      alert('Failed to create listing. Please try again.');
+    } finally {
+      setIsPosting(false);
+    }
   };
 
 
@@ -576,12 +588,11 @@ export default function CreateListing({ onClose }: CreateListingProps) {
         const result = await response.json();
         console.log('Listing posted:', result);
         
-        // Show success message
+        // Show success state instead of closing immediately
         const successCount = result.successful_postings || 0;
         const totalCount = result.total_platforms || 0;
-        alert(`Successfully posted to ${successCount}/${totalCount} platforms!`);
-        
-        onClose();
+        setPostResult({ successCount, totalCount });
+        setPostSuccess(true);
       } else {
         throw new Error('Failed to post listing');
       }
@@ -598,6 +609,70 @@ export default function CreateListing({ onClose }: CreateListingProps) {
   const models = carDetails.make && carDetails.make !== 'Other' ? carData[carDetails.make] : [];
   const currentYear = new Date().getFullYear() + 1;
   const years = Array.from({ length: currentYear - 1959 }, (_, i) => (currentYear - i).toString());
+
+  // Show success screen after posting
+  if (postSuccess && postResult) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md">
+          <div className="p-6 text-center">
+            <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 dark:bg-green-900/20 mb-4">
+              <svg className="h-8 w-8 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              🎉 Listing Posted Successfully!
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
+              Your listing has been posted to <strong>{postResult.successCount}</strong> out of <strong>{postResult.totalCount}</strong> platforms.
+            </p>
+            <div className="space-y-3">
+              <button
+                onClick={() => {
+                  setPostSuccess(false);
+                  setPostResult(null);
+                  onClose();
+                }}
+                className="w-full bg-blue-500 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-600 transition-colors"
+              >
+                Return to Dashboard
+              </button>
+              <button
+                onClick={() => {
+                  setPostSuccess(false);
+                  setPostResult(null);
+                  // Reset form for new listing
+                  setFiles([]);
+                  setSelectedFiles([]);
+                  setCarDetails({
+                    make: '',
+                    model: '',
+                    year: '',
+                    mileage: '',
+                    price: '',
+                    lowestPrice: '',
+                    titleStatus: '',
+                    city: '',
+                    zipCode: '',
+                    aboutVehicle: '',
+                    finalDescription: ''
+                  });
+                  setAnalysisResult(null);
+                  setShowAnalysis(false);
+                  setSelectedPricingTier(null);
+                  setSelectedPlatforms([]);
+                }}
+                className="w-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 py-3 px-4 rounded-lg font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+              >
+                Create Another Listing
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50 animate-fade-in">
@@ -701,6 +776,52 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                               setFiles(newFiles);
                             }
                           }}
+                          // Mobile touch events for drag and drop
+                          onTouchStart={(e) => {
+                            e.currentTarget.dataset.touchStartTime = Date.now().toString();
+                            e.currentTarget.dataset.touchStartY = e.touches[0].clientY.toString();
+                            e.currentTarget.dataset.touchStartX = e.touches[0].clientX.toString();
+                            e.currentTarget.dataset.draggedIndex = index.toString();
+                          }}
+                          onTouchMove={(e) => {
+                            e.preventDefault();
+                            const touch = e.touches[0];
+                            const startY = parseFloat(e.currentTarget.dataset.touchStartY || '0');
+                            const startX = parseFloat(e.currentTarget.dataset.touchStartX || '0');
+                            const deltaY = Math.abs(touch.clientY - startY);
+                            const deltaX = Math.abs(touch.clientX - startX);
+                            
+                            // If moved more than 10px, start drag mode
+                            if (deltaY > 10 || deltaX > 10) {
+                              e.currentTarget.classList.add('opacity-50', 'scale-105', 'z-10');
+                              e.currentTarget.style.transform = `translate(${touch.clientX - startX}px, ${touch.clientY - startY}px)`;
+                            }
+                          }}
+                          onTouchEnd={(e) => {
+                            const element = e.currentTarget;
+                            element.classList.remove('opacity-50', 'scale-105', 'z-10');
+                            element.style.transform = '';
+                            
+                            // Find the element under the touch point
+                            const touch = e.changedTouches[0];
+                            const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+                            
+                            if (elementBelow) {
+                              const dropTarget = elementBelow.closest('[data-file-index]');
+                              if (dropTarget) {
+                                const draggedIndex = parseInt(element.dataset.draggedIndex || '0');
+                                const dropIndex = parseInt(dropTarget.getAttribute('data-file-index') || '0');
+                                
+                                if (draggedIndex !== dropIndex) {
+                                  const newFiles = [...files];
+                                  const [draggedFile] = newFiles.splice(draggedIndex, 1);
+                                  newFiles.splice(dropIndex, 0, draggedFile);
+                                  setFiles(newFiles);
+                                }
+                              }
+                            }
+                          }}
+                          data-file-index={index}
                         >
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
@@ -1002,20 +1123,20 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                   <button
                     type="button"
                     onClick={() => setSelectedPricingTier('quick')}
-                    className={`p-4 rounded-lg border-2 transition-all ${
+                    className={`p-4 rounded-lg border-2 transition-all min-h-[80px] active:scale-95 touch-manipulation ${
                       selectedPricingTier === 'quick' 
-                        ? 'border-green-500 bg-green-50 dark:bg-green-900/20' 
-                        : 'border-gray-200 dark:border-gray-600 hover:border-green-300'
+                        ? 'border-green-500 bg-green-50 dark:bg-green-900/20 shadow-lg' 
+                        : 'border-gray-200 dark:border-gray-600 hover:border-green-300 active:border-green-400 bg-white dark:bg-gray-800'
                     }`}
                   >
                     <div className="flex justify-between items-center">
                       <div>
-                        <div className="font-bold text-green-600">🚀 Quick Sale</div>
+                        <div className="font-bold text-green-600 dark:text-green-400">🚀 Quick Sale</div>
                         <div className="text-sm text-gray-600 dark:text-gray-400">Lower price, faster sale</div>
                       </div>
                       <div className="text-right">
-                        <div className="font-bold text-lg">${Math.floor(parseInt(carDetails.price || '10000') * 0.85).toLocaleString()}</div>
-                        <div className="text-xs text-gray-500">~7 days</div>
+                        <div className="font-bold text-lg text-gray-900 dark:text-white">${Math.floor(parseInt(carDetails.price || '10000') * 0.85).toLocaleString()}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">~7 days</div>
                       </div>
                     </div>
                   </button>
@@ -1023,20 +1144,20 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                   <button
                     type="button"
                     onClick={() => setSelectedPricingTier('market')}
-                    className={`p-4 rounded-lg border-2 transition-all ${
+                    className={`p-4 rounded-lg border-2 transition-all min-h-[80px] active:scale-95 touch-manipulation ${
                       selectedPricingTier === 'market' 
-                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
-                        : 'border-gray-200 dark:border-gray-600 hover:border-blue-300'
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-lg' 
+                        : 'border-gray-200 dark:border-gray-600 hover:border-blue-300 active:border-blue-400 bg-white dark:bg-gray-800'
                     }`}
                   >
                     <div className="flex justify-between items-center">
                       <div>
-                        <div className="font-bold text-blue-600">⚖️ Market Rate</div>
+                        <div className="font-bold text-blue-600 dark:text-blue-400">⚖️ Market Rate</div>
                         <div className="text-sm text-gray-600 dark:text-gray-400">Balanced price & speed</div>
                       </div>
                       <div className="text-right">
-                        <div className="font-bold text-lg">${parseInt(carDetails.price || '10000').toLocaleString()}</div>
-                        <div className="text-xs text-gray-500">~14 days</div>
+                        <div className="font-bold text-lg text-gray-900 dark:text-white">${parseInt(carDetails.price || '10000').toLocaleString()}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">~14 days</div>
                       </div>
                     </div>
                   </button>
@@ -1044,20 +1165,20 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                   <button
                     type="button"
                     onClick={() => setSelectedPricingTier('premium')}
-                    className={`p-4 rounded-lg border-2 transition-all ${
+                    className={`p-4 rounded-lg border-2 transition-all min-h-[80px] active:scale-95 touch-manipulation ${
                       selectedPricingTier === 'premium' 
-                        ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20' 
-                        : 'border-gray-200 dark:border-gray-600 hover:border-purple-300'
+                        ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20 shadow-lg' 
+                        : 'border-gray-200 dark:border-gray-600 hover:border-purple-300 active:border-purple-400 bg-white dark:bg-gray-800'
                     }`}
                   >
                     <div className="flex justify-between items-center">
                       <div>
-                        <div className="font-bold text-purple-600">💎 Premium</div>
+                        <div className="font-bold text-purple-600 dark:text-purple-400">💎 Premium</div>
                         <div className="text-sm text-gray-600 dark:text-gray-400">Higher price, detailed listing</div>
                       </div>
                       <div className="text-right">
-                        <div className="text-lg font-bold">${Math.floor(parseInt(carDetails.price || '10000') * 1.15).toLocaleString()}</div>
-                        <div className="text-xs text-gray-500">~21 days</div>
+                        <div className="text-lg font-bold text-gray-900 dark:text-white">${Math.floor(parseInt(carDetails.price || '10000') * 1.15).toLocaleString()}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">~21 days</div>
                       </div>
                     </div>
                   </button>
@@ -1107,7 +1228,7 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                   placeholder="AI will generate the final polished listing here..."
                 />
                 
-                {/* Post Button */}
+                {/* Unified Post Button */}
                 <div className="mt-4">
                   <button
                     type="button"
@@ -1118,7 +1239,10 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                     <span>Post Listing</span>
                   </button>
                   <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-2">
-                    This will create your listing on the dashboard
+                    {selectedPlatforms.length > 0 
+                      ? `Will post to ${selectedPlatforms.length} platform${selectedPlatforms.length > 1 ? 's' : ''} and save to dashboard`
+                      : 'Will save to dashboard (select platforms above to post externally)'
+                    }
                   </p>
                 </div>
               </div>
@@ -1129,8 +1253,11 @@ export default function CreateListing({ onClose }: CreateListingProps) {
             {/* Platform Selection */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Post to Platforms
+                Select Platforms (Optional)
               </label>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                Choose which platforms to post to. If none selected, listing will only be saved to your dashboard.
+              </p>
               <div className="space-y-2">
                 {[
                   { id: 'facebook_marketplace', name: 'Facebook Marketplace', icon: '📘' },
