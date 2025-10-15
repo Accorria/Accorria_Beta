@@ -38,7 +38,48 @@ export class ListingsService {
    * Get empty listings array - ready for real car data
    */
   private getMockListings(): Listing[] {
-    return [];
+    try {
+      const stored = localStorage.getItem('demoListings');
+      return stored ? JSON.parse(stored) : [];
+    } catch (error) {
+      console.error('Error loading mock listings:', error);
+      return [];
+    }
+  }
+
+  private createMockListing(listingData: Omit<Listing, 'id' | 'user_id' | 'created_at' | 'updated_at'>): Listing {
+    const newListing: Listing = {
+      id: Date.now().toString(),
+      user_id: '00000000-0000-0000-0000-000000000123',
+      title: listingData.title,
+      description: listingData.description,
+      price: listingData.price,
+      platforms: listingData.platforms || ['accorria'],
+      status: listingData.status || 'active',
+      images: listingData.images || [],
+      make: listingData.make,
+      model: listingData.model,
+      year: listingData.year,
+      mileage: listingData.mileage,
+      condition: listingData.condition,
+      location: listingData.location,
+      postedAt: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      titleStatus: 'Clean',
+      messages: 0,
+      clicks: 0,
+      detectedFeatures: [],
+      aiAnalysis: undefined,
+      finalDescription: listingData.description
+    };
+
+    // Store in localStorage
+    const existingListings = this.getMockListings();
+    existingListings.unshift(newListing);
+    localStorage.setItem('demoListings', JSON.stringify(existingListings));
+
+    return newListing;
   }
 
   /**
@@ -48,9 +89,9 @@ export class ListingsService {
     try {
       const { data: { user } } = await this.supabase.auth.getUser();
       
-      // For development, return mock data if no Supabase user
-      if (!user) {
-        console.log('No Supabase user found, returning mock data for development');
+      // For development, return mock data if no Supabase user or if it's the demo user
+      if (!user || user.id === '00000000-0000-0000-0000-000000000123') {
+        console.log('Demo user detected, returning mock data for development');
         return this.getMockListings();
       }
 
@@ -99,8 +140,10 @@ export class ListingsService {
     try {
       const { data: { user } } = await this.supabase.auth.getUser();
       
-      if (!user) {
-        throw new Error('User not authenticated');
+      // For demo user, store in localStorage instead of database
+      if (!user || user.id === '00000000-0000-0000-0000-000000000123') {
+        console.log('Demo user detected, storing listing in localStorage');
+        return this.createMockListing(listingData);
       }
 
       const { data, error } = await this.supabase
