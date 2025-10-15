@@ -257,7 +257,7 @@ export default function CreateListing({ onClose }: CreateListingProps) {
         images: imageUrls,
         make: carDetails.make,
         model: carDetails.model,
-        year: carDetails.year,
+        year: parseInt(carDetails.year) || new Date().getFullYear(),
         mileage: carDetails.mileage,
         condition: 'good',
         location: 'Detroit, MI',
