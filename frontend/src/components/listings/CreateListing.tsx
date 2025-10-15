@@ -253,7 +253,7 @@ export default function CreateListing({ onClose }: CreateListingProps) {
         description: carDetails.finalDescription,
         price: finalPrice,
         platforms: selectedPlatforms.length > 0 ? selectedPlatforms : ['accorria'],
-        status: 'active',
+        status: 'active' as const,
         images: imageUrls,
         make: carDetails.make,
         model: carDetails.model,
