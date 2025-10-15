@@ -23,6 +23,7 @@ export default function Dashboard() {
   const [logMsg, setLogMsg] = useState<string | null>(null);
   const [showCreateListing, setShowCreateListing] = useState(false);
   const [isLoadingListings, setIsLoadingListings] = useState(true);
+  const [currentMode, setCurrentMode] = useState<'solo' | 'dealer'>('solo');
 
   // Load listings from Supabase database
   useEffect(() => {
@@ -35,18 +36,26 @@ export default function Dashboard() {
       try {
         setIsLoadingListings(true);
         
-        // First, try to migrate any localStorage data
-        await listingsService.migrateLocalStorageData();
+        // Load listings and stats in parallel for better performance
+        const [userListings, listingStats] = await Promise.all([
+          listingsService.getUserListings(),
+          listingsService.getListingStats()
+        ]);
         
-        // Load listings from database
-        const userListings = await listingsService.getUserListings();
         setListings(userListings);
-        
-        // Load stats
-        const listingStats = await listingsService.getListingStats();
         setStats(listingStats);
         
         setLogMsg(`Loaded ${userListings.length} listings from database`);
+        
+        // Run migration in background after initial load (non-blocking)
+        setTimeout(async () => {
+          try {
+            await listingsService.migrateLocalStorageData();
+          } catch (error) {
+            console.log('Background migration completed or failed:', error);
+          }
+        }, 100);
+        
       } catch (error) {
         console.error('Failed to load listings:', error);
         setLogMsg('Failed to load listings from database');
@@ -61,10 +70,13 @@ export default function Dashboard() {
   // Refresh listings when a new one is created
   const handleListingCreated = async () => {
     try {
-      const userListings = await listingsService.getUserListings();
-      setListings(userListings);
+      // Load listings and stats in parallel for better performance
+      const [userListings, listingStats] = await Promise.all([
+        listingsService.getUserListings(),
+        listingsService.getListingStats()
+      ]);
       
-      const listingStats = await listingsService.getListingStats();
+      setListings(userListings);
       setStats(listingStats);
       
       setShowCreateListing(false);
@@ -167,6 +179,34 @@ export default function Dashboard() {
           </div>
         </div>
 
+        {/* Mode Toggle */}
+        <div className="px-4 mb-4">
+          <div className="flex justify-center">
+            <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+              <button
+                onClick={() => setCurrentMode('solo')}
+                className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                  currentMode === 'solo'
+                    ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+                    : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
+                }`}
+              >
+                👤 Solo Mode
+              </button>
+              <button
+                onClick={() => setCurrentMode('dealer')}
+                className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                  currentMode === 'dealer'
+                    ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+                    : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
+                }`}
+              >
+                🏢 Dealer Mode
+              </button>
+            </div>
+          </div>
+        </div>
+
         {/* Quick Actions */}
         <div className="px-4 mb-6">
           <div className="grid grid-cols-1 gap-3">
@@ -180,9 +220,11 @@ export default function Dashboard() {
         </div>
 
         {/* Dealer Mode Section */}
-        <div className="px-4 mb-6">
-          <DealerMode userTier={user?.user_metadata?.subscription_tier || 'free_trial'} />
-        </div>
+        {currentMode === 'dealer' && (
+          <div className="px-4 mb-6">
+            <DealerMode userTier={user?.user_metadata?.subscription_tier || 'free_trial'} />
+          </div>
+        )}
 
 
         {/* Active Listings */}
