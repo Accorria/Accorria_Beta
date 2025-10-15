@@ -260,7 +260,9 @@ export default function CreateListing({ onClose }: CreateListingProps) {
         year: carDetails.year,
         mileage: carDetails.mileage,
         condition: 'good',
-        location: 'Detroit, MI'
+        location: 'Detroit, MI',
+        titleStatus: 'Clean',
+        postedAt: new Date().toISOString()
       };
       
       // Use the listingsService to create the listing
