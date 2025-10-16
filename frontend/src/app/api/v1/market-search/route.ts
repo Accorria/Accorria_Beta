@@ -343,7 +343,7 @@ function generateMockResults(searchTerm: string) {
   // Find matching make
   let results = [];
   for (const [make, cars] of Object.entries(mockData)) {
-    if (make in searchLower) {
+    if (searchLower.includes(make)) {
       results = cars;
       break;
     }
