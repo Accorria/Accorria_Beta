@@ -826,10 +826,12 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                           }}
                           onDragStart={(e) => {
                             e.dataTransfer.setData('text/plain', index.toString());
-                            e.currentTarget.classList.add('opacity-50');
+                            e.currentTarget.classList.add('opacity-50', 'scale-105');
+                            console.log('Drag started for image', index);
                           }}
                           onDragEnd={(e) => {
-                            e.currentTarget.classList.remove('opacity-50');
+                            e.currentTarget.classList.remove('opacity-50', 'scale-105');
+                            console.log('Drag ended for image', index);
                           }}
                           onDragOver={(e) => {
                             e.preventDefault();
@@ -845,11 +847,14 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                             const draggedIndex = parseInt(e.dataTransfer.getData('text/plain'));
                             const dropIndex = index;
                             
+                            console.log('Drop event:', { draggedIndex, dropIndex });
+                            
                             if (draggedIndex !== dropIndex) {
                               const newFiles = [...files];
                               const [draggedFile] = newFiles.splice(draggedIndex, 1);
                               newFiles.splice(dropIndex, 0, draggedFile);
                               setFiles(newFiles);
+                              console.log('Files reordered:', newFiles.map(f => f.name));
                             }
                           }}
                           // Mobile touch events for drag and drop
