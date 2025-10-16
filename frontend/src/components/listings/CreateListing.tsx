@@ -615,7 +615,7 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
         // Save listing locally for demo users (in addition to backend save)
         try {
           const { listingsService } = await import('@/services/listingsService');
-          const service = new listingsService.ListingsService();
+          const service = listingsService;
           
           // Create listing data from the analysis result
           const listingData = {
@@ -623,7 +623,7 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
             description: result.car_analysis?.description || carDetails.finalDescription || '',
             price: result.car_analysis?.price || parseFloat(carDetails.price) || 0,
             platforms: selectedPlatforms,
-            status: 'active',
+            status: 'active' as const,
             images: files.map(file => file.name), // Store file names for demo
             make: result.car_analysis?.make || carDetails.make,
             model: result.car_analysis?.model || carDetails.model,
