@@ -28,11 +28,12 @@ async def discover_deals(
         # Use real scraper to get live data
         async with real_scraper as scraper:
             # Scrape from multiple sources
-            ebay_results = await scraper.scrape_ebay_motors(search_term, max_results // 2)
-            cargurus_results = await scraper.scrape_cargurus(search_term, max_results // 2)
+            ebay_results = await scraper.scrape_ebay_motors(search_term, max_results // 3)
+            cargurus_results = await scraper.scrape_cargurus(search_term, max_results // 3)
+            google_results = await scraper.scrape_google_car_listings(search_term, max_results // 3)
             
             # Combine results
-            all_deals = ebay_results + cargurus_results
+            all_deals = ebay_results + cargurus_results + google_results
             
             # Sort by deal score
             all_deals.sort(key=lambda x: x.get("deal_score", 0), reverse=True)
@@ -46,7 +47,8 @@ async def discover_deals(
                 "total_found": len(all_deals),
                 "sources": {
                     "ebay_motors": len(ebay_results),
-                    "cargurus": len(cargurus_results)
+                    "cargurus": len(cargurus_results),
+                    "google_search": len(google_results)
                 },
                 "search_term": search_term
             }

@@ -36,6 +36,10 @@ from app.api.v1 import (
     chat as chat_router,
     inventory as inventory_router
 )
+from app.api.v1.market_search_real_scrape import router as market_search_real_scrape_router
+from app.api.v1.market_search_scrapingbee import router as market_search_scrapingbee_router
+from app.api.v1.market_search_marketcheck import router as market_search_marketcheck_router
+from app.api.v1.market_search_scraping import router as market_search_scraping_router
 from app.middleware import rate_limit_middleware, cleanup_rate_limits
 from app.core.security import (
     SecurityConfig, 
@@ -196,6 +200,10 @@ app.include_router(replies_router.router, prefix="/api/v1", tags=["AI Replies"])
 app.include_router(deals_router.router, prefix="/api/v1", tags=["Deals"])
 app.include_router(chat_router.router, prefix="/api/v1/chat", tags=["Chat"])
 app.include_router(inventory_router.router, prefix="/api/v1", tags=["Inventory"])
+app.include_router(market_search_real_scrape_router, prefix="/api/v1/market-search", tags=["Market Search"])
+app.include_router(market_search_scrapingbee_router, prefix="/api/v1/market-search", tags=["Market Search"])
+app.include_router(market_search_marketcheck_router, prefix="/api/v1/market-search", tags=["Market Search"])
+app.include_router(market_search_scraping_router, prefix="/api/v1/market-search", tags=["Market Search"])
 
 # Test endpoint
 @app.get("/test")

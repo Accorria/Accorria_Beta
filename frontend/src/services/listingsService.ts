@@ -74,10 +74,15 @@ export class ListingsService {
       finalDescription: listingData.description
     };
 
-    // Store in localStorage
+    // Store in localStorage - use consistent key for demo data
     const existingListings = this.getMockListings();
     existingListings.unshift(newListing);
     localStorage.setItem('demoListings', JSON.stringify(existingListings));
+    
+    // Also store in testListings for backward compatibility
+    const existingTestListings = JSON.parse(localStorage.getItem('testListings') || '[]');
+    existingTestListings.unshift(newListing);
+    localStorage.setItem('testListings', JSON.stringify(existingTestListings));
 
     return newListing;
   }
@@ -138,13 +143,23 @@ export class ListingsService {
    */
   async createListing(listingData: Omit<Listing, 'id' | 'user_id' | 'created_at' | 'updated_at'>): Promise<Listing | null> {
     try {
+      console.log('🚀 createListing called at:', new Date().toISOString());
       const { data: { user } } = await this.supabase.auth.getUser();
       
-      // For demo user, store in localStorage instead of database
-      if (!user || user.id === '00000000-0000-0000-0000-000000000123') {
-        console.log('Demo user detected, storing listing in localStorage');
+      console.log('Current user:', user?.id, user?.email);
+      console.log('User check conditions:', {
+        noUser: !user,
+        isDemoId: user?.id === '00000000-0000-0000-0000-000000000123',
+        isPrestonEmail: user?.email === 'preston@accorria.com'
+      });
+      
+      // For demo user or any user without a profile, store in localStorage instead of database
+      if (!user || user.id === '00000000-0000-0000-0000-000000000123' || user.email === 'preston@accorria.com') {
+        console.log('✅ Demo user detected, storing listing in localStorage');
         return this.createMockListing(listingData);
       }
+      
+      console.log('❌ Proceeding to database insert for user:', user.email);
 
       const { data, error } = await this.supabase
         .from('car_listings')
@@ -164,6 +179,13 @@ export class ListingsService {
 
       if (error) {
         console.error('Error creating listing:', error);
+        
+        // If it's a foreign key constraint error, fall back to localStorage
+        if (error.code === '23503') {
+          console.log('🔄 Foreign key constraint error detected, falling back to localStorage');
+          return this.createMockListing(listingData);
+        }
+        
         throw error;
       }
 

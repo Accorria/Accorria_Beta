@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { useDropzone, FileRejection } from 'react-dropzone';
 import carDataRaw from '../../data/carData.json';
 import { api } from '../../utils/api';
@@ -10,6 +10,7 @@ const carData = carDataRaw as Record<string, string[]>;
 
 interface CreateListingProps {
   onClose: () => void;
+  onListingCreated?: () => void;
 }
 
 interface CarDetails {
@@ -80,7 +81,7 @@ interface AnalysisResult {
   };
 }
 
-export default function CreateListing({ onClose }: CreateListingProps) {
+export default function CreateListing({ onClose, onListingCreated }: CreateListingProps) {
   const [files, setFiles] = useState<File[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [carDetails, setCarDetails] = useState<CarDetails>({
@@ -109,12 +110,7 @@ export default function CreateListing({ onClose }: CreateListingProps) {
 
 
   const onDrop = useCallback(async (acceptedFiles: File[], rejectedFiles: FileRejection[]) => {
-    console.log('onDrop called!');
-    console.log('Accepted files:', acceptedFiles.length);
-    console.log('Rejected files:', rejectedFiles.length);
-    console.log('Accepted file names:', acceptedFiles.map(f => f.name));
-    console.log('Accepted file types:', acceptedFiles.map(f => f.type));
-    console.log('Accepted file sizes:', acceptedFiles.map(f => f.size));
+    console.log('onDrop called with', acceptedFiles.length, 'accepted files');
     
     if (rejectedFiles.length > 0) {
       console.log('Rejected files details:', rejectedFiles);
@@ -122,14 +118,11 @@ export default function CreateListing({ onClose }: CreateListingProps) {
     }
     
     if (acceptedFiles.length > 0) {
-      console.log('Setting files...');
-      
       // Convert and compress files
       const convertedFiles = await Promise.all(
         acceptedFiles.map(async (file): Promise<File> => {
           // Compress images to reduce file size
           if (file.type.startsWith('image/')) {
-            console.log('Compressing file:', file.name, 'Size:', file.size);
             
             // Create a canvas to compress the image
             const canvas = document.createElement('canvas');
@@ -165,7 +158,6 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                       type: 'image/jpeg',
                       lastModified: Date.now()
                     });
-                    console.log('Compressed file:', file.name, 'New size:', compressedFile.size);
                     resolve(compressedFile);
                   } else {
                     resolve(file);
@@ -182,9 +174,6 @@ export default function CreateListing({ onClose }: CreateListingProps) {
       
       // Append new files instead of replacing
       setFiles(prev => [...prev, ...convertedFiles]);
-      console.log('Files state updated with:', convertedFiles.length, 'files');
-    } else {
-      console.log('No files to add!');
     }
   }, []);
 
@@ -220,10 +209,8 @@ export default function CreateListing({ onClose }: CreateListingProps) {
   };
 
   const handleTestPost = async () => {
-    if (!selectedPricingTier) {
-      alert('Please select a pricing tier first');
-      return;
-    }
+    // Use market rate as default if no pricing tier is selected
+    const pricingTier = selectedPricingTier || 'market';
     
     setIsPosting(true);
     
@@ -243,8 +230,8 @@ export default function CreateListing({ onClose }: CreateListingProps) {
       
       // Calculate price based on selected tier
       const basePrice = parseInt(carDetails.price || '0');
-      const finalPrice = selectedPricingTier === 'quick' ? Math.floor(basePrice * 0.85) :
-                        selectedPricingTier === 'premium' ? Math.floor(basePrice * 1.15) :
+      const finalPrice = pricingTier === 'quick' ? Math.floor(basePrice * 0.85) :
+                        pricingTier === 'premium' ? Math.floor(basePrice * 1.15) :
                         basePrice;
       
       // Create listing data for database
@@ -275,6 +262,11 @@ export default function CreateListing({ onClose }: CreateListingProps) {
         // Show success state
         setPostResult({ successCount: 1, totalCount: 1 });
         setPostSuccess(true);
+        
+        // Notify parent component that listing was created
+        if (onListingCreated) {
+          onListingCreated();
+        }
       } else {
         throw new Error('Failed to create listing');
       }
@@ -316,8 +308,20 @@ export default function CreateListing({ onClose }: CreateListingProps) {
     
     const titleStatusText = titleStatus === 'clean' ? 'Clean' : 
                            titleStatus === 'rebuilt' ? 'Rebuilt' : 
-                           'Salvage';
-    description += `📄 Title: ${titleStatusText}\n`;
+                           titleStatus === 'salvage' ? 'Salvage' :
+                           titleStatus === 'flood' ? 'Flood' :
+                           titleStatus === 'lemon' ? 'Lemon' :
+                           titleStatus === 'junk' ? 'Junk' : 'Clean';
+    
+    // Add title status with appropriate emoji and context
+    const titleEmoji = titleStatus === 'clean' ? '✅' : 
+                      titleStatus === 'rebuilt' ? '🔧' : 
+                      titleStatus === 'salvage' ? '⚠️' :
+                      titleStatus === 'flood' ? '🌊' :
+                      titleStatus === 'lemon' ? '🍋' :
+                      titleStatus === 'junk' ? '🗑️' : '✅';
+    
+    description += `${titleEmoji} Title: ${titleStatusText}\n`;
     description += `📍 Location: Detroit, MI\n\n`;
     
     // Details section
@@ -401,7 +405,25 @@ export default function CreateListing({ onClose }: CreateListingProps) {
       description += `• Alloy wheels\n`;
     }
     
-    description += `\n🔑 Reliable, efficient sedan—priced right for a ${titleStatusText.toLowerCase()} title.\n\n`;
+    // Add title-specific context to the description
+    let titleContext = '';
+    if (titleStatus === 'clean') {
+      titleContext = 'Reliable, efficient sedan with a clean title—priced competitively.';
+    } else if (titleStatus === 'rebuilt') {
+      titleContext = 'Rebuilt title vehicle—professionally restored and ready to drive.';
+    } else if (titleStatus === 'salvage') {
+      titleContext = 'Salvage title vehicle—great for parts or restoration project.';
+    } else if (titleStatus === 'flood') {
+      titleContext = 'Flood title vehicle—sold as-is for parts or restoration.';
+    } else if (titleStatus === 'lemon') {
+      titleContext = 'Lemon title vehicle—sold as-is, great for parts.';
+    } else if (titleStatus === 'junk') {
+      titleContext = 'Junk title vehicle—sold for parts only.';
+    } else {
+      titleContext = 'Reliable, efficient sedan—priced right for the market.';
+    }
+    
+    description += `\n🔑 ${titleContext}\n\n`;
     description += `📱 Message me to schedule a test drive or ask questions!`;
     
     return description;
@@ -414,7 +436,7 @@ export default function CreateListing({ onClose }: CreateListingProps) {
       setCarDetails(prev => ({ ...prev, finalDescription: newDescription }));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedPricingTier, analysisResult, carDetails.finalDescription, carDetails.make, carDetails.model, carDetails.year, carDetails.mileage, carDetails.price, carDetails.titleStatus, generateAIDescription]);
+  }, [selectedPricingTier, analysisResult, carDetails.make, carDetails.model, carDetails.year, carDetails.mileage, carDetails.price, carDetails.titleStatus]);
 
   const analyzeImages = async () => {
     if (selectedFiles.length === 0) {
@@ -590,6 +612,41 @@ export default function CreateListing({ onClose }: CreateListingProps) {
         const result = await response.json();
         console.log('Listing posted:', result);
         
+        // Save listing locally for demo users (in addition to backend save)
+        try {
+          const { listingsService } = await import('@/services/listingsService');
+          const service = new listingsService.ListingsService();
+          
+          // Create listing data from the analysis result
+          const listingData = {
+            title: result.car_analysis?.title || `${result.car_analysis?.year || ''} ${result.car_analysis?.make || ''} ${result.car_analysis?.model || ''}`.trim(),
+            description: result.car_analysis?.description || carDetails.finalDescription || '',
+            price: result.car_analysis?.price || parseFloat(carDetails.price) || 0,
+            platforms: selectedPlatforms,
+            status: 'active',
+            images: files.map(file => file.name), // Store file names for demo
+            make: result.car_analysis?.make || carDetails.make,
+            model: result.car_analysis?.model || carDetails.model,
+            year: result.car_analysis?.year || carDetails.year,
+            mileage: result.car_analysis?.mileage || carDetails.mileage,
+            condition: result.car_analysis?.condition || 'Good',
+            location: result.car_analysis?.location || `${carDetails.city}, ${carDetails.zipCode}`,
+            postedAt: new Date().toISOString(),
+            titleStatus: 'Clean',
+            messages: 0,
+            clicks: 0,
+            detectedFeatures: result.car_analysis?.features || [],
+            aiAnalysis: result.car_analysis,
+            finalDescription: result.car_analysis?.description || carDetails.finalDescription
+          };
+          
+          await service.createListing(listingData);
+          console.log('✅ Listing saved locally for demo user');
+        } catch (error) {
+          console.error('Failed to save listing locally:', error);
+          // Don't fail the entire flow if local save fails
+        }
+        
         // Show success state instead of closing immediately
         const successCount = result.successful_postings || 0;
         const totalCount = result.total_platforms || 0;
@@ -611,6 +668,19 @@ export default function CreateListing({ onClose }: CreateListingProps) {
   const models = carDetails.make && carDetails.make !== 'Other' ? carData[carDetails.make] : [];
   const currentYear = new Date().getFullYear() + 1;
   const years = Array.from({ length: currentYear - 1959 }, (_, i) => (currentYear - i).toString());
+
+  // Memoize image URLs to prevent constant re-rendering
+  const imageUrls = useMemo(() => {
+    console.log('Creating new image URLs for', files.length, 'files');
+    return files.map(file => URL.createObjectURL(file));
+  }, [files.length]); // Only depend on length, not the entire files array
+
+  // Cleanup URLs when component unmounts or files change
+  useEffect(() => {
+    return () => {
+      imageUrls.forEach(url => URL.revokeObjectURL(url));
+    };
+  }, [files.length]); // Only depend on length to prevent infinite loops
 
   // Show success screen after posting
   if (postSuccess && postResult) {
@@ -634,6 +704,10 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                 onClick={() => {
                   setPostSuccess(false);
                   setPostResult(null);
+                  // Call the callback to refresh dashboard listings
+                  if (onListingCreated) {
+                    onListingCreated();
+                  }
                   onClose();
                 }}
                 className="w-full bg-blue-500 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-600 transition-colors"
@@ -827,13 +901,13 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                         >
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
-                            src={URL.createObjectURL(file)}
+                            src={imageUrls[index]}
                             alt={`Preview ${index + 1}`}
                             className={`w-full h-20 object-cover rounded-lg transition-all ${
                               isSelected ? 'ring-2 ring-blue-500 opacity-100' : 'opacity-70 hover:opacity-100'
                             }`}
                             onError={() => console.error('Image failed to load:', file.name)}
-                            onLoad={() => console.log('Image loaded successfully:', file.name)}
+                            onLoad={() => {}}
                           />
                           
                           {/* Selection Checkbox - appears on hover */}
@@ -1068,6 +1142,9 @@ export default function CreateListing({ onClose }: CreateListingProps) {
                 <option value="clean">Clean Title</option>
                 <option value="rebuilt">Rebuilt Title</option>
                 <option value="salvage">Salvage Title</option>
+                <option value="flood">Flood Title</option>
+                <option value="lemon">Lemon Title</option>
+                <option value="junk">Junk Title</option>
               </select>
             </div>
 

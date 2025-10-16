@@ -16,7 +16,7 @@ export default function ListingsPage() {
 
   // Load test listings from localStorage
   useEffect(() => {
-    const savedTestListings = localStorage.getItem('testListings');
+    const savedTestListings = localStorage.getItem('demoListings');
     if (savedTestListings) {
       setTestListings(JSON.parse(savedTestListings));
     }
@@ -25,7 +25,7 @@ export default function ListingsPage() {
   // Listen for storage changes to update test listings
   useEffect(() => {
     const handleStorageChange = () => {
-      const savedTestListings = localStorage.getItem('testListings');
+      const savedTestListings = localStorage.getItem('demoListings');
       if (savedTestListings) {
         setTestListings(JSON.parse(savedTestListings));
       }
@@ -34,6 +34,15 @@ export default function ListingsPage() {
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
+
+  // Refresh listings when a new one is created
+  const handleListingCreated = () => {
+    const savedTestListings = localStorage.getItem('demoListings');
+    if (savedTestListings) {
+      setTestListings(JSON.parse(savedTestListings));
+    }
+    setShowCreateListing(false);
+  };
 
   // Show loading state
   if (loading) {
@@ -139,6 +148,7 @@ export default function ListingsPage() {
       {showCreateListing && (
         <CreateListing 
           onClose={() => setShowCreateListing(false)}
+          onListingCreated={handleListingCreated}
         />
       )}
       </div>

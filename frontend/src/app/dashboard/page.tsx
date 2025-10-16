@@ -284,6 +284,7 @@ export default function Dashboard() {
       {showCreateListing && (
         <CreateListing 
           onClose={() => setShowCreateListing(false)}
+          onListingCreated={handleListingCreated}
         />
       )}
       </div>
