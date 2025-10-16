@@ -38,7 +38,6 @@ from app.api.v1 import (
 )
 from app.api.v1.market_search_real_scrape import router as market_search_real_scrape_router
 from app.api.v1.market_search_scrapingbee import router as market_search_scrapingbee_router
-from app.api.v1.market_search_marketcheck import router as market_search_marketcheck_router
 from app.api.v1.market_search_scraping import router as market_search_scraping_router
 from app.middleware import rate_limit_middleware, cleanup_rate_limits
 from app.core.security import (
@@ -202,7 +201,6 @@ app.include_router(chat_router.router, prefix="/api/v1/chat", tags=["Chat"])
 app.include_router(inventory_router.router, prefix="/api/v1", tags=["Inventory"])
 app.include_router(market_search_real_scrape_router, prefix="/api/v1/market-search", tags=["Market Search"])
 app.include_router(market_search_scrapingbee_router, prefix="/api/v1/market-search", tags=["Market Search"])
-app.include_router(market_search_marketcheck_router, prefix="/api/v1/market-search", tags=["Market Search"])
 app.include_router(market_search_scraping_router, prefix="/api/v1/market-search", tags=["Market Search"])
 
 # Test endpoint
@@ -253,8 +251,8 @@ if __name__ == "__main__":
     import uvicorn
     import os
     
-    # Use PORT environment variable or default to 8000
-    port = int(os.getenv("PORT", 8000))
+    # Use PORT environment variable or default to 8080 (Cloud Run standard)
+    port = int(os.getenv("PORT", 8080))
     
     uvicorn.run(
         "app.main:app",

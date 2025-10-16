@@ -8,8 +8,8 @@ import uvicorn
 from app.main import app
 
 if __name__ == "__main__":
-    # Get port from environment or default to 8000
-    port = int(os.getenv("PORT", 8000))
+    # Get port from environment or default to 8080 (Cloud Run standard)
+    port = int(os.getenv("PORT", 8080))
     
     print(f"🚀 Starting Accorria backend on port {port}")
     

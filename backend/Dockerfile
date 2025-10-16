@@ -25,7 +25,7 @@ RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
 USER appuser
 
 # Expose port
-EXPOSE 8000
+EXPOSE 8080
 
 # Run the application
 CMD python start_server.py 

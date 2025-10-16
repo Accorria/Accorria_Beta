@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "sqlite:///./accorria.db"
     
     # Redis (optional for caching)
-    REDIS_URL: str = "redis://localhost:6379"
+    REDIS_URL: str = ""
     
     # Security
     SECRET_KEY: str = "your-secret-key-here"
@@ -44,8 +44,8 @@ class Settings(BaseSettings):
     RATE_LIMIT_UPLOAD: int = 10
     RATE_LIMIT_CHAT: int = 20
     
-    # Redis Configuration
-    REDIS_HOST: str = "localhost"
+    # Redis Configuration (optional)
+    REDIS_HOST: str = ""
     REDIS_PORT: int = 6379
     REDIS_PASSWORD: Optional[str] = None
     REDIS_DB: int = 0

@@ -37,7 +37,7 @@ steps:
       - '--concurrency'
       - '80'
       - '--set-env-vars'
-      - 'CLOUDBUILD=true,SECRET_KEY=your-secret-key-here'
+      - 'CLOUDBUILD=true,SECRET_KEY=your-secret-key-here,PORT=8080,REDIS_HOST=,REDIS_URL='
       - '--service-account'
       - '691352445702-compute@developer.gserviceaccount.com'
 
