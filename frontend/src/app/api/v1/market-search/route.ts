@@ -8,15 +8,15 @@ export async function POST(req: NextRequest) {
     // Call the backend API to get real scraped data
     const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'https://accorria-backend-19949436301.us-central1.run.app';
     
-    // Try Scrapy scraping API first
+    // Try the main market search API first
     try {
-      const scrapingResponse = await fetch(`${backendUrl}/api/v1/market-search/scraping`, {
+      const scrapingResponse = await fetch(`${backendUrl}/api/v1/market-search/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          search_term: searchTerm,
+          searchTerm: searchTerm,
           location: location,
           radius: radius,
           max_results: 20,
