@@ -5,6 +5,39 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { searchTerm, location, radius } = body;
     
+    // For demo purposes, return mock data immediately
+    // TODO: Replace with real backend call once deployment is fixed
+    
+    // Generate mock results based on search term
+    const mockResults = generateMockResults(searchTerm);
+    
+    const mockResponse = {
+      success: true,
+      results: mockResults,
+      summary: {
+        totalListings: mockResults.length,
+        averagePrice: mockResults.reduce((sum, r) => sum + (r.price || 0), 0) / mockResults.length,
+        priceRange: {
+          min: Math.min(...mockResults.map(r => r.price || 0)),
+          max: Math.max(...mockResults.map(r => r.price || 0))
+        },
+        sources: [...new Set(mockResults.map(r => r.source))],
+        searchTerm: searchTerm,
+        isRealData: false,
+        isDirectListings: false,
+        message: `Mock data: Found ${mockResults.length} sample listings for ${searchTerm}`
+      },
+      message: `Found ${mockResults.length} sample vehicle listings (demo data)`
+    };
+    
+    return new Response(JSON.stringify(mockResponse), {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    // Original backend call code (commented out for demo)
+    /*
     // Call the backend API to get real scraped data
     const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'https://accorria-backend-19949436301.us-central1.run.app';
     
@@ -254,6 +287,7 @@ export async function POST(req: NextRequest) {
         'Content-Type': 'application/json',
       },
     });
+    */
   } catch (error) {
     console.error('Market search error:', error);
     return new Response(JSON.stringify({
@@ -266,4 +300,62 @@ export async function POST(req: NextRequest) {
       },
     });
   }
+}
+
+// Mock data generation function for demo
+function generateMockResults(searchTerm: string) {
+  const searchLower = searchTerm.toLowerCase();
+  
+  // Mock data based on common car makes
+  const mockData = {
+    "bmw": [
+      { title: "2018 BMW 3 Series", price: 28000, mileage: 45000, location: "Los Angeles, CA", source: "eBay Motors", year: 2018, make: "BMW", model: "3 Series" },
+      { title: "2019 BMW 5 Series", price: 35000, mileage: 32000, location: "Miami, FL", source: "CarGurus", year: 2019, make: "BMW", model: "5 Series" },
+      { title: "2020 BMW X3", price: 42000, mileage: 28000, location: "Austin, TX", source: "AutoTrader", year: 2020, make: "BMW", model: "X3" },
+    ],
+    "toyota": [
+      { title: "2019 Toyota Camry", price: 22000, mileage: 38000, location: "Phoenix, AZ", source: "eBay Motors", year: 2019, make: "Toyota", model: "Camry" },
+      { title: "2020 Toyota RAV4", price: 28000, mileage: 25000, location: "Denver, CO", source: "CarGurus", year: 2020, make: "Toyota", model: "RAV4" },
+      { title: "2018 Toyota Prius", price: 18000, mileage: 55000, location: "Portland, OR", source: "AutoTrader", year: 2018, make: "Toyota", model: "Prius" },
+    ],
+    "honda": [
+      { title: "2019 Honda Civic", price: 20000, mileage: 40000, location: "Seattle, WA", source: "eBay Motors", year: 2019, make: "Honda", model: "Civic" },
+      { title: "2020 Honda CR-V", price: 26000, mileage: 30000, location: "Boston, MA", source: "CarGurus", year: 2020, make: "Honda", model: "CR-V" },
+      { title: "2018 Honda Accord", price: 23000, mileage: 45000, location: "Atlanta, GA", source: "AutoTrader", year: 2018, make: "Honda", model: "Accord" },
+    ],
+    "ford": [
+      { title: "2019 Ford F-150", price: 35000, mileage: 35000, location: "Dallas, TX", source: "eBay Motors", year: 2019, make: "Ford", model: "F-150" },
+      { title: "2020 Ford Explorer", price: 32000, mileage: 28000, location: "Chicago, IL", source: "CarGurus", year: 2020, make: "Ford", model: "Explorer" },
+      { title: "2018 Ford Mustang", price: 25000, mileage: 40000, location: "Detroit, MI", source: "AutoTrader", year: 2018, make: "Ford", model: "Mustang" },
+    ],
+    "dodge": [
+      { title: "2012 Dodge Charger", price: 18000, mileage: 75000, location: "Las Vegas, NV", source: "eBay Motors", year: 2012, make: "Dodge", model: "Charger" },
+      { title: "2013 Dodge Challenger", price: 22000, mileage: 65000, location: "Phoenix, AZ", source: "CarGurus", year: 2013, make: "Dodge", model: "Challenger" },
+      { title: "2011 Dodge Ram", price: 16000, mileage: 85000, location: "Houston, TX", source: "AutoTrader", year: 2011, make: "Dodge", model: "Ram" },
+    ],
+    "mercedes": [
+      { title: "2019 Mercedes C-Class", price: 38000, mileage: 30000, location: "New York, NY", source: "eBay Motors", year: 2019, make: "Mercedes", model: "C-Class" },
+      { title: "2020 Mercedes GLC", price: 45000, mileage: 25000, location: "San Francisco, CA", source: "CarGurus", year: 2020, make: "Mercedes", model: "GLC" },
+      { title: "2018 Mercedes E-Class", price: 42000, mileage: 35000, location: "Las Vegas, NV", source: "AutoTrader", year: 2018, make: "Mercedes", model: "E-Class" },
+    ]
+  };
+  
+  // Find matching make
+  let results = [];
+  for (const [make, cars] of Object.entries(mockData)) {
+    if (make in searchLower) {
+      results = cars;
+      break;
+    }
+  }
+  
+  // If no specific make found, return a mix
+  if (results.length === 0) {
+    for (const [make, cars] of Object.entries(mockData)) {
+      results.push(...cars.slice(0, 2)); // Take 2 from each make
+    }
+  }
+  
+  // Limit results
+  return results.slice(0, 20);
 }
