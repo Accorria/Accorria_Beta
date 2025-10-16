@@ -15,6 +15,7 @@ interface MarketResult {
   mileage?: string;
   year?: string;
   url: string;
+  isDirectListing?: boolean;
 }
 
 export default function SimpleMarketSearch({ onClose }: SimpleMarketSearchProps) {
