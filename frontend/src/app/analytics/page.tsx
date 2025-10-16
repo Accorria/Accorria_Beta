@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { EmailVerification } from '@/components/EmailVerification';
 import Header from '@/components/Header';
 import { ThemeProvider } from '@/contexts/ThemeContext';
+import AnalyticsDashboard from '@/components/AnalyticsDashboard';
 
 export default function AnalyticsPage() {
   const { user, loading, isEmailVerified } = useAuth();
@@ -115,6 +116,11 @@ export default function AnalyticsPage() {
         <main className="pb-20">
         <div className="px-4 py-6">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Analytics</h1>
+          
+          {/* New Analytics Dashboard */}
+          <div className="mb-8">
+            <AnalyticsDashboard />
+          </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
