@@ -212,6 +212,15 @@ app.include_router(market_search_scraping_router, prefix="/api/v1/market-search"
 async def test_endpoint():
     return {"message": "Test endpoint working!"}
 
+# Test market search endpoint without auth
+@app.post("/test-market-search")
+async def test_market_search(request: dict):
+    return {
+        "success": True,
+        "message": "Test market search working!",
+        "received": request
+    }
+
 # Chat endpoint
 @app.post("/chat/enhanced")
 async def enhanced_chat(request: Request):
