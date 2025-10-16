@@ -49,9 +49,7 @@ search_history_storage = []
 
 @router.post("/", response_model=SearchHistoryResponse)
 async def save_search_history(
-    request: SearchHistoryRequest,
-    current_user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    request: SearchHistoryRequest
 ):
     """
     Save a market search to history
@@ -71,7 +69,7 @@ async def save_search_history(
             "results": request.results,
             "summary": request.summary,
             "timestamp": datetime.now(),
-            "user_id": current_user.get("user_id") if current_user else None
+            "user_id": None  # No auth for demo
         }
         
         # Store in memory (replace with database in production)
@@ -97,9 +95,7 @@ async def save_search_history(
 
 @router.get("/", response_model=List[SearchHistoryItem])
 async def get_search_history(
-    limit: int = Query(20, description="Number of searches to return"),
-    current_user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    limit: int = Query(20, description="Number of searches to return")
 ):
     """
     Get search history for the current user
@@ -107,14 +103,8 @@ async def get_search_history(
     try:
         logger.info("Retrieving search history")
         
-        # Filter by user if authenticated
-        user_id = current_user.get("user_id") if current_user else None
-        
-        if user_id:
-            user_searches = [s for s in search_history_storage if s.get("user_id") == user_id]
-        else:
-            # For demo purposes, return all searches if no user
-            user_searches = search_history_storage
+        # For demo purposes, return all searches
+        user_searches = search_history_storage
         
         # Sort by timestamp (newest first)
         user_searches.sort(key=lambda x: x["timestamp"], reverse=True)

@@ -10,6 +10,7 @@ from datetime import datetime
 
 from app.services.scraping_service import scraping_service
 from app.core.security import get_current_user
+from fastapi import Depends, HTTPException
 from app.core.database import get_db
 from sqlalchemy.orm import Session
 
@@ -36,9 +37,7 @@ class MarketSearchResponse(BaseModel):
 
 @router.post("/", response_model=MarketSearchResponse)
 async def market_search(
-    request: MarketSearchRequest,
-    current_user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    request: MarketSearchRequest
 ):
     """
     Main market search endpoint that routes to the best available search method
