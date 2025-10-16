@@ -5,36 +5,102 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { searchTerm, location, radius } = body;
     
-    // For demo purposes, return mock data immediately
-    // TODO: Replace with real backend call once deployment is fixed
+    // Call the actual backend API
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'https://accorria-backend-19949436301.us-central1.run.app';
     
-    // Generate mock results based on search term
-    const mockResults = generateMockResults(searchTerm);
-    
-    const mockResponse = {
-      success: true,
-      results: mockResults,
-      summary: {
-        totalListings: mockResults.length,
-        averagePrice: mockResults.reduce((sum, r) => sum + (r.price || 0), 0) / mockResults.length,
-        priceRange: {
-          min: Math.min(...mockResults.map(r => r.price || 0)),
-          max: Math.max(...mockResults.map(r => r.price || 0))
+    try {
+      const backendResponse = await fetch(`${backendUrl}/api/v1/market-search/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-        sources: [...new Set(mockResults.map(r => r.source))],
-        searchTerm: searchTerm,
-        isRealData: false,
-        isDirectListings: false,
-        message: `Mock data: Found ${mockResults.length} sample listings for ${searchTerm}`
-      },
-      message: `Found ${mockResults.length} sample vehicle listings (demo data)`
-    };
-    
-    return new Response(JSON.stringify(mockResponse), {
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+        body: JSON.stringify({
+          searchTerm: searchTerm,
+          location: location,
+          radius: radius,
+          max_results: 20,
+          sources: ['ebay', 'cargurus']
+        }),
+      });
+
+      if (backendResponse.ok) {
+        const backendData = await backendResponse.json();
+        
+        // Transform backend results to frontend format
+        const transformedResults = backendData.results.map((result: any, index: number) => ({
+          source: result.source,
+          price: result.price ? `$${result.price.toLocaleString()}` : 'Price on request',
+          location: result.location || 'Various locations',
+          mileage: result.mileage ? `${result.mileage.toLocaleString()} miles` : 'Mileage not specified',
+          year: result.year || 'Various',
+          make: result.make || 'Various',
+          model: result.model || 'Various',
+          url: result.url || '#',
+          image_url: result.primary_image || result.image_urls?.[0] || '',
+          distance: `${Math.round(5 + Math.random() * 45)} miles`,
+          listingId: result.listing_id || `listing-${index + 1}`,
+          description: result.title || `${result.year} ${result.make} ${result.model}`,
+          isDirectListing: result.is_direct_listing || false,
+          dealScore: result.deal_score || 0.5,
+          dealerName: result.seller_name || '',
+          vin: result.vin || '',
+          exteriorColor: result.exterior_color || '',
+          interiorColor: result.interior_color || '',
+          fuelType: result.fuel_type || '',
+          transmission: result.transmission || '',
+          drivetrain: result.drivetrain || '',
+          bodyStyle: result.body_style || '',
+          engine: result.engine || '',
+          mpgCity: result.mpg_city || 0,
+          mpgHighway: result.mpg_highway || 0,
+          condition: result.condition || 'unknown',
+          potentialProfit: result.potential_profit || 0,
+          sellerMotivation: result.seller_motivation || 'unknown',
+          urgencyIndicators: result.urgency_indicators || [],
+          scrapedAt: result.scraped_at || new Date().toISOString()
+        }));
+
+        return Response.json({
+          success: true,
+          results: transformedResults,
+          summary: backendData.summary,
+          message: backendData.message || "Live data from real marketplace scraping"
+        });
+      } else {
+        console.error('Backend market search failed:', backendResponse.status, await backendResponse.text());
+        throw new Error(`Backend returned ${backendResponse.status}`);
+      }
+    } catch (backendError) {
+      console.error('Backend market search error:', backendError);
+      
+      // Fallback to mock data if backend fails
+      const mockResults = generateMockResults(searchTerm);
+      
+      const mockResponse = {
+        success: true,
+        results: mockResults,
+        summary: {
+          totalListings: mockResults.length,
+          averagePrice: mockResults.reduce((sum, r) => sum + (r.price || 0), 0) / mockResults.length,
+          priceRange: {
+            min: Math.min(...mockResults.map(r => r.price || 0)),
+            max: Math.max(...mockResults.map(r => r.price || 0))
+          },
+          sources: [...new Set(mockResults.map(r => r.source))],
+          searchTerm: searchTerm,
+          isRealData: false,
+          isDirectListings: false,
+          message: `Fallback mock data: Found ${mockResults.length} sample listings for ${searchTerm}`
+        },
+        message: `Found ${mockResults.length} sample vehicle listings (fallback data)`
+      };
+      
+      return new Response(JSON.stringify(mockResponse), {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+    }
     
     // Original backend call code (commented out for demo)
     /*
