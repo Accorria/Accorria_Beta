@@ -634,7 +634,7 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
             price: result.car_analysis?.price || parseFloat(carDetails.price) || 0,
             platforms: selectedPlatforms,
             status: 'active' as const,
-            images: files.map(file => file.name), // Store file names for demo
+            images: files.map(fileWithId => fileWithId.file.name), // Store file names for demo
             make: result.car_analysis?.make || carDetails.make,
             model: result.car_analysis?.model || carDetails.model,
             year: result.car_analysis?.year || carDetails.year,
