@@ -34,8 +34,10 @@ from app.api.v1 import (
     replies as replies_router,
     deals as deals_router,
     chat as chat_router,
-    inventory as inventory_router
+    inventory as inventory_router,
+    search_history as search_history_router
 )
+from app.api.v1.market_search import router as market_search_router
 from app.api.v1.market_search_real_scrape import router as market_search_real_scrape_router
 from app.api.v1.market_search_scrapingbee import router as market_search_scrapingbee_router
 from app.api.v1.market_search_scraping import router as market_search_scraping_router
@@ -199,6 +201,8 @@ app.include_router(replies_router.router, prefix="/api/v1", tags=["AI Replies"])
 app.include_router(deals_router.router, prefix="/api/v1", tags=["Deals"])
 app.include_router(chat_router.router, prefix="/api/v1/chat", tags=["Chat"])
 app.include_router(inventory_router.router, prefix="/api/v1", tags=["Inventory"])
+app.include_router(search_history_router.router, prefix="/api/v1/search-history", tags=["Search History"])
+app.include_router(market_search_router, prefix="/api/v1/market-search", tags=["Market Search"])
 app.include_router(market_search_real_scrape_router, prefix="/api/v1/market-search", tags=["Market Search"])
 app.include_router(market_search_scrapingbee_router, prefix="/api/v1/market-search", tags=["Market Search"])
 app.include_router(market_search_scraping_router, prefix="/api/v1/market-search", tags=["Market Search"])
