@@ -81,9 +81,14 @@ interface AnalysisResult {
   };
 }
 
+interface FileWithId {
+  id: string;
+  file: File;
+}
+
 export default function CreateListing({ onClose, onListingCreated }: CreateListingProps) {
-  const [files, setFiles] = useState<File[]>([]);
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [files, setFiles] = useState<FileWithId[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<FileWithId[]>([]);
   const [carDetails, setCarDetails] = useState<CarDetails>({
     make: '',
     model: '',
@@ -172,8 +177,12 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
         })
       );
       
-      // Append new files instead of replacing
-      setFiles(prev => [...prev, ...convertedFiles]);
+      // Append new files instead of replacing, with unique IDs
+      const filesWithIds = convertedFiles.map(file => ({
+        id: `${file.name}-${file.size}-${file.lastModified}-${Date.now()}`,
+        file
+      }));
+      setFiles(prev => [...prev, ...filesWithIds]);
     }
   }, []);
 
@@ -191,17 +200,18 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
 
   const removeFile = (index: number) => {
     setFiles(prev => prev.filter((_, i) => i !== index));
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  const toggleFileSelection = (file: File) => {
-    console.log('Toggle file selection called for:', file.name);
+  const toggleFileSelection = (fileWithId: FileWithId) => {
+    console.log('Toggle file selection called for:', fileWithId.file.name);
     setSelectedFiles(prev => {
-      if (prev.includes(file)) {
-        console.log('Removing file from selection:', file.name);
-        return prev.filter(f => f !== file);
+      if (prev.some(f => f.id === fileWithId.id)) {
+        console.log('Removing file from selection:', fileWithId.file.name);
+        return prev.filter(f => f.id !== fileWithId.id);
       } else if (prev.length < 4) {
-        console.log('Adding file to selection:', file.name);
-        return [...prev, file];
+        console.log('Adding file to selection:', fileWithId.file.name);
+        return [...prev, fileWithId];
       }
       console.log('Max selection reached (4 files)');
       return prev;
@@ -216,13 +226,13 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
     
     try {
       // Convert images to base64 for persistent storage
-      const imagePromises = files.map(file => {
+      const imagePromises = files.map(fileWithId => {
         return new Promise<string>((resolve) => {
           const reader = new FileReader();
           reader.onload = () => {
             resolve(reader.result as string);
           };
-          reader.readAsDataURL(file);
+          reader.readAsDataURL(fileWithId.file);
         });
       });
       
@@ -468,8 +478,8 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
       const formData = new FormData();
       
       // Add selected images for analysis
-      selectedFiles.forEach((file) => {
-        formData.append('images', file);
+      selectedFiles.forEach((fileWithId) => {
+        formData.append('images', fileWithId.file);
       });
       
       // Add car details
@@ -579,8 +589,8 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
     
     try {
       const formData = new FormData();
-      files.forEach((file) => {
-        formData.append(`images`, file);
+      files.forEach((fileWithId) => {
+        formData.append(`images`, fileWithId.file);
       });
       
       // Add car details, using custom values if 'Other' is selected
@@ -672,7 +682,7 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
   // Memoize image URLs to prevent constant re-rendering
   const imageUrls = useMemo(() => {
     console.log('Creating new image URLs for', files.length, 'files');
-    return files.map(file => URL.createObjectURL(file));
+    return files.map(fileWithId => URL.createObjectURL(fileWithId.file));
   }, [files.length]); // Only depend on length, not the entire files array
 
   // Cleanup URLs when component unmounts or files change
@@ -813,11 +823,11 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                     </span>
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {files.map((file, index) => {
-                      const isSelected = selectedFiles.includes(file);
+                    {files.map((fileWithId, index) => {
+                      const isSelected = selectedFiles.some(f => f.id === fileWithId.id);
                       return (
                         <div 
-                          key={`${file.name}-${index}`}
+                          key={fileWithId.id}
                           className="relative group"
                           draggable
                           onMouseDown={(e) => {
@@ -854,7 +864,7 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                               const [draggedFile] = newFiles.splice(draggedIndex, 1);
                               newFiles.splice(dropIndex, 0, draggedFile);
                               setFiles(newFiles);
-                              console.log('Files reordered:', newFiles.map(f => f.name));
+                              console.log('Files reordered:', newFiles.map(f => f.file.name));
                             }
                           }}
                           // Mobile touch events for drag and drop
@@ -898,6 +908,7 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                                   const [draggedFile] = newFiles.splice(draggedIndex, 1);
                                   newFiles.splice(dropIndex, 0, draggedFile);
                                   setFiles(newFiles);
+                                  console.log('Mobile drag: Files reordered:', newFiles.map(f => f.file.name));
                                 }
                               }
                             }
@@ -911,7 +922,7 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                             className={`w-full h-20 object-cover rounded-lg transition-all ${
                               isSelected ? 'ring-2 ring-blue-500 opacity-100' : 'opacity-70 hover:opacity-100'
                             }`}
-                            onError={() => console.error('Image failed to load:', file.name)}
+                            onError={() => console.error('Image failed to load:', fileWithId.file.name)}
                             onLoad={() => {}}
                           />
                           
@@ -925,8 +936,8 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                             onClick={(e) => {
                               e.stopPropagation();
                               e.preventDefault();
-                              console.log('Selection button clicked for:', file.name);
-                              toggleFileSelection(file);
+                              console.log('Selection button clicked for:', fileWithId.file.name);
+                              toggleFileSelection(fileWithId);
                             }}
                             className={`absolute top-1 left-1 w-6 h-6 rounded-full border-2 transition-all z-10 ${
                               isSelected 
