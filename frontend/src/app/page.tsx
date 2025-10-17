@@ -395,6 +395,7 @@ export default function Home() {
                 <li><Link href="/about" className="text-gray-400 hover:text-white">About</Link></li>
                 <li><Link href="/contact" className="text-gray-400 hover:text-white">Contact</Link></li>
                 <li><Link href="/privacy" className="text-gray-400 hover:text-white">Privacy</Link></li>
+                <li><Link href="/terms" className="text-gray-400 hover:text-white">Terms of Service</Link></li>
               </ul>
             </div>
           </div>
