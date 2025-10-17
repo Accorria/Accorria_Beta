@@ -32,12 +32,13 @@ class FacebookListingData:
 class FacebookMarketplaceAPI:
     """
     Facebook Marketplace API integration
-    Uses Facebook Business API for posting listings
+    Uses Facebook Business API for posting listings with user-specific tokens
     """
     
-    def __init__(self, access_token: str, page_id: str):
+    def __init__(self, access_token: str, page_id: str, user_id: str = None):
         self.access_token = access_token
         self.page_id = page_id
+        self.user_id = user_id  # Track which user this posting is for
         self.api_base_url = "https://graph.facebook.com/v18.0"
         self.session: Optional[aiohttp.ClientSession] = None
     

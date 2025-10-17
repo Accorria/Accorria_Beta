@@ -1,0 +1,359 @@
+"""
+Facebook OAuth2 Integration Service
+Handles multi-tenant Facebook account connections for users
+"""
+
+import asyncio
+import logging
+import aiohttp
+import json
+import secrets
+from typing import Dict, Any, Optional, List
+from datetime import datetime, timedelta
+from dataclasses import dataclass
+from urllib.parse import urlencode, parse_qs, urlparse
+import base64
+import hashlib
+import hmac
+
+logger = logging.getLogger(__name__)
+
+@dataclass
+class FacebookOAuthConfig:
+    """Facebook OAuth2 configuration"""
+    app_id: str
+    app_secret: str
+    redirect_uri: str
+    scopes: List[str] = None
+    
+    def __post_init__(self):
+        if self.scopes is None:
+            self.scopes = [
+                "pages_manage_posts",
+                "pages_read_engagement", 
+                "public_profile",
+                "email"
+            ]
+
+@dataclass
+class FacebookUserInfo:
+    """Facebook user information from OAuth2"""
+    user_id: str
+    name: str
+    email: Optional[str] = None
+    picture_url: Optional[str] = None
+
+@dataclass
+class FacebookPageInfo:
+    """Facebook page information"""
+    page_id: str
+    name: str
+    access_token: str
+    category: str = ""
+
+class FacebookOAuthService:
+    """
+    Facebook OAuth2 service for multi-tenant user connections
+    Each user connects their own Facebook account to Accorria
+    """
+    
+    def __init__(self, config: FacebookOAuthConfig):
+        self.config = config
+        self.api_base_url = "https://graph.facebook.com/v18.0"
+        self.oauth_base_url = "https://www.facebook.com/v18.0/dialog/oauth"
+        self.session: Optional[aiohttp.ClientSession] = None
+        
+        # Store state for CSRF protection
+        self._state_store: Dict[str, Dict[str, Any]] = {}
+    
+    async def __aenter__(self):
+        self.session = aiohttp.ClientSession()
+        return self
+    
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        if self.session:
+            await self.session.close()
+    
+    def generate_authorization_url(self, user_id: str, additional_scopes: List[str] = None) -> str:
+        """
+        Generate Facebook OAuth2 authorization URL for a user
+        
+        Args:
+            user_id: Accorria user ID
+            additional_scopes: Additional scopes beyond the default ones
+            
+        Returns:
+            Authorization URL for user to visit
+        """
+        # Generate state for CSRF protection
+        state = secrets.token_urlsafe(32)
+        
+        # Store state with user info
+        self._state_store[state] = {
+            "user_id": user_id,
+            "timestamp": datetime.utcnow(),
+            "scopes": additional_scopes or []
+        }
+        
+        # Combine scopes
+        all_scopes = self.config.scopes.copy()
+        if additional_scopes:
+            all_scopes.extend(additional_scopes)
+        
+        # Build authorization URL
+        params = {
+            "client_id": self.config.app_id,
+            "redirect_uri": self.config.redirect_uri,
+            "scope": ",".join(all_scopes),
+            "response_type": "code",
+            "state": state,
+            "auth_type": "rerequest"  # Force re-authentication to get fresh permissions
+        }
+        
+        return f"{self.oauth_base_url}?{urlencode(params)}"
+    
+    async def exchange_code_for_token(self, code: str, state: str) -> Dict[str, Any]:
+        """
+        Exchange authorization code for access token
+        
+        Args:
+            code: Authorization code from Facebook
+            state: State parameter for CSRF protection
+            
+        Returns:
+            Token exchange result with user info and pages
+        """
+        try:
+            # Verify state
+            if state not in self._state_store:
+                raise ValueError("Invalid state parameter")
+            
+            state_data = self._state_store[state]
+            user_id = state_data["user_id"]
+            
+            # Clean up state
+            del self._state_store[state]
+            
+            # Exchange code for token
+            token_url = f"{self.api_base_url}/oauth/access_token"
+            token_params = {
+                "client_id": self.config.app_id,
+                "client_secret": self.config.app_secret,
+                "redirect_uri": self.config.redirect_uri,
+                "code": code
+            }
+            
+            if not self.session:
+                raise RuntimeError("Session not initialized")
+            
+            async with self.session.get(token_url, params=token_params) as response:
+                if response.status != 200:
+                    error_text = await response.text()
+                    raise Exception(f"Token exchange failed: {response.status} - {error_text}")
+                
+                token_data = await response.json()
+                access_token = token_data.get("access_token")
+                
+                if not access_token:
+                    raise Exception("No access token received")
+            
+            # Get user information
+            user_info = await self._get_user_info(access_token)
+            
+            # Get user's pages (for posting)
+            pages = await self._get_user_pages(access_token)
+            
+            # Get token expiration
+            expires_in = token_data.get("expires_in", 0)
+            expires_at = datetime.utcnow() + timedelta(seconds=expires_in) if expires_in > 0 else None
+            
+            return {
+                "success": True,
+                "user_id": user_id,
+                "access_token": access_token,
+                "expires_at": expires_at,
+                "user_info": user_info,
+                "pages": pages,
+                "scopes": token_data.get("granted_scopes", "").split(",")
+            }
+            
+        except Exception as e:
+            logger.error(f"Error exchanging code for token: {str(e)}")
+            return {
+                "success": False,
+                "error": str(e)
+            }
+    
+    async def _get_user_info(self, access_token: str) -> FacebookUserInfo:
+        """Get user information from Facebook"""
+        try:
+            url = f"{self.api_base_url}/me"
+            params = {
+                "access_token": access_token,
+                "fields": "id,name,email,picture"
+            }
+            
+            if not self.session:
+                raise RuntimeError("Session not initialized")
+            
+            async with self.session.get(url, params=params) as response:
+                if response.status != 200:
+                    raise Exception(f"Failed to get user info: {response.status}")
+                
+                data = await response.json()
+                
+                return FacebookUserInfo(
+                    user_id=data["id"],
+                    name=data["name"],
+                    email=data.get("email"),
+                    picture_url=data.get("picture", {}).get("data", {}).get("url")
+                )
+                
+        except Exception as e:
+            logger.error(f"Error getting user info: {str(e)}")
+            raise
+    
+    async def _get_user_pages(self, access_token: str) -> List[FacebookPageInfo]:
+        """Get user's Facebook pages for posting"""
+        try:
+            url = f"{self.api_base_url}/me/accounts"
+            params = {
+                "access_token": access_token,
+                "fields": "id,name,access_token,category"
+            }
+            
+            if not self.session:
+                raise RuntimeError("Session not initialized")
+            
+            async with self.session.get(url, params=params) as response:
+                if response.status != 200:
+                    logger.warning(f"Failed to get pages: {response.status}")
+                    return []
+                
+                data = await response.json()
+                pages = []
+                
+                for page_data in data.get("data", []):
+                    pages.append(FacebookPageInfo(
+                        page_id=page_data["id"],
+                        name=page_data["name"],
+                        access_token=page_data["access_token"],
+                        category=page_data.get("category", "")
+                    ))
+                
+                return pages
+                
+        except Exception as e:
+            logger.error(f"Error getting user pages: {str(e)}")
+            return []
+    
+    async def refresh_access_token(self, refresh_token: str) -> Dict[str, Any]:
+        """
+        Refresh an expired access token
+        
+        Args:
+            refresh_token: Refresh token from initial OAuth2 flow
+            
+        Returns:
+            New access token information
+        """
+        try:
+            url = f"{self.api_base_url}/oauth/access_token"
+            params = {
+                "grant_type": "fb_exchange_token",
+                "client_id": self.config.app_id,
+                "client_secret": self.config.app_secret,
+                "fb_exchange_token": refresh_token
+            }
+            
+            if not self.session:
+                raise RuntimeError("Session not initialized")
+            
+            async with self.session.get(url, params=params) as response:
+                if response.status != 200:
+                    error_text = await response.text()
+                    raise Exception(f"Token refresh failed: {response.status} - {error_text}")
+                
+                data = await response.json()
+                access_token = data.get("access_token")
+                
+                if not access_token:
+                    raise Exception("No access token received")
+                
+                expires_in = data.get("expires_in", 0)
+                expires_at = datetime.utcnow() + timedelta(seconds=expires_in) if expires_in > 0 else None
+                
+                return {
+                    "success": True,
+                    "access_token": access_token,
+                    "expires_at": expires_at
+                }
+                
+        except Exception as e:
+            logger.error(f"Error refreshing token: {str(e)}")
+            return {
+                "success": False,
+                "error": str(e)
+            }
+    
+    async def validate_token(self, access_token: str) -> Dict[str, Any]:
+        """
+        Validate an access token
+        
+        Args:
+            access_token: Facebook access token to validate
+            
+        Returns:
+            Token validation result
+        """
+        try:
+            url = f"{self.api_base_url}/me"
+            params = {
+                "access_token": access_token,
+                "fields": "id"
+            }
+            
+            if not self.session:
+                raise RuntimeError("Session not initialized")
+            
+            async with self.session.get(url, params=params) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    return {
+                        "valid": True,
+                        "user_id": data.get("id")
+                    }
+                else:
+                    return {
+                        "valid": False,
+                        "error": f"Token validation failed: {response.status}"
+                    }
+                    
+        except Exception as e:
+            logger.error(f"Error validating token: {str(e)}")
+            return {
+                "valid": False,
+                "error": str(e)
+            }
+
+def get_facebook_oauth_config() -> FacebookOAuthConfig:
+    """
+    Get Facebook OAuth2 configuration from environment variables
+    
+    Returns:
+        FacebookOAuthConfig object
+    """
+    import os
+    
+    app_id = os.getenv("FACEBOOK_APP_ID")
+    app_secret = os.getenv("FACEBOOK_APP_SECRET")
+    redirect_uri = os.getenv("FACEBOOK_REDIRECT_URI", "http://localhost:3000/auth/facebook/callback")
+    
+    if not app_id or not app_secret:
+        raise ValueError("Facebook OAuth2 credentials not configured. Set FACEBOOK_APP_ID and FACEBOOK_APP_SECRET")
+    
+    return FacebookOAuthConfig(
+        app_id=app_id,
+        app_secret=app_secret,
+        redirect_uri=redirect_uri
+    )

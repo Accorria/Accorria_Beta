@@ -6,6 +6,7 @@ import carDataRaw from '../../data/carData.json';
 import { api } from '../../utils/api';
 import { getBackendUrl, API_ENDPOINTS } from '../../config/api';
 import { ListingsService } from '../../services/listingsService';
+import FacebookOAuth2 from '../FacebookOAuth2';
 const carData = carDataRaw as Record<string, string[]>;
 
 interface CreateListingProps {
@@ -1384,6 +1385,31 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                 ))}
               </div>
             </div>
+
+            {/* Facebook OAuth2 Integration */}
+            {selectedPlatforms.includes('facebook_marketplace') && (
+              <FacebookOAuth2
+                listingContent={{
+                  title: `${carDetails.year} ${carDetails.make} ${carDetails.model}`,
+                  description: carDetails.finalDescription,
+                  price: parseFloat(carDetails.price) || 0,
+                  make: carDetails.make,
+                  model: carDetails.model,
+                  year: parseInt(carDetails.year) || 0,
+                  mileage: parseInt(carDetails.mileage) || 0,
+                  condition: carDetails.titleStatus || 'GOOD',
+                  images: files.map(f => f.file.name)
+                }}
+                onPostSuccess={(result) => {
+                  console.log('Facebook posting successful:', result);
+                  // You can add additional success handling here
+                }}
+                onPostError={(error) => {
+                  console.error('Facebook posting error:', error);
+                  // You can add additional error handling here
+                }}
+              />
+            )}
 
             {/* AI Analysis Results - Hidden for cleaner UX */}
             {false && showAnalysis && analysisResult && (

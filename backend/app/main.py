@@ -35,7 +35,9 @@ from app.api.v1 import (
     deals as deals_router,
     chat as chat_router,
     inventory as inventory_router,
-    search_history as search_history_router
+    search_history as search_history_router,
+    facebook_oauth as facebook_oauth_router,
+    user_facebook_posting as user_facebook_posting_router
 )
 from app.api.v1.market_search import router as market_search_router
 from app.api.v1.market_search_real_scrape import router as market_search_real_scrape_router
@@ -206,6 +208,10 @@ app.include_router(market_search_router, prefix="/api/v1/market-search", tags=["
 app.include_router(market_search_real_scrape_router, prefix="/api/v1/market-search", tags=["Market Search"])
 app.include_router(market_search_scrapingbee_router, prefix="/api/v1/market-search", tags=["Market Search"])
 app.include_router(market_search_scraping_router, prefix="/api/v1/market-search", tags=["Market Search"])
+
+# Facebook OAuth2 and User-Specific Posting
+app.include_router(facebook_oauth_router.router, prefix="/api/v1/auth", tags=["Facebook OAuth2"])
+app.include_router(user_facebook_posting_router.router, prefix="/api/v1/facebook", tags=["User Facebook Posting"])
 
 # Test endpoint
 @app.get("/test")
