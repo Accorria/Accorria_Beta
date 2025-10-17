@@ -1,0 +1,31 @@
+VIN,Year,Make,Model,Mileage,Price,Title_Status,Description,Photo_URLs
+1HGBH41JXMN109186,2021,Toyota,Camry,25000,24500,Clean,Excellent condition one owner vehicle with full service history,https://example.com/camry1.jpg,https://example.com/camry2.jpg
+2T1BU4EE8CC123456,2020,Toyota,Corolla,32000,18900,Clean,Well maintained regular service records available,https://example.com/corolla1.jpg,https://example.com/corolla2.jpg
+3T1BF1FK8CC234567,2022,Toyota,RAV4,18000,28900,Clean,Like new all-wheel drive with premium package,https://example.com/rav4_1.jpg,https://example.com/rav4_2.jpg
+4T1BF1FK8CC345678,2021,Toyota,Highlander,22000,32500,Clean,Family SUV with third row seating and navigation,https://example.com/highlander1.jpg,https://example.com/highlander2.jpg
+5T1BF1FK8CC456789,2020,Toyota,Tacoma,35000,28500,Clean,4WD pickup truck with towing package,https://example.com/tacoma1.jpg,https://example.com/tacoma2.jpg
+6T1BF1FK8CC567890,2022,Toyota,Prius,15000,26500,Clean,Hybrid fuel efficiency with low miles,https://example.com/prius1.jpg,https://example.com/prius2.jpg
+7T1BF1FK8CC678901,2021,Toyota,4Runner,28000,38500,Clean,Off-road capable SUV with TRD package,https://example.com/4runner1.jpg,https://example.com/4runner2.jpg
+8T1BF1FK8CC789012,2020,Toyota,Avalon,30000,27500,Clean,Luxury sedan with premium audio system,https://example.com/avalon1.jpg,https://example.com/avalon2.jpg
+9T1BF1FK8CC890123,2022,Toyota,Sienna,12000,34500,Clean,Minivan with all-wheel drive and entertainment system,https://example.com/sienna1.jpg,https://example.com/sienna2.jpg
+1T1BF1FK8CC901234,2021,Toyota,C-HR,25000,22500,Clean,Compact crossover with sporty design,https://example.com/chr1.jpg,https://example.com/chr2.jpg
+2T1BF1FK8CC012345,2020,Toyota,Yaris,40000,16500,Clean,Economical subcompact with great fuel economy,https://example.com/yaris1.jpg,https://example.com/yaris2.jpg
+3T1BF1FK8CC123456,2022,Toyota,Sequoia,18000,48500,Clean,Full-size SUV with towing capacity,https://example.com/sequoia1.jpg,https://example.com/sequoia2.jpg
+4T1BF1FK8CC234567,2021,Toyota,Land Cruiser,20000,68500,Clean,Luxury off-road vehicle with premium features,https://example.com/landcruiser1.jpg,https://example.com/landcruiser2.jpg
+5T1BF1FK8CC345678,2020,Toyota,Mirai,25000,38500,Clean,Fuel cell electric vehicle with hydrogen technology,https://example.com/mirai1.jpg,https://example.com/mirai2.jpg
+6T1BF1FK8CC456789,2022,Toyota,GR Supra,8000,48500,Clean,Performance sports car with turbocharged engine,https://example.com/supra1.jpg,https://example.com/supra2.jpg
+7T1BF1FK8CC567890,2021,Toyota,GR86,12000,28500,Clean,Sports coupe with rear-wheel drive,https://example.com/gr86_1.jpg,https://example.com/gr86_2.jpg
+8T1BF1FK8CC678901,2020,Toyota,GR Corolla,15000,38500,Clean,Hot hatch with all-wheel drive performance,https://example.com/grcorolla1.jpg,https://example.com/grcorolla2.jpg
+9T1BF1FK8CC789012,2022,Toyota,bZ4X,5000,42500,Clean,All-electric SUV with advanced technology,https://example.com/bz4x1.jpg,https://example.com/bz4x2.jpg
+1T1BF1FK8CC890123,2021,Toyota,Venza,22000,31500,Clean,Hybrid crossover with premium interior,https://example.com/venza1.jpg,https://example.com/venza2.jpg
+2T1BF1FK8CC901234,2020,Toyota,Camry Hybrid,30000,27500,Clean,Fuel-efficient hybrid sedan with excellent reliability,https://example.com/camryhybrid1.jpg,https://example.com/camryhybrid2.jpg
+3T1BF1FK8CC012345,2022,Toyota,Corolla Cross,10000,26500,Clean,Compact SUV with all-wheel drive option,https://example.com/corollacross1.jpg,https://example.com/corollacross2.jpg
+4T1BF1FK8CC123456,2021,Toyota,RAV4 Hybrid,18000,31500,Clean,Hybrid SUV with excellent fuel economy,https://example.com/rav4hybrid1.jpg,https://example.com/rav4hybrid2.jpg
+5T1BF1FK8CC234567,2020,Toyota,Highlander Hybrid,25000,35500,Clean,Three-row hybrid SUV with premium features,https://example.com/highlanderhybrid1.jpg,https://example.com/highlanderhybrid2.jpg
+6T1BF1FK8CC345678,2022,Toyota,Tacoma TRD Pro,12000,42500,Clean,Off-road pickup with TRD Pro package,https://example.com/tacomatrd1.jpg,https://example.com/tacomatrd2.jpg
+7T1BF1FK8CC456789,2021,Toyota,4Runner TRD Pro,20000,45500,Clean,Off-road SUV with TRD Pro suspension,https://example.com/4runnertrd1.jpg,https://example.com/4runnertrd2.jpg
+8T1BF1FK8CC567890,2020,Toyota,Land Cruiser Heritage,15000,72500,Clean,Heritage edition with special badging,https://example.com/landcruiserheritage1.jpg,https://example.com/landcruiserheritage2.jpg
+9T1BF1FK8CC678901,2022,Toyota,GR Supra 3.0 Premium,5000,52500,Clean,Premium sports car with leather interior,https://example.com/suprapremium1.jpg,https://example.com/suprapremium2.jpg
+1T1BF1FK8CC789012,2021,Toyota,GR86 Premium,8000,31500,Clean,Premium sports coupe with upgraded features,https://example.com/gr86premium1.jpg,https://example.com/gr86premium2.jpg
+2T1BF1FK8CC890123,2020,Toyota,GR Corolla Circuit Edition,10000,42500,Clean,Limited edition hot hatch with special features,https://example.com/grcorollacircuit1.jpg,https://example.com/grcorollacircuit2.jpg
+3T1BF1FK8CC901234,2022,Toyota,bZ4X Limited,3000,47500,Clean,Limited edition electric SUV with premium package,https://example.com/bz4xlimited1.jpg,https://example.com/bz4xlimited2.jpg

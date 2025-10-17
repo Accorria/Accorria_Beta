@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { EmailVerification } from '@/components/EmailVerification';
+import CreateListing from '@/components/listings/CreateListing';
 import Header from '@/components/Header';
 import DealerMode from '@/components/DealerMode';
 import { listingsService, Listing } from '@/services/listingsService';
@@ -19,7 +20,46 @@ export default function DealerDashboard() {
     totalRevenue: 0
   });
   const [logMsg, setLogMsg] = useState<string | null>(null);
+  const [showCreateListing, setShowCreateListing] = useState(false);
   const [isLoadingListings, setIsLoadingListings] = useState(true);
+
+  // Refresh listings when a new one is created
+  const handleListingCreated = () => {
+    // Reload listings from database
+    const loadListings = async () => {
+      if (!user) {
+        setIsLoadingListings(false);
+        return;
+      }
+      try {
+        setIsLoadingListings(true);
+        const userListings = await listingsService.getUserListings();
+        setListings(userListings);
+        
+        // Calculate stats
+        const totalListings = userListings.length;
+        const activeListings = userListings.filter(l => l.status === 'active').length;
+        const soldListings = userListings.filter(l => l.status === 'sold').length;
+        const totalRevenue = userListings
+          .filter(l => l.status === 'sold' && l.price)
+          .reduce((sum, l) => sum + l.price, 0);
+        
+        setStats({
+          totalListings,
+          activeListings,
+          soldListings,
+          totalRevenue
+        });
+      } catch (error) {
+        console.error('Error loading listings:', error);
+        setLogMsg('Error loading listings. Please try again.');
+      } finally {
+        setIsLoadingListings(false);
+      }
+    };
+    loadListings();
+    setShowCreateListing(false);
+  };
 
   // Load listings from Supabase database
   useEffect(() => {
@@ -145,6 +185,69 @@ export default function DealerDashboard() {
               Manage your entire inventory with AI-powered listings
             </p>
           </div>
+          
+          {/* Post Vehicle Button */}
+          <div className="text-center mb-6">
+            <button
+              onClick={() => setShowCreateListing(true)}
+              className="bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors shadow-lg"
+            >
+              🚗 Post Vehicle
+            </button>
+          </div>
+        </div>
+
+        {/* Inventory Management Blocks */}
+        <div className="px-4 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 dark:bg-green-900">
+                  <span className="text-xl">📊</span>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900 dark:text-white">Upload Inventory</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">Bulk import via CSV</p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  // Open CSV import functionality
+                  const input = document.createElement('input');
+                  input.type = 'file';
+                  input.accept = '.csv';
+                  input.onchange = (e) => {
+                    const file = (e.target as HTMLInputElement).files?.[0];
+                    if (file) {
+                      setLogMsg(`CSV file selected: ${file.name}. Processing...`);
+                    }
+                  };
+                  input.click();
+                }}
+                className="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors font-medium"
+              >
+                Choose CSV File
+              </button>
+            </div>
+            
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900">
+                  <span className="text-xl">🔍</span>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900 dark:text-white">Check Inventory</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">View all vehicles</p>
+                </div>
+              </div>
+              <button
+                onClick={() => window.location.href = '/listings'}
+                className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              >
+                View Inventory
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Enhanced Stats for Dealers */}
@@ -177,25 +280,6 @@ export default function DealerDashboard() {
           </div>
         </div>
 
-        {/* Dealer Mode Features */}
-        <div className="px-4 mb-6">
-          <DealerMode userTier={user?.user_metadata?.subscription_tier || 'free_trial'} />
-        </div>
-
-        {/* Quick Actions for Dealers */}
-        <div className="px-4 mb-6">
-          <div className="grid grid-cols-1 gap-3">
-            <button className="w-full bg-blue-500 dark:bg-blue-700 text-white py-4 rounded-xl font-semibold shadow-lg hover:bg-blue-600 dark:hover:bg-blue-800 transition-colors duration-200 text-center flex items-center justify-center gap-3">
-              📸 Add New Vehicle
-            </button>
-            <button className="w-full bg-green-500 dark:bg-green-700 text-white py-4 rounded-xl font-semibold shadow-lg hover:bg-green-600 dark:hover:bg-green-800 transition-colors duration-200 text-center flex items-center justify-center gap-3">
-              📊 Bulk Import CSV
-            </button>
-            <button className="w-full bg-purple-500 dark:bg-purple-700 text-white py-4 rounded-xl font-semibold shadow-lg hover:bg-purple-600 dark:hover:bg-purple-800 transition-colors duration-200 text-center flex items-center justify-center gap-3">
-              🚀 Post to All Platforms
-            </button>
-          </div>
-        </div>
 
         {/* Inventory Overview */}
         {!isLoadingListings && listings.length > 0 && (
@@ -233,17 +317,54 @@ export default function DealerDashboard() {
         {/* Empty State */}
         {!isLoadingListings && listings.length === 0 && (
           <div className="px-4 mb-6">
-            <div className="text-center py-12">
+            <div className="text-center py-8">
               <div className="text-6xl mb-4">🏢</div>
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No Inventory Yet</h3>
-              <p className="text-gray-600 dark:text-gray-300 mb-6">Start building your dealer inventory by importing your vehicles.</p>
-              <button className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors">
-                Import Inventory
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No inventory yet</h3>
+              <p className="text-gray-600 dark:text-gray-400 mb-4">Start by adding your first vehicle!</p>
+              <button
+                onClick={() => setShowCreateListing(true)}
+                className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors"
+              >
+                Add Your First Vehicle
               </button>
             </div>
           </div>
         )}
       </main>
+
+      {/* Bottom Navigation */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-4 py-2">
+        <div className="flex justify-around items-center">
+          <Link href="/dealer-dashboard" className="flex flex-col items-center py-2 text-blue-600 dark:text-blue-400">
+            <span className="text-2xl">🏠</span>
+            <span className="text-xs mt-1">Home</span>
+          </Link>
+          <Link href="/listings" className="flex flex-col items-center py-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400">
+            <span className="text-2xl">🚗</span>
+            <span className="text-xs mt-1">Listings</span>
+          </Link>
+          <Link href="/messages" className="flex flex-col items-center py-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400">
+            <span className="text-2xl">💬</span>
+            <span className="text-xs mt-1">Messages</span>
+          </Link>
+          <Link href="/analytics" className="flex flex-col items-center py-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400">
+            <span className="text-2xl">📊</span>
+            <span className="text-xs mt-1">Analytics</span>
+          </Link>
+          <Link href="/market-intel" className="flex flex-col items-center py-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400">
+            <span className="text-2xl">🔍</span>
+            <span className="text-xs mt-1">Market Intel</span>
+          </Link>
+        </div>
+      </nav>
+
+      {/* Create Listing Modal */}
+      {showCreateListing && (
+        <CreateListing 
+          onClose={() => setShowCreateListing(false)}
+          onListingCreated={handleListingCreated}
+        />
+      )}
     </div>
     </ThemeProvider>
   );
