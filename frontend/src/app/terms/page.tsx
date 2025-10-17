@@ -60,6 +60,20 @@ export default function TermsPage() {
               We may update these terms from time to time. Continued use of our services means you accept the changes.
             </p>
 
+            <h2 className="text-2xl font-bold text-slate-900 mt-8 mb-4" id="data-deletion">Data Deletion</h2>
+            <p className="text-slate-700 mb-4">
+              You have the right to request deletion of your personal data from Accorria. To request data deletion:
+            </p>
+            <ul className="list-disc list-inside text-slate-700 mb-8 space-y-2">
+              <li>Email us at <a href="mailto:privacy@accorria.com" className="text-amber-600 hover:text-amber-700">privacy@accorria.com</a></li>
+              <li>Include "Data Deletion Request" in the subject line</li>
+              <li>Provide your account email address for verification</li>
+              <li>We will process your request within 30 days</li>
+            </ul>
+            <p className="text-slate-700 mb-8">
+              <strong>Note:</strong> Some data may be retained for legal compliance or legitimate business purposes as outlined in our Privacy Policy.
+            </p>
+
             <h2 className="text-2xl font-bold text-slate-900 mt-8 mb-4">Contact</h2>
             <p className="text-slate-700 mb-8">
               <a href="mailto:support@accorria.com" className="text-amber-600 hover:text-amber-700">support@accorria.com</a>
