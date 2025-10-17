@@ -4,7 +4,7 @@
  */
 
 // Production backend URL
-const PRODUCTION_BACKEND_URL = 'https://accorria-backend-19949436301.us-central1.run.app';
+const PRODUCTION_BACKEND_URL = 'https://accorria-backend-tv2qihivdq-uc.a.run.app';
 
 // Development backend URL (if you want to use local backend during development)
 const DEVELOPMENT_BACKEND_URL = 'http://localhost:8000';
