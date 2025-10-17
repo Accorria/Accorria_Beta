@@ -627,15 +627,21 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
                     const existingAnalytics = JSON.parse(localStorage.getItem('listingAnalytics') || '[]');
                     existingAnalytics.push(deletedListing);
                     
-                    // Keep only last 50 analytics entries to prevent quota issues
-                    const trimmedAnalytics = existingAnalytics.slice(-50);
+                    // Keep only last 10 analytics entries to prevent quota issues
+                    const trimmedAnalytics = existingAnalytics.slice(-10);
                     localStorage.setItem('listingAnalytics', JSON.stringify(trimmedAnalytics));
                     console.log('Analytics updated:', trimmedAnalytics);
                   } catch (error) {
                     console.warn('Could not save analytics (quota exceeded):', error);
-                    // Clear old analytics and try again
-                    localStorage.removeItem('listingAnalytics');
-                    localStorage.setItem('listingAnalytics', JSON.stringify([deletedListing]));
+                    // Clear all analytics data to free up space
+                    try {
+                      localStorage.removeItem('listingAnalytics');
+                      localStorage.removeItem('demoListings');
+                      localStorage.removeItem('testListings');
+                      console.log('Cleared localStorage to free up space');
+                    } catch (clearError) {
+                      console.error('Failed to clear localStorage:', clearError);
+                    }
                   }
                   
                   // Remove the listing from active listings

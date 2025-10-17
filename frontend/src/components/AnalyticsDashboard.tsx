@@ -15,7 +15,7 @@ interface HotCar {
   trend: 'up' | 'down' | 'stable';
 }
 
-interface BlockchainTransaction {
+interface ContractTransaction {
   id: string;
   buyer: string;
   seller: string;
@@ -25,7 +25,7 @@ interface BlockchainTransaction {
   startDate: string;
   endDate: string;
   daysRemaining: number;
-  contractAddress: string;
+  contractNumber: string;
 }
 
 interface ConversationAnalytics {
@@ -36,62 +36,25 @@ interface ConversationAnalytics {
   topTopics: string[];
 }
 
+interface ProfitThresholds {
+  minimumProfit: number;
+  targetROI: number;
+  maxDaysToSell: number;
+}
+
 export default function AnalyticsDashboard() {
-  const [hotCars, setHotCars] = useState<HotCar[]>([]);
-  const [blockchainTransactions, setBlockchainTransactions] = useState<BlockchainTransaction[]>([]);
+  const [contractTransactions, setContractTransactions] = useState<ContractTransaction[]>([]);
   const [conversationAnalytics, setConversationAnalytics] = useState<ConversationAnalytics | null>(null);
-  const [activeTab, setActiveTab] = useState<'hot-cars' | 'blockchain' | 'conversations'>('hot-cars');
+  const [profitThresholds, setProfitThresholds] = useState<ProfitThresholds>({
+    minimumProfit: 2000,
+    targetROI: 25,
+    maxDaysToSell: 30
+  });
+  const [activeTab, setActiveTab] = useState<'contracts' | 'conversations' | 'profit-thresholds'>('contracts');
 
   useEffect(() => {
     // Mock data for demonstration
-    setHotCars([
-      {
-        id: '1',
-        make: 'Honda',
-        model: 'Civic',
-        year: 2019,
-        price: 18500,
-        demand: 95,
-        profit: 3200,
-        location: 'Seattle, WA',
-        trend: 'up'
-      },
-      {
-        id: '2',
-        make: 'Toyota',
-        model: 'Camry',
-        year: 2020,
-        price: 22500,
-        demand: 88,
-        profit: 2800,
-        location: 'Austin, TX',
-        trend: 'up'
-      },
-      {
-        id: '3',
-        make: 'Ford',
-        model: 'F-150',
-        year: 2018,
-        price: 32000,
-        demand: 92,
-        profit: 4500,
-        location: 'Denver, CO',
-        trend: 'stable'
-      },
-      {
-        id: '4',
-        make: 'BMW',
-        model: '3 Series',
-        year: 2019,
-        price: 28500,
-        demand: 76,
-        profit: 2200,
-        location: 'Miami, FL',
-        trend: 'down'
-      }
-    ]);
-
-    setBlockchainTransactions([
+    setContractTransactions([
       {
         id: 'tx-001',
         buyer: 'Sarah Johnson',
@@ -102,7 +65,7 @@ export default function AnalyticsDashboard() {
         startDate: '2024-10-10',
         endDate: '2024-10-24',
         daysRemaining: 8,
-        contractAddress: '0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6'
+        contractNumber: 'CT-2024-001'
       },
       {
         id: 'tx-002',
@@ -114,7 +77,7 @@ export default function AnalyticsDashboard() {
         startDate: '2024-10-12',
         endDate: '2024-10-19',
         daysRemaining: 3,
-        contractAddress: '0x8f2e0d4a7b9c1e3f5a6b8c0d2e4f6a8b9c1d3e5'
+        contractNumber: 'CT-2024-002'
       },
       {
         id: 'tx-003',
@@ -126,7 +89,7 @@ export default function AnalyticsDashboard() {
         startDate: '2024-10-15',
         endDate: '2024-10-29',
         daysRemaining: 14,
-        contractAddress: '0x3a7b9c1e3f5a6b8c0d2e4f6a8b9c1d3e5f7a9b'
+        contractNumber: 'CT-2024-003'
       },
       {
         id: 'tx-004',
@@ -138,7 +101,7 @@ export default function AnalyticsDashboard() {
         startDate: '2024-10-01',
         endDate: '2024-10-15',
         daysRemaining: 0,
-        contractAddress: '0x9c1e3f5a6b8c0d2e4f6a8b9c1d3e5f7a9b1c3d'
+        contractNumber: 'CT-2024-004'
       }
     ]);
 
@@ -169,7 +132,7 @@ export default function AnalyticsDashboard() {
     }
   };
 
-  const totalEscrowAmount = blockchainTransactions
+  const totalEscrowAmount = contractTransactions
     .filter(tx => tx.status === 'active' || tx.status === 'pending')
     .reduce((sum, tx) => sum + tx.amount, 0);
 
@@ -179,26 +142,15 @@ export default function AnalyticsDashboard() {
         <h2 className="text-2xl font-bold text-gray-900">Analytics Dashboard</h2>
         <div className="flex space-x-2">
           <button
-            onClick={() => setActiveTab('hot-cars')}
+            onClick={() => setActiveTab('contracts')}
             className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-              activeTab === 'hot-cars'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
-          >
-            <Car className="w-4 h-4 inline mr-2" />
-            Hot Cars
-          </button>
-          <button
-            onClick={() => setActiveTab('blockchain')}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-              activeTab === 'blockchain'
+              activeTab === 'contracts'
                 ? 'bg-blue-600 text-white'
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             }`}
           >
             <Shield className="w-4 h-4 inline mr-2" />
-            Blockchain
+            Contracts
           </button>
           <button
             onClick={() => setActiveTab('conversations')}
@@ -210,6 +162,17 @@ export default function AnalyticsDashboard() {
           >
             <MessageSquare className="w-4 h-4 inline mr-2" />
             Conversations
+          </button>
+          <button
+            onClick={() => setActiveTab('profit-thresholds')}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              activeTab === 'profit-thresholds'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            <DollarSign className="w-4 h-4 inline mr-2" />
+            Profit Thresholds
           </button>
         </div>
       </div>
@@ -231,7 +194,7 @@ export default function AnalyticsDashboard() {
             <div>
               <p className="text-blue-100 text-sm">Active Contracts</p>
               <p className="text-2xl font-bold">
-                {blockchainTransactions.filter(tx => tx.status === 'active' || tx.status === 'pending').length}
+                {contractTransactions.filter(tx => tx.status === 'active' || tx.status === 'pending').length}
               </p>
             </div>
             <Shield className="w-8 h-8 text-blue-200" />
@@ -241,10 +204,10 @@ export default function AnalyticsDashboard() {
         <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white p-4 rounded-lg">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-purple-100 text-sm">Hot Cars Today</p>
-              <p className="text-2xl font-bold">{hotCars.length}</p>
+              <p className="text-purple-100 text-sm">Profit Target</p>
+              <p className="text-2xl font-bold">${profitThresholds.minimumProfit.toLocaleString()}</p>
             </div>
-            <Zap className="w-8 h-8 text-purple-200" />
+            <DollarSign className="w-8 h-8 text-purple-200" />
           </div>
         </div>
         
@@ -260,52 +223,18 @@ export default function AnalyticsDashboard() {
       </div>
 
       {/* Tab Content */}
-      {activeTab === 'hot-cars' && (
+      {activeTab === 'contracts' && (
         <div>
-          <h3 className="text-lg font-semibold mb-4">🔥 Hot Cars of the Day</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {hotCars.map((car) => (
-              <div key={car.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="font-semibold text-lg">{car.year} {car.make} {car.model}</h4>
-                  {getTrendIcon(car.trend)}
-                </div>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="text-gray-600">Price</p>
-                    <p className="font-semibold">${car.price.toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-600">Demand</p>
-                    <p className="font-semibold text-green-600">{car.demand}%</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-600">Profit</p>
-                    <p className="font-semibold text-blue-600">${car.profit.toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-600">Location</p>
-                    <p className="font-semibold">{car.location}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {activeTab === 'blockchain' && (
-        <div>
-          <h3 className="text-lg font-semibold mb-4">🔗 Active Blockchain Transactions</h3>
+          <h3 className="text-lg font-semibold mb-4">📋 Active Contracts</h3>
           <div className="space-y-4">
-            {blockchainTransactions.map((tx) => (
+            {contractTransactions.map((tx) => (
               <div key={tx.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center space-x-3">
                     <div className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(tx.status)}`}>
                       {tx.status.toUpperCase()}
                     </div>
-                    <span className="text-sm text-gray-600">Contract: {tx.contractAddress.slice(0, 10)}...</span>
+                    <span className="text-sm text-gray-600">Contract: {tx.contractNumber}</span>
                   </div>
                   <div className="text-right">
                     <p className="text-2xl font-bold text-green-600">${tx.amount}</p>
@@ -347,6 +276,37 @@ export default function AnalyticsDashboard() {
                 )}
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'profit-thresholds' && (
+        <div>
+          <h3 className="text-lg font-semibold mb-4">💰 Profit Thresholds</h3>
+          <div className="space-y-4">
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h4 className="font-semibold mb-2">Current Settings</h4>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600">Minimum Profit</span>
+                  <span className="font-semibold text-gray-900">${profitThresholds.minimumProfit.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600">Target ROI</span>
+                  <span className="font-semibold text-gray-900">{profitThresholds.targetROI}%</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600">Max Days to Sell</span>
+                  <span className="font-semibold text-gray-900">{profitThresholds.maxDaysToSell} days</span>
+                </div>
+              </div>
+            </div>
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <h4 className="font-semibold mb-2 text-blue-800">How It Works</h4>
+              <p className="text-sm text-blue-700">
+                These thresholds help you make smart buying decisions. Only cars that meet your profit targets will be recommended for purchase.
+              </p>
+            </div>
           </div>
         </div>
       )}

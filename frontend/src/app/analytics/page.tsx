@@ -125,15 +125,6 @@ export default function AnalyticsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Listing Performance</h3>
-              <div className="mb-4 w-full h-32 rounded-lg overflow-hidden">
-                <Image 
-                  src="/Analizing Photos.png" 
-                  alt="Analytics dashboard showing listing performance" 
-                  width={400}
-                  height={128}
-                  className="w-full h-full object-cover"
-                />
-              </div>
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600 dark:text-gray-400">Total Listings</span>
@@ -156,15 +147,6 @@ export default function AnalyticsPage() {
 
             <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Revenue</h3>
-              <div className="mb-4 w-full h-32 rounded-lg overflow-hidden">
-                <Image 
-                  src="/Price Stragety.png" 
-                  alt="Revenue analytics and pricing strategy" 
-                  width={400}
-                  height={128}
-                  className="w-full h-full object-cover"
-                />
-              </div>
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600 dark:text-gray-400">Total Revenue</span>

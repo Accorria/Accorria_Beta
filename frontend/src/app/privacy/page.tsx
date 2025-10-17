@@ -37,6 +37,8 @@ export default function PrivacyPage() {
               <li>Information you provide when creating an account (name, email, etc.)</li>
               <li>Data related to listings you create (photos, descriptions, prices)</li>
               <li>Usage data from our website and app (cookies, analytics)</li>
+              <li>Facebook account information when you connect your Facebook account (with your permission)</li>
+              <li>Facebook page data and access tokens (encrypted and stored securely)</li>
             </ul>
 
             <h2 className="text-2xl font-bold text-slate-900 mt-8 mb-4">How We Use Your Data</h2>
@@ -44,12 +46,27 @@ export default function PrivacyPage() {
               <li>To provide and improve our services</li>
               <li>To enable escrow, payments, and identity verification</li>
               <li>To send important updates and customer support messages</li>
+              <li>To post your listings to your connected Facebook pages (with your permission)</li>
+              <li>To help you manage your Facebook Marketplace listings</li>
             </ul>
 
             <h2 className="text-2xl font-bold text-slate-900 mt-8 mb-4">Sharing</h2>
             <p className="text-slate-700 mb-8">
-              We do not sell your data. We only share information with trusted partners (escrow/payment providers, analytics) as necessary to deliver the service.
+              We do not sell your data. We only share information with trusted partners (escrow/payment providers, analytics) as necessary to deliver the service. When you connect your Facebook account, we only share your listing content with Facebook to post on your behalf - we never share your personal Facebook data with third parties.
             </p>
+
+            <h2 className="text-2xl font-bold text-slate-900 mt-8 mb-4">Facebook Data Handling</h2>
+            <p className="text-slate-700 mb-8">
+              When you connect your Facebook account to Accorria:
+            </p>
+            <ul className="list-disc list-inside text-slate-700 mb-8 space-y-2">
+              <li>We store your Facebook access tokens encrypted in our secure database</li>
+              <li>We only use your Facebook data to post listings to your own Facebook pages</li>
+              <li>We never post to Accorria's Facebook page - all posts appear on your pages</li>
+              <li>You can disconnect your Facebook account at any time</li>
+              <li>When you disconnect, we immediately delete your Facebook tokens</li>
+              <li>We never share your Facebook data with third parties</li>
+            </ul>
 
             <h2 className="text-2xl font-bold text-slate-900 mt-8 mb-4">Cookies</h2>
             <p className="text-slate-700 mb-8">

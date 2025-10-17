@@ -74,17 +74,65 @@ export class ListingsService {
       finalDescription: listingData.description
     };
 
-    // Store in localStorage - use consistent key for demo data
-    const existingListings = this.getMockListings();
-    existingListings.unshift(newListing);
-    localStorage.setItem('demoListings', JSON.stringify(existingListings));
-    
-    // Also store in testListings for backward compatibility
-    const existingTestListings = JSON.parse(localStorage.getItem('testListings') || '[]');
-    existingTestListings.unshift(newListing);
-    localStorage.setItem('testListings', JSON.stringify(existingTestListings));
+    try {
+      // Store in localStorage - use consistent key for demo data
+      const existingListings = this.getMockListings();
+      existingListings.unshift(newListing);
+      
+      // Limit to 50 listings to prevent quota issues
+      const limitedListings = existingListings.slice(0, 50);
+      localStorage.setItem('demoListings', JSON.stringify(limitedListings));
+      
+      // Also store in testListings for backward compatibility (limited)
+      const existingTestListings = JSON.parse(localStorage.getItem('testListings') || '[]');
+      existingTestListings.unshift(newListing);
+      const limitedTestListings = existingTestListings.slice(0, 50);
+      localStorage.setItem('testListings', JSON.stringify(limitedTestListings));
+      
+    } catch (error) {
+      console.error('Failed to store listing in localStorage:', error);
+      // If localStorage fails, clear old data and try again
+      this.clearOldListings();
+      try {
+        localStorage.setItem('demoListings', JSON.stringify([newListing]));
+        localStorage.setItem('testListings', JSON.stringify([newListing]));
+      } catch (retryError) {
+        console.error('Failed to store listing even after cleanup:', retryError);
+      }
+    }
 
     return newListing;
+  }
+
+  private clearOldListings(): void {
+    try {
+      // Clear old data to free up space
+      localStorage.removeItem('demoListings');
+      localStorage.removeItem('testListings');
+      localStorage.removeItem('oldListings');
+      localStorage.removeItem('carListings');
+      
+      // Clear any other potential listing keys
+      const keysToRemove = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.includes('listing') || key.includes('car') || key.includes('demo'))) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach(key => localStorage.removeItem(key));
+      
+      console.log('Cleared old listing data to free up localStorage space');
+    } catch (error) {
+      console.error('Failed to clear old listings:', error);
+    }
+  }
+
+  /**
+   * Public method to clear localStorage when quota is exceeded
+   */
+  public clearLocalStorage(): void {
+    this.clearOldListings();
   }
 
   /**
@@ -95,9 +143,11 @@ export class ListingsService {
       const { data: { user } } = await this.supabase.auth.getUser();
       
       // For development, return mock data if no Supabase user or if it's the demo user
-      if (!user || user.id === '00000000-0000-0000-0000-000000000123') {
+      if (!user || user.id === '00000000-0000-0000-0000-000000000123' || user.email === 'preston@accorria.com') {
         console.log('Demo user detected, returning mock data for development');
-        return this.getMockListings();
+        const mockListings = this.getMockListings();
+        console.log('Mock listings loaded:', mockListings.length, 'listings');
+        return mockListings;
       }
 
       const { data, error } = await this.supabase
@@ -349,8 +399,10 @@ export class ListingsService {
       const localListings = JSON.parse(localData);
       const { data: { user } } = await this.supabase.auth.getUser();
       
-      if (!user) {
-        throw new Error('User not authenticated');
+      // For demo users, skip migration to prevent quota issues
+      if (!user || user.id === '00000000-0000-0000-0000-000000000123' || user.email === 'preston@accorria.com') {
+        console.log('Demo user detected, skipping migration to prevent quota issues');
+        return true;
       }
 
       // Check if we already have listings in the database
@@ -360,33 +412,41 @@ export class ListingsService {
         return true;
       }
 
+      // Limit migration to prevent quota issues
+      const listingsToMigrate = localListings.slice(0, 10); // Only migrate first 10 listings
+      
       // Migrate each listing
-      for (const listing of localListings) {
-        await this.createListing({
-          title: listing.title || 'Migrated Listing',
-          description: listing.description || '',
-          price: listing.price || 0,
-          soldFor: listing.soldFor,
-          status: listing.soldFor ? 'sold' : 'active',
-          images: listing.images || [],
-          make: listing.make,
-          model: listing.model,
-          year: listing.year,
-          mileage: listing.mileage?.toString() || '0',
-          condition: listing.condition,
-          location: listing.location,
-          // Required fields for component compatibility
-          postedAt: listing.postedAt || new Date().toISOString(),
-          titleStatus: listing.titleStatus || 'Clean',
-          platforms: listing.platforms || ['accorria'],
-          messages: listing.messages || 0,
-          clicks: listing.clicks || 0,
-          soldAt: listing.soldAt,
-          soldTo: listing.soldTo,
-          detectedFeatures: listing.detectedFeatures || [],
-          aiAnalysis: listing.aiAnalysis,
-          finalDescription: listing.finalDescription
-        });
+      for (const listing of listingsToMigrate) {
+        try {
+          await this.createListing({
+            title: listing.title || 'Migrated Listing',
+            description: listing.description || '',
+            price: listing.price || 0,
+            soldFor: listing.soldFor,
+            status: listing.soldFor ? 'sold' : 'active',
+            images: listing.images || [],
+            make: listing.make,
+            model: listing.model,
+            year: listing.year,
+            mileage: listing.mileage?.toString() || '0',
+            condition: listing.condition,
+            location: listing.location,
+            // Required fields for component compatibility
+            postedAt: listing.postedAt || new Date().toISOString(),
+            titleStatus: listing.titleStatus || 'Clean',
+            platforms: listing.platforms || ['accorria'],
+            messages: listing.messages || 0,
+            clicks: listing.clicks || 0,
+            soldAt: listing.soldAt,
+            soldTo: listing.soldTo,
+            detectedFeatures: listing.detectedFeatures || [],
+            aiAnalysis: listing.aiAnalysis,
+            finalDescription: listing.finalDescription
+          });
+        } catch (listingError) {
+          console.error('Failed to migrate individual listing:', listingError);
+          // Continue with other listings
+        }
       }
 
       // Clear localStorage after successful migration

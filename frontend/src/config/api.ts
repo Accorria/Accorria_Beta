@@ -25,9 +25,8 @@ export const getBackendUrl = (): string => {
       return PRODUCTION_BACKEND_URL;
     }
     
-    // For development, you can choose to use local or deployed backend
-    // Change this to DEVELOPMENT_BACKEND_URL if you want to use local backend during development
-    return PRODUCTION_BACKEND_URL;
+    // For development, use local backend
+    return DEVELOPMENT_BACKEND_URL;
   }
   
   // Server-side rendering fallback

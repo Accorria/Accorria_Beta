@@ -90,6 +90,8 @@ interface FileWithId {
 export default function CreateListing({ onClose, onListingCreated }: CreateListingProps) {
   const [files, setFiles] = useState<FileWithId[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<FileWithId[]>([]);
+  const [renderKey, setRenderKey] = useState(0);
+
   const [carDetails, setCarDetails] = useState<CarDetails>({
     make: '',
     model: '',
@@ -106,11 +108,17 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
   const [customModel, setCustomModel] = useState('');
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
+  
+  // Clear any existing error on component mount
+  useEffect(() => {
+    setAnalysisError(null);
+  }, []);
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [descriptionSuggestions, setDescriptionSuggestions] = useState<string[]>([]);
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [isPosting, setIsPosting] = useState(false);
   const [selectedPricingTier, setSelectedPricingTier] = useState<'quick' | 'market' | 'premium' | null>(null);
+  const [titleRebuildExplanation, setTitleRebuildExplanation] = useState('');
   const [postSuccess, setPostSuccess] = useState(false);
   const [postResult, setPostResult] = useState<{successCount: number, totalCount: number} | null>(null);
 
@@ -291,7 +299,7 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
   };
 
 
-  const generateAIDescription = (analysisResult: AnalysisResult, carDetails: CarDetails): string => {
+  const generateAIDescription = (analysisResult: AnalysisResult, carDetails: CarDetails, titleRebuildExplanation?: string): string => {
     let description = '';
     
     // Start with basic car info (use actual user input)
@@ -333,7 +341,10 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                       titleStatus === 'junk' ? '🗑️' : '✅';
     
     description += `${titleEmoji} Title: ${titleStatusText}\n`;
-    description += `📍 Location: Detroit, MI\n\n`;
+    const location = carDetails.city && carDetails.zipCode 
+      ? `${carDetails.city}, ${carDetails.zipCode}` 
+      : carDetails.city || 'Detroit, MI';
+    description += `📍 Location: ${location}\n\n`;
     
     // Details section
     description += `💡 Details:\n`;
@@ -346,11 +357,16 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
       }
     }
     
+    // Add title rebuild explanation if applicable
+    if (titleStatus === 'rebuilt' && titleRebuildExplanation) {
+      description += `• ${titleRebuildExplanation}\n`;
+    }
+    
     // Add default details if no AI analysis
     if (!analysisResult.data?.features_detected) {
-      description += `• Runs and drives excellent\n`;
-      description += `• Smooth-shifting automatic\n`;
-      description += `• Clean interior & exterior\n`;
+      description += `• Runs and drives\n`;
+      description += `• Transmission works great\n`;
+      description += `• Good condition\n`;
     }
     
     description += `\n`;
@@ -391,12 +407,27 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
         'backup_camera': 'Backup camera',
         'bluetooth': 'Bluetooth & USB',
         'apple_carplay': 'Apple CarPlay & Android Auto',
-        'navigation': 'Navigation',
+        'navigation': 'Navigation system',
         'heated_seats': 'Heated seats',
         'leather_seats': 'Leather seats',
         'alloy_wheels': 'Alloy wheels',
         'cruise_control': 'Cruise control',
-        'dual_zone_climate': 'Dual-zone climate control'
+        'dual_zone_climate': 'Dual-zone climate control',
+        'sunroof': 'Sunroof',
+        'tinted_windows': 'Tinted windows',
+        'touchscreen': 'Touchscreen display',
+        'premium_audio': 'Premium audio system',
+        'keyless_entry': 'Keyless entry',
+        'push_button_start': 'Push-button start',
+        'lane_departure': 'Lane departure warning',
+        'blind_spot': 'Blind spot monitoring',
+        'adaptive_cruise': 'Adaptive cruise control',
+        'parking_sensors': 'Parking sensors',
+        'led_headlights': 'LED headlights',
+        'fog_lights': 'Fog lights',
+        'spoiler': 'Rear spoiler',
+        'chrome_trim': 'Chrome trim',
+        'premium_wheels': 'Premium wheels'
       };
       
       const uniqueFeatures = [...new Set(featureList.slice(0, 6))];
@@ -408,12 +439,12 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
     
     // Add standard features if no detected features
     if (!analysisResult.data?.features_detected) {
-      description += `• Backup camera\n`;
-      description += `• Apple CarPlay & Android Auto\n`;
-      description += `• Bluetooth & USB\n`;
-      description += `• Dual-zone climate control\n`;
-      description += `• Cruise control\n`;
+      description += `• Touchscreen infotainment system\n`;
+      description += `• Bluetooth + Backup camera\n`;
+      description += `• Heated seats\n`;
       description += `• Alloy wheels\n`;
+      description += `• Dual-zone climate control\n`;
+      description += `• Power seats + remote start\n`;
     }
     
     // Add title-specific context to the description
@@ -435,19 +466,32 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
     }
     
     description += `\n🔑 ${titleContext}\n\n`;
-    description += `📱 Message me to schedule a test drive or ask questions!`;
+    description += `📱 Message me to schedule a test drive or make an offer!`;
     
     return description;
   };
 
-  // Regenerate description when pricing tier changes
+  // Regenerate description when any relevant field changes
   useEffect(() => {
-    if (selectedPricingTier && analysisResult && carDetails.finalDescription) {
-      const newDescription = generateAIDescription(analysisResult, carDetails);
+    if (analysisResult && carDetails.finalDescription) {
+      const newDescription = generateAIDescription(analysisResult, carDetails, titleRebuildExplanation);
       setCarDetails(prev => ({ ...prev, finalDescription: newDescription }));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedPricingTier, analysisResult, carDetails.make, carDetails.model, carDetails.year, carDetails.mileage, carDetails.price, carDetails.titleStatus]);
+  }, [
+    selectedPricingTier, 
+    analysisResult, 
+    carDetails.make, 
+    carDetails.model, 
+    carDetails.year, 
+    carDetails.mileage, 
+    carDetails.price, 
+    carDetails.titleStatus,
+    carDetails.city,
+    carDetails.zipCode,
+    carDetails.aboutVehicle,
+    titleRebuildExplanation
+  ]);
 
   const analyzeImages = async () => {
     if (selectedFiles.length === 0) {
@@ -529,11 +573,34 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
           console.log('Using raw AI analysis from backend:', generatedDescription);
         } else {
           // Fallback to local generation
-          generatedDescription = generateAIDescription(analysisResult, carDetails);
+          generatedDescription = generateAIDescription(analysisResult, carDetails, titleRebuildExplanation);
           console.log('Using fallback local generation');
         }
         
-        setCarDetails(prev => ({ ...prev, finalDescription: generatedDescription }));
+        // Clean up the description text
+        const cleanedDescription = generatedDescription
+          .replace(/no visible damage/gi, 'good condition')
+          .replace(/runs and drives excellent/gi, 'Runs and drives')
+          .replace(/runs and drives great/gi, 'Runs and drives')
+          .replace(/transmission shifts smooth/gi, 'Transmission works great')
+          .replace(/transmission shifts great/gi, 'Transmission works great')
+          .replace(/good paint condition/gi, 'excellent paint condition')
+          .replace(/clean interior/gi, 'well-maintained interior')
+          // Remove emojis from features section
+          .replace(/🔧 Features & Equipment:/g, 'Features & Equipment:')
+          .replace(/❤️/g, '•')
+          .replace(/🛠️/g, '•')
+          .replace(/⚙️/g, '•')
+          .replace(/🔧/g, '•')
+          .replace(/📱/g, '•')
+          .replace(/🎵/g, '•')
+          .replace(/🧭/g, '•')
+          .replace(/🪑/g, '•')
+          .replace(/🛞/g, '•')
+          .replace(/🌡️/g, '•')
+          .replace(/🚗/g, '•');
+
+        setCarDetails(prev => ({ ...prev, finalDescription: cleanedDescription }));
         setShowAnalysis(false); // Hide the analysis results section
       }
       // Run market analysis in background
@@ -682,16 +749,16 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
 
   // Memoize image URLs to prevent constant re-rendering
   const imageUrls = useMemo(() => {
-    console.log('Creating new image URLs for', files.length, 'files');
+    console.log('🎯 Creating new image URLs for', files.length, 'files:', files.map(f => f.file.name));
     return files.map(fileWithId => URL.createObjectURL(fileWithId.file));
-  }, [files.length]); // Only depend on length, not the entire files array
+  }, [files]); // Depend on the entire files array so reordering updates the URLs
 
   // Cleanup URLs when component unmounts or files change
   useEffect(() => {
     return () => {
       imageUrls.forEach(url => URL.revokeObjectURL(url));
     };
-  }, [files.length]); // Only depend on length to prevent infinite loops
+  }, [files]); // Depend on files array to cleanup when files change
 
   // Show success screen after posting
   if (postSuccess && postResult) {
@@ -826,11 +893,13 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {files.map((fileWithId, index) => {
                       const isSelected = selectedFiles.some(f => f.id === fileWithId.id);
+                      console.log(`🎯 Rendering photo ${index}: ${fileWithId.file.name}`);
                       return (
                         <div 
-                          key={fileWithId.id}
-                          className="relative group"
+                          key={`${fileWithId.id}-${index}`}
+                          className="relative group cursor-move select-none"
                           draggable
+                          style={{ userSelect: 'none' }}
                           onMouseDown={(e) => {
                             // Start tracking for drag vs click
                             e.currentTarget.dataset.mouseDownTime = Date.now().toString();
@@ -838,7 +907,7 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                           onDragStart={(e) => {
                             e.dataTransfer.setData('text/plain', index.toString());
                             e.currentTarget.classList.add('opacity-50', 'scale-105');
-                            console.log('Drag started for image', index);
+                            console.log('🎯 DRAG STARTED for image', index, 'File:', fileWithId.file.name);
                           }}
                           onDragEnd={(e) => {
                             e.currentTarget.classList.remove('opacity-50', 'scale-105');
@@ -847,6 +916,7 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                           onDragOver={(e) => {
                             e.preventDefault();
                             e.currentTarget.classList.add('ring-2', 'ring-blue-300');
+                            console.log('Drag over image', index);
                           }}
                           onDragLeave={(e) => {
                             e.currentTarget.classList.remove('ring-2', 'ring-blue-300');
@@ -858,14 +928,18 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                             const draggedIndex = parseInt(e.dataTransfer.getData('text/plain'));
                             const dropIndex = index;
                             
-                            console.log('Drop event:', { draggedIndex, dropIndex });
+                            console.log('🎯 DROP EVENT:', { draggedIndex, dropIndex, draggedIndexType: typeof draggedIndex, dropIndexType: typeof dropIndex });
                             
-                            if (draggedIndex !== dropIndex) {
+                            if (draggedIndex !== dropIndex && !isNaN(draggedIndex) && !isNaN(dropIndex)) {
+                              console.log('🎯 REORDERING: Moving from', draggedIndex, 'to', dropIndex);
                               const newFiles = [...files];
                               const [draggedFile] = newFiles.splice(draggedIndex, 1);
                               newFiles.splice(dropIndex, 0, draggedFile);
                               setFiles(newFiles);
-                              console.log('Files reordered:', newFiles.map(f => f.file.name));
+                              setRenderKey(prev => prev + 1); // Force re-render
+                              console.log('🎯 FILES REORDERED:', newFiles.map(f => f.file.name));
+                            } else {
+                              console.log('🎯 NO REORDER: Same position or invalid indices');
                             }
                           }}
                           // Mobile touch events for drag and drop
@@ -909,6 +983,7 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                                   const [draggedFile] = newFiles.splice(draggedIndex, 1);
                                   newFiles.splice(dropIndex, 0, draggedFile);
                                   setFiles(newFiles);
+                                  setRenderKey(prev => prev + 1); // Force re-render
                                   console.log('Mobile drag: Files reordered:', newFiles.map(f => f.file.name));
                                 }
                               }
@@ -920,6 +995,7 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                           <img
                             src={imageUrls[index]}
                             alt={`Preview ${index + 1}`}
+                            draggable={false}
                             className={`w-full h-20 object-cover rounded-lg transition-all ${
                               isSelected ? 'ring-2 ring-blue-500 opacity-100' : 'opacity-70 hover:opacity-100'
                             }`}
@@ -936,7 +1012,6 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                             }}
                             onClick={(e) => {
                               e.stopPropagation();
-                              e.preventDefault();
                               console.log('Selection button clicked for:', fileWithId.file.name);
                               toggleFileSelection(fileWithId);
                             }}
@@ -1165,6 +1240,22 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
               </select>
             </div>
 
+            {/* Title Rebuild Explanation - only show when Rebuilt Title is selected */}
+            {carDetails.titleStatus === 'rebuilt' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Why was the title rebuilt?
+                </label>
+                <textarea
+                  value={titleRebuildExplanation}
+                  onChange={(e) => setTitleRebuildExplanation(e.target.value)}
+                  placeholder="e.g., Minor accident damage that has been professionally repaired"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  rows={2}
+                />
+              </div>
+            )}
+
             {/* Location Fields */}
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -1204,7 +1295,7 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                 onChange={(e) => setCarDetails(prev => ({ ...prev, aboutVehicle: e.target.value }))}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 rows={4}
-                placeholder="Tell us about the vehicle's condition, features, history, or any important details..."
+                placeholder={`Tell us about the vehicle's condition, features, history, or any important details...${carDetails.titleStatus === 'rebuilt' && titleRebuildExplanation ? `\n\nTitle Rebuild: ${titleRebuildExplanation}` : ''}`}
               />
             </div>
 

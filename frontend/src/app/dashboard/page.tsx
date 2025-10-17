@@ -5,10 +5,10 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { EmailVerification } from '@/components/EmailVerification';
-import DashboardListing from '@/components/DashboardListing';
 import CreateListing from '@/components/listings/CreateListing';
 import Header from '@/components/Header';
 import DealerMode from '@/components/DealerMode';
+import DashboardListing from '@/components/DashboardListing';
 import { listingsService, Listing } from '@/services/listingsService';
 
 export default function Dashboard() {
@@ -42,6 +42,9 @@ export default function Dashboard() {
           listingsService.getListingStats()
         ]);
         
+        console.log('Dashboard loaded listings:', userListings.length, 'listings');
+        console.log('Dashboard loaded stats:', listingStats);
+        
         setListings(userListings);
         setStats(listingStats);
         
@@ -52,14 +55,8 @@ export default function Dashboard() {
           setLogMsg(null); // Don't show "loaded 0 listings" message
         }
         
-        // Run migration in background after initial load (non-blocking)
-        setTimeout(async () => {
-          try {
-            await listingsService.migrateLocalStorageData();
-          } catch (error) {
-            console.log('Background migration completed or failed:', error);
-          }
-        }, 100);
+        // Skip migration for demo users to prevent quota issues
+        // Migration is only needed for real users with database access
         
       } catch (error) {
         console.error('Failed to load listings:', error);
@@ -217,11 +214,21 @@ export default function Dashboard() {
                 View All
               </Link>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {listings.slice(0, 2).map((listing) => (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {listings.slice(0, 6).map((listing) => (
                 <DashboardListing key={listing.id} listing={listing} />
               ))}
             </div>
+            {listings.length > 6 && (
+              <div className="text-center mt-4">
+                <Link
+                  href="/listings"
+                  className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
+                >
+                  View all {listings.length} listings →
+                </Link>
+              </div>
+            )}
           </div>
         )}
 

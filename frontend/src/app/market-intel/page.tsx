@@ -7,6 +7,7 @@ import { EmailVerification } from '@/components/EmailVerification';
 import Header from '@/components/Header';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import SimpleMarketSearch from '@/components/SimpleMarketSearch';
+import HotCarsSection from '@/components/HotCarsSection';
 
 export default function MarketIntelPage() {
   const { user, loading, isEmailVerified } = useAuth();
@@ -79,6 +80,9 @@ export default function MarketIntelPage() {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Market Price Search</h1>
           
           <div className="space-y-6">
+            {/* Hot Cars Section */}
+            <HotCarsSection />
+            
             <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Search Car Prices</h3>
               <p className="text-gray-600 dark:text-gray-300 mb-4">
@@ -174,23 +178,6 @@ export default function MarketIntelPage() {
               )}
             </div>
 
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Profit Thresholds</h3>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600 dark:text-gray-400">Minimum Profit</span>
-                  <span className="font-semibold text-gray-900 dark:text-white">$2,000</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600 dark:text-gray-400">Target ROI</span>
-                  <span className="font-semibold text-gray-900 dark:text-white">25%</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600 dark:text-gray-400">Max Days to Sell</span>
-                  <span className="font-semibold text-gray-900 dark:text-white">30 days</span>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </main>
