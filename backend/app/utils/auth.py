@@ -73,6 +73,14 @@ def get_optional_user(request: Request) -> Optional[Dict[str, Any]]:
     except HTTPException:
         return None
 
+def get_current_user_id(request: Request) -> str:
+    """
+    Get the current user ID from the JWT token.
+    Returns the user ID as a string.
+    """
+    user = get_current_user(request)
+    return user.get("sub", user.get("user_id", "unknown"))
+
 def require_user_role(required_role: str):
     """
     Decorator to require specific user role.
