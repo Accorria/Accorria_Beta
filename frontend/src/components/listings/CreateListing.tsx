@@ -726,7 +726,7 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
       console.log('⏱️  [ANALYZE] Calling api.postFormData to:', API_ENDPOINTS.ENHANCED_ANALYZE);
       const analysisStart = Date.now();
       
-      const result = await api.postFormData(API_ENDPOINTS.ENHANCED_ANALYZE, formData);
+      const result = await api.postFormData(API_ENDPOINTS.ENHANCED_ANALYZE, formData) as AnalysisResult;
       
       const analysisTime = Date.now() - analysisStart;
       console.log(`⏱️  [ANALYZE] Analysis completed in ${analysisTime}ms (${(analysisTime/1000).toFixed(1)}s)`);
@@ -741,11 +741,11 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
       // DEBUG: Print the actual result to console
       console.log('📋 [ANALYZE] Full result object:', JSON.stringify(result, null, 2).substring(0, 500));
       
-      setAnalysisResult(result as AnalysisResult);
+      setAnalysisResult(result);
       setShowAnalysis(true);
       
       // Generate AI description based on enhanced analysis
-      const analysisResult = result as AnalysisResult;
+      const analysisResult = result;
       if (analysisResult.success) {
         // Use AI-generated content from backend if available, otherwise fallback to local generation
         let generatedDescription = '';
