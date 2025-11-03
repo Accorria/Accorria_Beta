@@ -48,6 +48,18 @@ export class ListingsService {
   }
 
   private createMockListing(listingData: Omit<Listing, 'id' | 'user_id' | 'created_at' | 'updated_at'>): Listing {
+    // Optimize images: store only metadata (count, names) instead of full base64 data
+    const imageData = listingData.images || [];
+    const optimizedImages = imageData.map((img, idx) => {
+      // If it's a base64 data URL, replace with metadata
+      if (typeof img === 'string' && img.startsWith('data:')) {
+        // Extract file type and size estimate
+        const sizeEstimate = Math.round(img.length * 0.75); // Base64 is ~33% larger
+        return `placeholder:image${idx + 1}:${sizeEstimate}`;
+      }
+      return img; // Already a URL or reference
+    });
+
     const newListing: Listing = {
       id: Date.now().toString(),
       user_id: '00000000-0000-0000-0000-000000000123',
@@ -56,7 +68,7 @@ export class ListingsService {
       price: listingData.price,
       platforms: listingData.platforms || ['accorria'],
       status: listingData.status || 'active',
-      images: listingData.images || [],
+      images: optimizedImages, // Store metadata only, not full base64
       make: listingData.make,
       model: listingData.model,
       year: listingData.year,
@@ -79,25 +91,47 @@ export class ListingsService {
       const existingListings = this.getMockListings();
       existingListings.unshift(newListing);
       
-      // Limit to 50 listings to prevent quota issues
-      const limitedListings = existingListings.slice(0, 50);
-      localStorage.setItem('demoListings', JSON.stringify(limitedListings));
+      // Limit to 5 listings to prevent quota issues (reduced from 50)
+      const limitedListings = existingListings.slice(0, 5);
       
-      // Also store in testListings for backward compatibility (limited)
-      const existingTestListings = JSON.parse(localStorage.getItem('testListings') || '[]');
-      existingTestListings.unshift(newListing);
-      const limitedTestListings = existingTestListings.slice(0, 50);
-      localStorage.setItem('testListings', JSON.stringify(limitedTestListings));
+      // Calculate size before storing
+      const listingString = JSON.stringify(limitedListings);
+      const sizeKB = Math.round(listingString.length / 1024);
+      
+      // If size is still too large (>4MB), keep only the newest listing
+      if (sizeKB > 4000) {
+        console.warn('⚠️ Listing data too large, keeping only newest listing');
+        localStorage.setItem('demoListings', JSON.stringify([newListing]));
+        localStorage.setItem('testListings', JSON.stringify([newListing]));
+      } else {
+        localStorage.setItem('demoListings', listingString);
+        // Also store in testListings for backward compatibility (limited to 5)
+        const existingTestListings = JSON.parse(localStorage.getItem('testListings') || '[]');
+        existingTestListings.unshift(newListing);
+        const limitedTestListings = existingTestListings.slice(0, 5);
+        localStorage.setItem('testListings', JSON.stringify(limitedTestListings));
+      }
+      
+      console.log(`✅ Stored listing (${sizeKB}KB, ${limitedListings.length} total listings)`);
       
     } catch (error) {
       console.error('Failed to store listing in localStorage:', error);
       // If localStorage fails, clear old data and try again
       this.clearOldListings();
       try {
-        localStorage.setItem('demoListings', JSON.stringify([newListing]));
-        localStorage.setItem('testListings', JSON.stringify([newListing]));
+        // Store only the newest listing with minimal data
+        const minimalListing = {
+          ...newListing,
+          images: [`placeholder:${imageData.length} images`], // Just store count
+          description: newListing.description.substring(0, 500) // Truncate description
+        };
+        localStorage.setItem('demoListings', JSON.stringify([minimalListing]));
+        localStorage.setItem('testListings', JSON.stringify([minimalListing]));
+        console.log('✅ Stored minimal listing after cleanup');
       } catch (retryError) {
-        console.error('Failed to store listing even after cleanup:', retryError);
+        console.error('❌ Failed to store listing even after cleanup:', retryError);
+        // Last resort: Don't store in localStorage, just return the listing
+        console.warn('⚠️ Listing created but not persisted to localStorage due to quota limits');
       }
     }
 
@@ -122,9 +156,24 @@ export class ListingsService {
       }
       keysToRemove.forEach(key => localStorage.removeItem(key));
       
-      console.log('Cleared old listing data to free up localStorage space');
+      // Clear any large data that might be taking up space
+      const allKeys = Object.keys(localStorage);
+      let clearedCount = 0;
+      for (const key of allKeys) {
+        try {
+          const value = localStorage.getItem(key);
+          if (value && value.length > 1000000) { // Clear items > 1MB
+            localStorage.removeItem(key);
+            clearedCount++;
+          }
+        } catch (e) {
+          // Skip keys that can't be read
+        }
+      }
+      
+      console.log(`✅ Cleared old listing data (${keysToRemove.length} listing keys, ${clearedCount} large items)`);
     } catch (error) {
-      console.error('Failed to clear old listings:', error);
+      console.error('❌ Failed to clear old listings:', error);
     }
   }
 

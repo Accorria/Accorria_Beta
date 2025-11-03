@@ -17,10 +17,23 @@ def get_current_user(request: Request) -> Dict[str, Any]:
     1. Extracts the Bearer token from Authorization header
     2. Decodes and verifies the JWT token using Supabase secret
     3. Returns the user payload if valid
-    4. Raises 401 if token is missing or invalid
+    4. In development (no SUPABASE_JWT_SECRET), returns mock user even without header
+    5. Raises 401 if token is missing or invalid in production
     """
     auth_header = request.headers.get("Authorization")
     
+    # In development mode (no SUPABASE_JWT_SECRET), allow requests without auth header
+    if not SUPABASE_JWT_SECRET:
+        logger.warning("SUPABASE_JWT_SECRET not set, using mock authentication for development")
+        # Return mock user even without auth header in development
+        return {
+            "sub": "mock-user-id",
+            "email": "test@example.com",
+            "user_metadata": {"full_name": "Test User"},
+            "app_metadata": {"provider": "email"}
+        }
+    
+    # In production, require auth header
     if not auth_header or not auth_header.startswith("Bearer "):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, 
@@ -28,16 +41,6 @@ def get_current_user(request: Request) -> Dict[str, Any]:
         )
 
     token = auth_header.split(" ")[1]
-    
-    if not SUPABASE_JWT_SECRET:
-        logger.warning("SUPABASE_JWT_SECRET not set, using mock authentication for development")
-        # For development, return a mock user if no secret is set
-        return {
-            "sub": "mock-user-id",
-            "email": "test@example.com",
-            "user_metadata": {"full_name": "Test User"},
-            "app_metadata": {"provider": "email"}
-        }
 
     try:
         # Decode and verify the JWT token

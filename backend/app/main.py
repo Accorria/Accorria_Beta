@@ -27,6 +27,7 @@ from app.api.v1 import (
     car_analysis as car_analysis_router,
     market_intelligence as market_intelligence_router,
     enhanced_analysis as enhanced_analysis_router,
+    synthesis as synthesis_router,
     flip_car as flip_car_router,
     listings,
     platform_posting as platform_posting_router,
@@ -37,7 +38,9 @@ from app.api.v1 import (
     inventory as inventory_router,
     search_history as search_history_router,
     facebook_oauth as facebook_oauth_router,
-    user_facebook_posting as user_facebook_posting_router
+    user_facebook_posting as user_facebook_posting_router,
+    user_ebay_posting as user_ebay_posting_router,
+    test_apis as test_apis_router
 )
 from app.api.v1.market_search import router as market_search_router
 from app.api.v1.market_search_real_scrape import router as market_search_real_scrape_router
@@ -109,15 +112,41 @@ app.add_middleware(
 # Health check endpoint
 @app.get("/health")
 async def health_check():
-    """Health check endpoint"""
+    """Health check endpoint with API connectivity verification"""
+    from app.core.config import settings
+    import os
+    
+    print(f"[HEALTH CHECK] ===== HEALTH CHECK CALLED =====")
+    
+    # Check API keys are set
+    openai_key_set = bool(settings.OPENAI_API_KEY and settings.OPENAI_API_KEY != "")
+    gemini_key_set = bool(settings.GEMINI_API_KEY and settings.GEMINI_API_KEY != "")
+    supabase_url_set = bool(settings.SUPABASE_URL and settings.SUPABASE_URL != "")
+    
+    # Test OpenAI connection (quick test without actual API call)
+    openai_status = "configured" if openai_key_set else "missing_key"
+    gemini_status = "configured" if gemini_key_set else "missing_key"
+    
+    print(f"[HEALTH CHECK] OpenAI API Key: {'SET' if openai_key_set else 'MISSING'}")
+    print(f"[HEALTH CHECK] Gemini API Key: {'SET' if gemini_key_set else 'MISSING'}")
+    print(f"[HEALTH CHECK] Supabase URL: {'SET' if supabase_url_set else 'MISSING'}")
+    print(f"[HEALTH CHECK] =============================")
+    
     return {
         "status": "healthy",
         "service": "Accorria Backend",
         "version": "1.0.0",
         "apis": {
-            "openai_vision": "configured",
-            "openai": "configured", 
-            "supabase": "configured"
+            "openai_vision": openai_status,
+            "openai": openai_status,
+            "gemini": gemini_status,
+            "google_search_grounding": gemini_status,
+            "supabase": "configured" if supabase_url_set else "missing_config"
+        },
+        "api_keys_configured": {
+            "openai": openai_key_set,
+            "gemini": gemini_key_set,
+            "supabase": supabase_url_set
         }
     }
 
@@ -195,6 +224,7 @@ app.include_router(car_listing_generator_router.router, prefix="/api/v1", tags=[
 app.include_router(car_analysis_router.router, prefix="/api/v1", tags=["Car Analysis"])
 app.include_router(market_intelligence_router.router, prefix="/api/v1", tags=["Market Intelligence"])
 app.include_router(enhanced_analysis_router.router, prefix="/api/v1", tags=["Enhanced Analysis"])
+app.include_router(synthesis_router.router, prefix="/api/v1", tags=["Synthesis"])
 app.include_router(flip_car_router.router, prefix="/api/v1", tags=["Flip Car"])
 app.include_router(listings.router, prefix="/api/v1/listings", tags=["Listings"])
 app.include_router(platform_posting_router.router, prefix="/api/v1", tags=["Platform Posting"])
@@ -212,6 +242,12 @@ app.include_router(market_search_scraping_router, prefix="/api/v1/market-search"
 # Facebook OAuth2 and User-Specific Posting
 app.include_router(facebook_oauth_router.router, prefix="/api/v1/auth", tags=["Facebook OAuth2"])
 app.include_router(user_facebook_posting_router.router, prefix="/api/v1/facebook", tags=["User Facebook Posting"])
+
+# eBay User-Specific Posting
+app.include_router(user_ebay_posting_router.router, prefix="/api/v1/ebay", tags=["User eBay Posting"])
+
+# API Testing
+app.include_router(test_apis_router.router, prefix="/api/v1", tags=["API Testing"])
 
 # Test endpoint
 @app.get("/test")

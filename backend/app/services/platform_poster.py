@@ -46,6 +46,7 @@ class PlatformPoster:
     def __init__(self):
         self.platforms = {
             "facebook_marketplace": FacebookMarketplacePoster(),
+            "ebay": eBayMotorsPoster(),
             "craigslist": CraigslistPoster(),
             "offerup": OfferUpPoster()
         }
@@ -254,6 +255,77 @@ class CraigslistPoster:
                 platform="craigslist",
                 error_message=str(e)
             )
+
+class eBayMotorsPoster:
+    """eBay Motors posting implementation"""
+    
+    def __init__(self):
+        from .ebay_poster import eBayPoster as eBayAPI, eBayListingData
+        
+        self.api = None
+        # eBay poster is initialized per request with user tokens
+    
+    async def post_listing(self, listing_data: ListingData) -> PostingResult:
+        """
+        Post listing to eBay Motors
+        
+        Note: This requires eBay Trading API setup
+        """
+        try:
+            # Convert to eBay-specific format
+            from .ebay_poster import eBayListingData
+            
+            ebay_listing_data = eBayListingData(
+                title=listing_data.title,
+                description=listing_data.description,
+                price=listing_data.price,
+                make=listing_data.make,
+                model=listing_data.model,
+                year=listing_data.year,
+                mileage=listing_data.mileage,
+                condition=self._map_condition(listing_data.condition),
+                images=listing_data.images,
+                location=self._get_location_data(listing_data.location)
+            )
+            
+            # Note: Actual posting requires user's eBay OAuth token
+            # This is handled by user_ebay_poster service
+            # For now, return a message that user needs to connect eBay account
+            return PostingResult(
+                success=False,
+                platform="ebay",
+                error_message="eBay account not connected. Please connect your eBay account first."
+            )
+            
+        except Exception as e:
+            logger.error(f"eBay Motors posting failed: {str(e)}")
+            return PostingResult(
+                success=False,
+                platform="ebay",
+                error_message=str(e)
+            )
+    
+    def _map_condition(self, condition: str) -> str:
+        """Map our condition to eBay's condition format"""
+        condition_map = {
+            "excellent": "Used",
+            "good": "Used",
+            "fair": "Used",
+            "poor": "For Parts or Not Working",
+            "new": "New"
+        }
+        return condition_map.get(condition.lower(), "Used")
+    
+    def _get_location_data(self, location: str) -> Optional[Dict[str, Any]]:
+        """Convert location string to eBay location format"""
+        if not location or location == "United States":
+            return None
+        
+        # For now, return a basic location structure
+        return {
+            "city": location,
+            "country": "US"
+        }
 
 class OfferUpPoster:
     """OfferUp posting implementation"""

@@ -10,7 +10,6 @@ from typing import List, Optional
 import logging
 import json
 from datetime import datetime
-from datetime import datetime
 
 from app.services.smart_image_analysis import SmartImageAnalysis
 
@@ -23,6 +22,7 @@ async def enhanced_analyze_car(
     images: List[UploadFile] = File(...),
     make: Optional[str] = Form(None),
     model: Optional[str] = Form(None),
+    trim: Optional[str] = Form(None),
     year: Optional[str] = Form(None),
     mileage: Optional[str] = Form(None),
     price: Optional[str] = Form(None),
@@ -36,9 +36,18 @@ async def enhanced_analyze_car(
     Uses OpenAI Vision API to actually analyze the uploaded images
     """
     try:
+        import time
+        start_time = time.time()
         logger.info(f"REAL: Enhanced analysis request received for {len(images)} images")
+        print(f"[ENHANCED-ANALYZE] ===== REQUEST RECEIVED =====")
+        print(f"[ENHANCED-ANALYZE] Images: {len(images)}")
+        print(f"[ENHANCED-ANALYZE] Car: {year} {make} {model} {trim}".strip())
+        print(f"[ENHANCED-ANALYZE] Mileage: {mileage}, Price: ${price}")
+        print(f"[ENHANCED-ANALYZE] Title Status: {titleStatus}")
+        print(f"[ENHANCED-ANALYZE] =============================")
         
         # Process ALL images with OpenAI Vision API (not just the first one)
+        image_processing_start = time.time()
         all_image_contents = []
         for image in images:
             image_content = await image.read()
@@ -50,12 +59,20 @@ async def enhanced_analyze_car(
                     "url": f"data:image/jpeg;base64,{image_b64}"
                 }
             })
+        image_processing_time = time.time() - image_processing_start
+        logger.info(f"⏱️ Image processing (base64 encoding) took {image_processing_time:.2f}s for {len(images)} images")
+        print(f"[ENHANCED-ANALYZE] ✅ Images processed: {len(all_image_contents)} images encoded in {image_processing_time:.2f}s")
         
         # TWO-PASS SYSTEM: Pass-1 - Analyze images → strict JSON
         import openai
         from app.core.config import settings
         
+        print(f"[ENHANCED-ANALYZE] Initializing OpenAI client...")
+        if not settings.OPENAI_API_KEY:
+            print(f"[ENHANCED-ANALYZE] ❌ ERROR: OpenAI API Key is not set!")
+            raise HTTPException(status_code=500, detail="OpenAI API key is not configured")
         client = openai.OpenAI(api_key=settings.OPENAI_API_KEY)
+        print(f"[ENHANCED-ANALYZE] ✅ OpenAI client initialized with API key")
         
         # PASS-1: ANALYSIS - Extract facts with confidence scores
         analysis_prompt = f"""You are an expert vehicle appraiser. Analyze ALL provided car photos THOROUGHLY.
@@ -64,8 +81,8 @@ Be generous with confidence scores for clearly visible features (0.7-0.9).
 Only set confidence ≤0.4 if you truly cannot see the feature.
 
 IMPORTANT: You are analyzing {len(images)} photos of the same car. Look at ALL images to find features.
-Photos of a car + quick line: "{make or 'Infiniti'} {model or 'Q50'} {year or '2014'}, {mileage or '123,456'} miles, {titleStatus or 'clean'}". 
-Extract what is visible using the schema. If trim is not clearly visible, leave trim null.
+Photos of a car + quick line: "{make or 'Infiniti'} {model or 'Q50'} {trim or ''} {year or '2014'}, {mileage or '123,456'} miles, {titleStatus or 'clean'}". 
+Extract what is visible using the schema. Look for trim badges, features, and options that indicate the trim level (e.g., Sport, Limited, Rubicon, etc.). If trim is not clearly visible but provided in context, use that. Otherwise leave trim null.
 
 CRITICAL: Look for these SPECIFIC visual details:
 - VIN numbers (visible on dashboard, door jamb, or windshield)
@@ -140,7 +157,12 @@ Return ONLY this JSON structure:
         # Create message content with text + all images
         message_content = [{"type": "text", "text": analysis_prompt}] + all_image_contents
         
-        analysis_response = client.chat.completions.create(
+        # PASS-1: OpenAI Vision API call (this is the slowest part)
+        pass1_start = time.time()
+        logger.info(f"⏱️ Starting PASS-1 analysis with {len(all_image_contents)} images using gpt-4o...")
+        print(f"[ENHANCED-ANALYZE] About to call OpenAI Vision API with {len(all_image_contents)} images...")
+        try:
+            analysis_response = client.chat.completions.create(
             model="gpt-4o",
             messages=[
                 {
@@ -151,7 +173,13 @@ Return ONLY this JSON structure:
             max_tokens=1500,
             temperature=0.0,
             response_format={"type": "json_object"}
-        )
+            )
+            print(f"[ENHANCED-ANALYZE] OpenAI Vision API call completed")
+        except Exception as api_error:
+            print(f"[ENHANCED-ANALYZE] ERROR calling OpenAI API: {type(api_error).__name__}: {str(api_error)}")
+            raise
+        pass1_time = time.time() - pass1_start
+        logger.info(f"⏱️ PASS-1 (vision analysis) completed in {pass1_time:.2f}s")
         
         analysis_json = json.loads(analysis_response.choices[0].message.content)
         logger.info(f"PASS-1: Analysis JSON extracted: {analysis_json}")
@@ -250,6 +278,7 @@ Return ONLY this JSON structure:
                 listing_context["condition_blurbs"].append(note_data["note"])
         
         # PASS-2: COMPOSE - Generate final listing text
+        # Use gpt-4o-mini for Pass 2 since it doesn't need vision - much faster and cheaper
         compose_prompt = f"""You are a professional car listing writer. Write detailed, specific, and compelling posts that highlight ALL visible features and details.
 ONLY use information provided in the context. Do NOT invent specs or claims.
 Be as detailed as possible - mention specific colors, materials, conditions, and features.
@@ -281,8 +310,11 @@ Write a DETAILED listing using this template. Include ALL specific details from 
 
 IMPORTANT: Make this as detailed as possible. Include specific colors, materials, wheel types, window tinting, interior details, and any visible features. This should be as comprehensive as a professional dealership listing."""
         
+        # Use gpt-4o-mini for Pass 2 - 10x faster, 1/10th the cost, no vision needed
+        pass2_start = time.time()
+        logger.info(f"⏱️ Starting PASS-2 (formatting) using gpt-4o-mini...")
         compose_response = client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-4o-mini",
             messages=[
                 {
                     "role": "user", 
@@ -292,9 +324,14 @@ IMPORTANT: Make this as detailed as possible. Include specific colors, materials
             max_tokens=500,
             temperature=0.2
         )
+        pass2_time = time.time() - pass2_start
+        logger.info(f"⏱️ PASS-2 (formatting) completed in {pass2_time:.2f}s")
         
         final_listing_text = compose_response.choices[0].message.content
         logger.info(f"PASS-2: Final listing composed: {final_listing_text[:100]}...")
+        
+        total_time = time.time() - start_time
+        logger.info(f"⏱️ TOTAL analysis time: {total_time:.2f}s (PASS-1: {pass1_time:.2f}s, PASS-2: {pass2_time:.2f}s, image processing: {image_processing_time:.2f}s)")
         
         ai_analysis = f"Two-pass analysis completed. Raw JSON: {json.dumps(analysis_json, indent=2)}"
         logger.info(f"REAL: OpenAI analysis completed: {ai_analysis[:100]}...")
@@ -350,15 +387,44 @@ IMPORTANT: Make this as detailed as possible. Include specific colors, materials
             "timestamp": datetime.now().isoformat(),
             "demo_mode": False,
             "images_processed": len(images),
-            "openai_tokens_used": (analysis_response.usage.total_tokens if analysis_response.usage else 0) + (compose_response.usage.total_tokens if compose_response.usage else 0)
+            "openai_tokens_used": (analysis_response.usage.total_tokens if analysis_response.usage else 0) + (compose_response.usage.total_tokens if compose_response.usage else 0),
+            "processing_times": {
+                "total_seconds": round(total_time, 2),
+                "pass1_vision_analysis_seconds": round(pass1_time, 2),
+                "pass2_formatting_seconds": round(pass2_time, 2),
+                "image_processing_seconds": round(image_processing_time, 2)
+            }
         }
         
         logger.info("REAL: Analysis completed successfully with OpenAI Vision API")
+        
+        # Print result summary for debugging
+        print(f"[ENHANCED-ANALYZE] ===== ANALYSIS COMPLETE =====")
+        print(f"[ENHANCED-ANALYZE] Success: {analysis_result.get('success')}")
+        print(f"[ENHANCED-ANALYZE] Has description: {bool(analysis_result.get('description'))}")
+        print(f"[ENHANCED-ANALYZE] Has post_text: {bool(analysis_result.get('post_text'))}")
+        if analysis_result.get('post_text'):
+            post_text = analysis_result.get('post_text', '')
+            print(f"[ENHANCED-ANALYZE] Post text length: {len(post_text)} chars")
+            print(f"[ENHANCED-ANALYZE] Post text preview: {post_text[:200]}...")
+        if analysis_result.get('description'):
+            desc = analysis_result.get('description', '')
+            print(f"[ENHANCED-ANALYZE] Description length: {len(desc)} chars")
+            print(f"[ENHANCED-ANALYZE] Description preview: {desc[:200]}...")
+        print(f"[ENHANCED-ANALYZE] =============================")
+        
         return JSONResponse(content=analysis_result, status_code=200)
         
     except Exception as e:
+        error_msg = str(e)
         logger.error(f"REAL: Enhanced analysis failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+        print(f"[ENHANCED-ANALYZE] ===== ERROR OCCURRED =====")
+        print(f"[ENHANCED-ANALYZE] Error type: {type(e).__name__}")
+        print(f"[ENHANCED-ANALYZE] Error message: {error_msg}")
+        import traceback
+        print(f"[ENHANCED-ANALYZE] Traceback: {traceback.format_exc()}")
+        print(f"[ENHANCED-ANALYZE] =============================")
+        raise HTTPException(status_code=500, detail=f"Analysis failed: {error_msg}")
 
 
 @router.post("/debug-analyze")
@@ -382,7 +448,8 @@ async def debug_analyze_car(
         # Prepare car details
         car_details = {
             "make": make or "Unknown",
-            "model": model or "Unknown", 
+            "model": model or "Unknown",
+            "trim": trim or "",
             "year": year or "Unknown",
             "mileage": mileage or "Unknown",
             "price": price or "15000",
@@ -602,6 +669,7 @@ async def real_analyze_car(
     images: List[UploadFile] = File(...),
     make: Optional[str] = Form(None),
     model: Optional[str] = Form(None),
+    trim: Optional[str] = Form(None),
     year: Optional[str] = Form(None),
     mileage: Optional[str] = Form(None),
     price: Optional[str] = Form(None),
@@ -618,7 +686,8 @@ async def real_analyze_car(
         # Prepare car details
         car_details = {
             "make": make or "Unknown",
-            "model": model or "Unknown", 
+            "model": model or "Unknown",
+            "trim": trim or "",
             "year": year or "Unknown",
             "mileage": mileage or "Unknown",
             "price": price or "15000",
@@ -652,6 +721,7 @@ async def enhanced_analyze_with_rag(
     images: List[UploadFile] = File(...),
     make: Optional[str] = Form(None),
     model: Optional[str] = Form(None),
+    trim: Optional[str] = Form(None),
     year: Optional[str] = Form(None),
     mileage: Optional[str] = Form(None),
     price: Optional[str] = Form(None),
@@ -671,7 +741,8 @@ async def enhanced_analyze_with_rag(
         # Prepare car details
         car_details = {
             "make": make or "Unknown",
-            "model": model or "Unknown", 
+            "model": model or "Unknown",
+            "trim": trim or "",
             "year": year or "Unknown",
             "mileage": mileage or "Unknown",
             "price": price or "15000",

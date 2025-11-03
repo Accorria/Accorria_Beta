@@ -14,4 +14,5 @@ from .replies import router as replies_router
 from .deals import router as deals_router
 from .chat import router as chat_router
 from .inventory import router as inventory_router
-from .market_search_scraping import router as market_search_scraping_router 
+from .market_search_scraping import router as market_search_scraping_router
+from .test_apis import router as test_apis_router 

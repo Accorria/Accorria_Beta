@@ -284,6 +284,10 @@ export default function Dashboard() {
             <span className="text-2xl">🔍</span>
             <span className="text-xs mt-1">Market Intel</span>
           </Link>
+          <Link href="/dashboard/connections" className="flex flex-col items-center py-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400">
+            <span className="text-2xl">🔗</span>
+            <span className="text-xs mt-1">Connections</span>
+          </Link>
         </div>
       </nav>
 

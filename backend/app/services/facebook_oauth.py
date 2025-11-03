@@ -8,6 +8,7 @@ import logging
 import aiohttp
 import json
 import secrets
+import os
 from typing import Dict, Any, Optional, List
 from datetime import datetime, timedelta
 from dataclasses import dataclass
@@ -17,6 +18,29 @@ import hashlib
 import hmac
 
 logger = logging.getLogger(__name__)
+
+# Process-level store for OAuth state (fallback if Redis not available)
+STATE_STORE: Dict[str, Dict[str, Any]] = {}
+
+# Try to use Redis for state storage if available
+try:
+    import redis
+    redis_host = os.getenv("REDIS_HOST", "localhost")
+    redis_port = int(os.getenv("REDIS_PORT", 6379))
+    redis_password = os.getenv("REDIS_PASSWORD")
+    redis_client = redis.Redis(
+        host=redis_host,
+        port=redis_port,
+        password=redis_password,
+        decode_responses=True
+    )
+    redis_client.ping()
+    logger.info("Using Redis for OAuth state storage")
+    USE_REDIS = True
+except Exception as e:
+    logger.warning(f"Redis not available, using in-memory state store: {e}")
+    redis_client = None
+    USE_REDIS = False
 
 @dataclass
 class FacebookOAuthConfig:
@@ -28,11 +52,11 @@ class FacebookOAuthConfig:
     
     def __post_init__(self):
         if self.scopes is None:
+            # Start with basic scopes that don't require App Review
+            # Advanced permissions (pages_manage_posts, pages_read_engagement) 
+            # require Facebook App Review and should be added later
             self.scopes = [
-                "pages_manage_posts",
-                "pages_read_engagement", 
-                "public_profile",
-                "email"
+                "public_profile"
             ]
 
 @dataclass
@@ -63,8 +87,7 @@ class FacebookOAuthService:
         self.oauth_base_url = "https://www.facebook.com/v18.0/dialog/oauth"
         self.session: Optional[aiohttp.ClientSession] = None
         
-        # Store state for CSRF protection
-        self._state_store: Dict[str, Dict[str, Any]] = {}
+        # State is kept in module-level STATE_STORE
     
     async def __aenter__(self):
         self.session = aiohttp.ClientSession()
@@ -88,12 +111,29 @@ class FacebookOAuthService:
         # Generate state for CSRF protection
         state = secrets.token_urlsafe(32)
         
-        # Store state with user info
-        self._state_store[state] = {
+        # Store state with user info (use Redis if available, otherwise in-memory)
+        state_data = {
             "user_id": user_id,
-            "timestamp": datetime.utcnow(),
+            "timestamp": datetime.utcnow().isoformat(),
             "scopes": additional_scopes or []
         }
+        
+        if USE_REDIS and redis_client:
+            # Store in Redis with 10-minute expiration
+            redis_client.setex(
+                f"oauth_state:{state}",
+                600,  # 10 minutes
+                json.dumps(state_data)
+            )
+            logger.info(f"Stored OAuth state in Redis: {state[:20]}...")
+        else:
+            # Fallback to in-memory storage
+            STATE_STORE[state] = {
+                "user_id": user_id,
+                "timestamp": datetime.utcnow(),
+                "scopes": additional_scopes or []
+            }
+            logger.info(f"Stored OAuth state in memory: {state[:20]}...")
         
         # Combine scopes
         all_scopes = self.config.scopes.copy()
@@ -124,15 +164,38 @@ class FacebookOAuthService:
             Token exchange result with user info and pages
         """
         try:
-            # Verify state
-            if state not in self._state_store:
-                raise ValueError("Invalid state parameter")
+            # Verify state (check Redis first, then fallback to in-memory)
+            logger.info(f"Verifying state parameter. State received: {state[:20]}...")
             
-            state_data = self._state_store[state]
+            state_data = None
+            if USE_REDIS and redis_client:
+                # Try to get from Redis
+                redis_key = f"oauth_state:{state}"
+                stored_data = redis_client.get(redis_key)
+                if stored_data:
+                    state_data = json.loads(stored_data)
+                    # Convert timestamp back to datetime if needed
+                    if isinstance(state_data.get("timestamp"), str):
+                        state_data["timestamp"] = datetime.fromisoformat(state_data["timestamp"])
+                    # Delete from Redis after use
+                    redis_client.delete(redis_key)
+                    logger.info(f"State found in Redis: {state[:20]}...")
+            
+            # Fallback to in-memory storage
+            if not state_data:
+                if state not in STATE_STORE:
+                    logger.error(f"State {state[:20]}... not found in store. Available states: {list(STATE_STORE.keys())[:3] if STATE_STORE else 'none'}")
+                    raise ValueError(f"Invalid state parameter: State not found in store. This may happen if the backend restarted. Please try connecting again.")
+                state_data = STATE_STORE[state]
+                # Clean up from in-memory store
+                try:
+                    del STATE_STORE[state]
+                except KeyError:
+                    pass
+                logger.info(f"State found in memory: {state[:20]}...")
+            
             user_id = state_data["user_id"]
-            
-            # Clean up state
-            del self._state_store[state]
+            logger.info(f"State verified. User ID: {user_id}")
             
             # Exchange code for token
             token_url = f"{self.api_base_url}/oauth/access_token"
@@ -344,6 +407,10 @@ def get_facebook_oauth_config() -> FacebookOAuthConfig:
         FacebookOAuthConfig object
     """
     import os
+    from dotenv import load_dotenv
+    
+    # Load .env file if it exists (pydantic-settings should handle this, but we'll ensure it)
+    load_dotenv()
     
     app_id = os.getenv("FACEBOOK_APP_ID")
     app_secret = os.getenv("FACEBOOK_APP_SECRET")

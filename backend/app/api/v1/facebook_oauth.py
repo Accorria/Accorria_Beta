@@ -83,9 +83,12 @@ async def initiate_facebook_connection(
         config = get_facebook_oauth_config()
         
         async with FacebookOAuthService(config) as oauth_service:
+            # For now, use only basic scopes that don't require App Review
+            # Once App Review is approved, you can add:
+            # additional_scopes=["pages_manage_posts", "pages_read_engagement"]
             auth_url = oauth_service.generate_authorization_url(
-                user_id=current_user_id,
-                additional_scopes=["pages_manage_posts", "pages_read_engagement"]
+                user_id=current_user_id
+                # additional_scopes=["pages_manage_posts", "pages_read_engagement"]
             )
             
             return {
@@ -182,11 +185,21 @@ async def facebook_oauth_callback(
                     pages=platform_data["pages"]
                 )
                 db.add(new_connection)
+                # Flush to get the ID assigned
+                await db.flush()
                 connection_id = str(new_connection.id)
             
             await db.commit()
             
-            return FacebookConnectionResponse(
+            # Ensure connection_id is not None
+            if not connection_id:
+                logger.error("Connection ID is None after commit")
+                raise HTTPException(
+                    status_code=500,
+                    detail="Failed to create connection: ID not assigned"
+                )
+            
+            response_data = FacebookConnectionResponse(
                 success=True,
                 message="Facebook account connected successfully",
                 connection_id=connection_id,
@@ -205,11 +218,18 @@ async def facebook_oauth_callback(
                 ]
             )
             
+            logger.info(f"Facebook connection successful for user {user_id}, connection_id: {connection_id}")
+            return response_data
+            
+    except HTTPException:
+        # Re-raise HTTPExceptions as-is
+        raise
     except Exception as e:
-        logger.error(f"Error in Facebook OAuth callback: {str(e)}")
+        error_msg = str(e)
+        logger.error(f"Error in Facebook OAuth callback: {error_msg}", exc_info=True)
         raise HTTPException(
             status_code=500,
-            detail=f"OAuth callback failed: {str(e)}"
+            detail=f"OAuth callback failed: {error_msg}"
         )
 
 @router.get("/facebook/status")

@@ -52,7 +52,7 @@ class FacebookPageInfo(BaseModel):
     name: str
     category: str
 
-@router.post("/facebook/post-to-page", response_model=FacebookPostingResponse)
+@router.post("/post-to-page", response_model=FacebookPostingResponse)
 async def post_to_facebook_page(
     request: FacebookPostingRequest,
     images: Optional[List[UploadFile]] = File(None, description="Listing images (up to 10)"),
@@ -151,7 +151,7 @@ async def post_to_facebook_page(
             detail=f"Failed to post to Facebook: {str(e)}"
         )
 
-@router.get("/facebook/pages", response_model=List[FacebookPageInfo])
+@router.get("/pages", response_model=List[FacebookPageInfo])
 async def get_user_facebook_pages(
     current_user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db)
@@ -195,7 +195,7 @@ async def get_user_facebook_pages(
             detail=f"Failed to get Facebook pages: {str(e)}"
         )
 
-@router.get("/facebook/connection-status")
+@router.get("/connection-status")
 async def get_facebook_connection_status(
     current_user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db)
@@ -251,7 +251,7 @@ async def get_facebook_connection_status(
             detail=f"Failed to get connection status: {str(e)}"
         )
 
-@router.post("/facebook/test-connection")
+@router.post("/test-connection")
 async def test_facebook_connection(
     current_user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db)

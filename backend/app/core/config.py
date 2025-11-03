@@ -83,6 +83,7 @@ class Settings(BaseSettings):
     
     # Google API
     GOOGLE_API_KEY: Optional[str] = None
+    GEMINI_API_KEY: Optional[str] = None
     
     # Platform API Keys (optional for MVP)
     FACEBOOK_ACCESS_TOKEN: Optional[str] = None

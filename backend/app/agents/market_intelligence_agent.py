@@ -11,11 +11,14 @@ This agent specializes in:
 
 import asyncio
 import logging
+import os
 from typing import Any, Dict, List, Optional
 from datetime import datetime, timedelta
 import json
 import openai
+import httpx
 from .base_agent import BaseAgent, AgentOutput
+from app.services.cache import cache_get, cache_set, _normalize_key
 
 logger = logging.getLogger(__name__)
 
@@ -35,8 +38,23 @@ class MarketIntelligenceAgent(BaseAgent):
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         super().__init__("market_intelligence_agent", config)
         
-        # Initialize OpenAI client for web search
-        self.openai_client = openai.OpenAI()
+        # Get API keys from environment or settings
+        from app.core.config import settings
+        self.openai_api_key = settings.OPENAI_API_KEY or os.getenv("OPENAI_API_KEY")
+        self.gemini_api_key = settings.GEMINI_API_KEY or os.getenv("GEMINI_API_KEY")
+        
+        # Initialize OpenAI client if available (fallback)
+        if self.openai_api_key:
+            self.openai_client = openai.OpenAI(api_key=self.openai_api_key)
+        else:
+            self.openai_client = None
+            logger.warning("OpenAI API key not set, will use Gemini only")
+        
+        # Prefer Gemini for web search with Google Grounding
+        if not self.gemini_api_key:
+            if not self.openai_api_key:
+                raise ValueError("Either OPENAI_API_KEY or GEMINI_API_KEY must be set")
+            logger.warning("Gemini API key not set, using OpenAI (limited web search)")
         
         # Market data sources (in production, these would be real APIs)
         self.market_data_sources = {
@@ -67,7 +85,7 @@ class MarketIntelligenceAgent(BaseAgent):
     
     async def process(self, input_data: Dict[str, Any]) -> AgentOutput:
         """
-        Process market intelligence request.
+        Process market intelligence request with caching.
         
         Args:
             input_data: Contains make, model, location, and analysis type
@@ -76,6 +94,30 @@ class MarketIntelligenceAgent(BaseAgent):
             Comprehensive market intelligence analysis
         """
         try:
+            # Check cache first (exclude price from cache key)
+            cache_key = _normalize_key({
+                "make": input_data.get("make"),
+                "model": input_data.get("model"),
+                "year": input_data.get("year"),
+                "mileage": input_data.get("mileage"),
+                "location": input_data.get("location"),
+                "analysis_type": input_data.get("analysis_type", "comprehensive"),
+            })
+            
+            cached_result = cache_get(cache_key, ttl_sec=15 * 60)  # 15 min cache
+            if cached_result:
+                logger.info(f"[MARKET-INTEL] Cache hit for key: {cache_key}")
+                print(f"[MARKET-INTEL] ✅ Cache hit - skipping API calls")
+                return AgentOutput(
+                    agent_name=self.name,
+                    timestamp=datetime.now(),
+                    success=True,
+                    data={**cached_result, "_cache_hit": True},
+                    confidence=0.85,
+                    processing_time=0.0
+                )
+            
+            print(f"[MARKET-INTEL] ❌ Cache miss - running analysis")
             analysis_type = input_data.get("analysis_type", "comprehensive")
             
             if analysis_type == "make_model_analysis":
@@ -89,17 +131,21 @@ class MarketIntelligenceAgent(BaseAgent):
             else:  # comprehensive
                 result = await self._comprehensive_analysis(input_data)
             
+            # Cache the result
+            cache_set(cache_key, result)
+            
             return AgentOutput(
                 agent_name=self.name,
                 timestamp=datetime.now(),
                 success=True,
-                data=result,
+                data={**result, "_cache_hit": False},
                 confidence=0.85,
                 processing_time=0.0
             )
             
         except Exception as e:
-            logger.error(f"Market intelligence processing failed: {str(e)}")
+            error_msg = str(e) if str(e) else f"Unknown error occurred: {type(e).__name__}"
+            logger.error(f"Market intelligence processing failed: {error_msg}", exc_info=True)
             return AgentOutput(
                 agent_name=self.name,
                 timestamp=datetime.now(),
@@ -107,7 +153,7 @@ class MarketIntelligenceAgent(BaseAgent):
                 data={},
                 confidence=0.0,
                 processing_time=0.0,
-                error_message=str(e)
+                error_message=error_msg
             )
     
     async def _analyze_make_model(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -257,54 +303,97 @@ class MarketIntelligenceAgent(BaseAgent):
         return comprehensive_report
     
     async def _web_search(self, query: str) -> Optional[str]:
-        """Perform web search using OpenAI's web search capabilities."""
+        """
+        Perform web search using Google Gemini with Google Search Grounding.
+        Falls back to OpenAI if Gemini is not available.
+        """
+        # Prefer Gemini with Google Search Grounding (better for real-time data)
+        if self.gemini_api_key:
+            return await self._web_search_gemini(query)
+        elif self.openai_client:
+            return await self._web_search_openai(query)
+        else:
+            logger.warning("No API keys available for web search")
+            return None
+    
+    async def _web_search_gemini(self, query: str) -> Optional[str]:
+        """Perform web search using Google Gemini with Google Search Grounding."""
         try:
+            print(f"[MARKET-INTEL] 🔍 Using Gemini with Google Search Grounding for: {query[:100]}")
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={self.gemini_api_key}",
+                    json={
+                        "contents": [{
+                            "parts": [{
+                                "text": f"Search Google for current real-time market data: {query}. Provide specific pricing information, recent sales data, and market trends. Focus on actual numbers and current market conditions."
+                            }]
+                        }],
+                        "tools": [{
+                            "googleSearch": {}
+                        }],
+                        "generationConfig": {
+                            "maxOutputTokens": 1000,
+                            "temperature": 0.1
+                        }
+                    },
+                    timeout=30.0
+                )
+                
+                if response.status_code != 200:
+                    logger.error(f"Gemini API error: {response.text}")
+                    print(f"[MARKET-INTEL] ❌ Gemini API error: {response.status_code} - {response.text[:200]}")
+                    return None
+                
+                result = response.json()
+                if "candidates" in result and len(result["candidates"]) > 0:
+                    candidate = result["candidates"][0]
+                    if "content" in candidate and "parts" in candidate["content"]:
+                        parts = candidate["content"]["parts"]
+                        # Extract text from all parts
+                        text_parts = []
+                        for part in parts:
+                            if "text" in part:
+                                text_parts.append(part["text"])
+                        if text_parts:
+                            search_result = " ".join(text_parts)
+                            print(f"[MARKET-INTEL] ✅ Google Search Grounding returned {len(search_result)} chars")
+                            return search_result
+                
+                print(f"[MARKET-INTEL] ⚠️ No results from Gemini API")
+                return None
+                
+        except Exception as e:
+            logger.error(f"Gemini web search failed: {e}", exc_info=True)
+            # Log the full error for debugging
+            if hasattr(e, 'response'):
+                logger.error(f"Response status: {e.response.status_code if hasattr(e.response, 'status_code') else 'N/A'}")
+            return None
+    
+    async def _web_search_openai(self, query: str) -> Optional[str]:
+        """Fallback to OpenAI for web search (limited capabilities)."""
+        try:
+            # Note: OpenAI's web_search tool may not be available in all models
+            # This is a fallback option
             response = self.openai_client.chat.completions.create(
                 model="gpt-4o",
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are a market research assistant. Search the web for current market information and provide a concise summary."
+                        "content": "You are a market research assistant. Provide current market information based on your knowledge."
                     },
                     {
                         "role": "user",
-                        "content": f"Search the web for: {query}. Provide a brief summary of current market trends and data."
+                        "content": f"Provide current market information for: {query}. Include pricing trends and recent data if available."
                     }
                 ],
-                tools=[{"type": "web_search"}],
-                tool_choice={"type": "function", "function": {"name": "web_search"}},
                 max_tokens=500
             )
             
-            # Extract web search results
-            if response.choices[0].message.tool_calls:
-                tool_call = response.choices[0].message.tool_calls[0]
-                if tool_call.function.name == "web_search":
-                    # Get the web search results
-                    web_search_response = self.openai_client.chat.completions.create(
-                        model="gpt-4o",
-                        messages=[
-                            {
-                                "role": "system",
-                                "content": "Summarize the web search results in 2-3 sentences."
-                            },
-                            {
-                                "role": "user",
-                                "content": f"Summarize these web search results for: {query}"
-                            },
-                            {
-                                "role": "assistant",
-                                "content": tool_call.function.arguments
-                            }
-                        ],
-                        max_tokens=200
-                    )
-                    return web_search_response.choices[0].message.content
-            
-            return None
+            return response.choices[0].message.content if response.choices else None
             
         except Exception as e:
-            logger.error(f"Web search failed: {e}")
+            logger.error(f"OpenAI web search failed: {e}")
             return None
     
     def _calculate_make_score(self, make: str) -> float:
@@ -322,8 +411,18 @@ class MarketIntelligenceAgent(BaseAgent):
     async def _analyze_market_demand(self, make: str, model: str, location: str) -> Dict[str, Any]:
         """Analyze market demand for a make/model combination."""
         try:
+            # Format location better (separate zip code from city name)
+            formatted_location = location
+            if "," in location:
+                # Split city and zip code
+                parts = [p.strip() for p in location.split(",")]
+                if len(parts) == 2 and parts[1].isdigit():
+                    # If second part is just a zip code, format as "City, ZIP"
+                    formatted_location = f"{parts[0]}, {parts[1]}"
+            
             # Use web search to get real market data
-            search_query = f"{make} {model} market demand {location} 2024"
+            search_query = f"{make} {model} market demand {formatted_location} 2024"
+            print(f"[MARKET-INTEL] 🔍 Demand search query: {search_query}")
             web_search_result = await self._web_search(search_query)
             
             # Combine web search with existing logic
@@ -447,38 +546,141 @@ class MarketIntelligenceAgent(BaseAgent):
         }
     
     async def _get_market_prices(self, make: str, model: str, year: Optional[int], mileage: Optional[int], location: str) -> Dict[str, Any]:
-        """Get market pricing data from various sources."""
+        """Get market pricing data using Google Search Grounding (real-time data from Google)."""
         try:
-            # Use web search for current market prices
-            search_query = f"{make} {model} {year} price market value {location} Kelley Blue Book Edmunds"
+            # Format location better (separate zip code from city name)
+            formatted_location = location
+            if "," in location:
+                # Split city and zip code
+                parts = [p.strip() for p in location.split(",")]
+                if len(parts) == 2 and parts[1].isdigit():
+                    # If second part is just a zip code, format as "City, ZIP"
+                    formatted_location = f"{parts[0]}, {parts[1]}"
+            
+            # Use Google Search Grounding for real-time market prices
+            year_str = f"{year} " if year else ""
+            search_query = f"{year_str}{make} {model} price market value {formatted_location} current listings"
+            print(f"[MARKET-INTEL] 🔍 Price search query: {search_query}")
             web_search_result = await self._web_search(search_query)
             
-            # Base pricing logic
+            # Base pricing logic (fallback)
             base_price = 15000
             if year:
                 base_price += (year - 2015) * 500
             if mileage:
                 base_price -= (mileage - 50000) * 0.1
             
-            # Adjust based on web search results if available
+            # Try to extract real prices from Google search results
+            market_average = base_price
+            kbb_value = base_price * 0.95
+            edmunds_value = base_price * 1.02
+            cargurus_value = base_price * 0.98
+            
             if web_search_result:
-                # Could add price extraction logic here
-                pass
+                # Extract prices from search results using better pattern matching
+                import re
+                # Look for dollar amounts - only match prices with $ sign or clearly marked as prices
+                # Pattern 1: $12,345 or $12345 or $12.5k
+                price_patterns = [
+                    r'\$([\d,]+)',  # $12,345 or $12345
+                    r'\$([\d]+)\.?([\d]+)?[Kk]',  # $12.5k or $12k (convert k to thousands)
+                    r'(\d+)\s*(?:thousand|thous|k)\s*(?:dollars?|USD)?',  # 12 thousand dollars
+                ]
+                
+                numeric_prices = []
+                # Extract from pattern 1: explicit dollar amounts
+                dollar_matches = re.findall(r'\$([\d,]+)', web_search_result)
+                for price_str in dollar_matches[:20]:  # Take first 20 matches
+                    try:
+                        price_val = int(price_str.replace(',', ''))
+                        # Filter reasonable car prices (not zip codes or years)
+                        if 5000 <= price_val <= 200000:
+                            numeric_prices.append(price_val)
+                    except ValueError:
+                        continue
+                
+                # Extract from pattern 2: $12k or $12.5k
+                k_matches = re.findall(r'\$([\d]+)\.?([\d]+)?[Kk]', web_search_result)
+                for match in k_matches[:10]:
+                    try:
+                        whole = int(match[0])
+                        decimal = int(match[1]) if match[1] else 0
+                        price_val = whole * 1000 + (decimal * 100 if decimal < 10 else decimal * 10)
+                        if 5000 <= price_val <= 200000:
+                            numeric_prices.append(price_val)
+                    except (ValueError, IndexError):
+                        continue
+                
+                # Extract from pattern 3: "12 thousand" or "12k"
+                thousand_matches = re.findall(r'(\d+)\s*(?:thousand|thous|k)\s*(?:dollars?|USD)?', web_search_result, re.IGNORECASE)
+                for price_str in thousand_matches[:10]:
+                    try:
+                        price_val = int(price_str) * 1000
+                        if 5000 <= price_val <= 200000:
+                            numeric_prices.append(price_val)
+                    except ValueError:
+                        continue
+                
+                # Filter out potential zip codes (5-digit numbers that might be in location context)
+                # Only keep prices that are clearly marked with $ or explicitly mentioned as prices
+                if numeric_prices:
+                    # Additional filter: if we have prices with $, prefer those
+                    # Remove any 5-digit numbers that aren't clearly prices (likely zip codes)
+                    final_prices = []
+                    for price in numeric_prices:
+                        # Skip if it's exactly 5 digits and looks like a zip code
+                        if 10000 <= price <= 99999:
+                            # Check if this number appears in location context in the search result
+                            price_str = str(price)
+                            # If it appears near location keywords, skip it
+                            location_keywords = ['zip', 'postal', 'code', location.split(',')[0].lower() if ',' in location else location.lower()]
+                            skip = False
+                            for keyword in location_keywords:
+                                # Check if the number appears near location keywords
+                                pattern = rf'\b{price_str}\b'
+                                if re.search(pattern, web_search_result, re.IGNORECASE):
+                                    # Check context around the number
+                                    idx = web_search_result.lower().find(price_str)
+                                    if idx != -1:
+                                        context = web_search_result[max(0, idx-20):idx+30].lower()
+                                        if any(kw in context for kw in location_keywords):
+                                            skip = True
+                                            break
+                            if not skip:
+                                final_prices.append(price)
+                        else:
+                            final_prices.append(price)
+                    
+                    numeric_prices = final_prices
+                    
+                    if numeric_prices:
+                        # Calculate average from found prices
+                        market_average = sum(numeric_prices) / len(numeric_prices)
+                        price_range_low = min(numeric_prices)
+                        price_range_high = max(numeric_prices)
+                        
+                        # Estimate KBB/Edmunds values based on market average
+                        kbb_value = market_average * 0.95
+                        edmunds_value = market_average * 1.02
+                        cargurus_value = market_average * 0.98
+                        
+                        logger.info(f"Extracted {len(numeric_prices)} prices from Google search, average: ${market_average:,.0f}")
             
             return {
-                "kbb_value": base_price * 0.95,
-                "edmunds_value": base_price * 1.02,
-                "cargurus_value": base_price * 0.98,
-                "market_average": base_price,
+                "kbb_value": round(kbb_value),
+                "edmunds_value": round(edmunds_value),
+                "cargurus_value": round(cargurus_value),
+                "market_average": round(market_average),
                 "price_range": {
-                    "low": base_price * 0.85,
-                    "high": base_price * 1.15
+                    "low": round(market_average * 0.85),
+                    "high": round(market_average * 1.15)
                 },
-                "web_search_data": web_search_result[:200] + "..." if web_search_result else None
+                "data_source": "google_search_grounding" if web_search_result else "estimated",
+                "web_search_snippet": web_search_result[:300] + "..." if web_search_result else None
             }
         except Exception as e:
-            logger.error(f"Web search failed for market prices: {e}")
-            # Fallback to original logic
+            logger.error(f"Market price lookup failed: {e}")
+            # Fallback to estimated pricing
             base_price = 15000
             if year:
                 base_price += (year - 2015) * 500
@@ -486,14 +688,16 @@ class MarketIntelligenceAgent(BaseAgent):
                 base_price -= (mileage - 50000) * 0.1
             
             return {
-                "kbb_value": base_price * 0.95,
-                "edmunds_value": base_price * 1.02,
-                "cargurus_value": base_price * 0.98,
-                "market_average": base_price,
+                "kbb_value": round(base_price * 0.95),
+                "edmunds_value": round(base_price * 1.02),
+                "cargurus_value": round(base_price * 0.98),
+                "market_average": round(base_price),
                 "price_range": {
-                    "low": base_price * 0.85,
-                    "high": base_price * 1.15
-                }
+                    "low": round(base_price * 0.85),
+                    "high": round(base_price * 1.15)
+                },
+                "data_source": "estimated",
+                "error": str(e)
             }
     
     async def _analyze_price_trends(self, make: str, model: str, location: str) -> Dict[str, Any]:

@@ -22,11 +22,14 @@ export async function authenticatedFetch(
       headers['Authorization'] = `Bearer ${session.access_token}`;
     }
     
-    // Make the request
-    const response = await fetch(url, {
+    // If signal is already in options, use it, otherwise create a default timeout
+    const fetchOptions: RequestInit = {
       ...options,
       headers,
-    });
+    };
+    
+    // Make the request
+    const response = await fetch(url, fetchOptions);
     
     return response;
   } catch (error) {
