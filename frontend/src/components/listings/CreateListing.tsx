@@ -863,6 +863,8 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
 
     setIsPosting(true);
     
+    const requestStartTime = Date.now();
+    
     try {
       const formData = new FormData();
       files.forEach((fileWithId) => {
@@ -888,8 +890,6 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
       if (carDetails.finalDescription) {
         formData.append('custom_description', carDetails.finalDescription);
       }
-
-      const requestStartTime = Date.now();
       console.log('⏱️  [FRONTEND] Starting request at:', new Date().toISOString());
       console.log('📡 [FRONTEND] Calling fetch to /api/v1/platform-posting/analyze-and-post...');
       console.log('📦 [FRONTEND] FormData contains:', {
