@@ -95,6 +95,8 @@ logs/
 test_venv/
 test_*.py
 *_test.py
+# Exception: test_apis.py is an API endpoint, not a test file
+!backend/app/api/v1/test_apis.py
 
 # Security files
 setup_secure_env.sh
