@@ -23,7 +23,7 @@ steps:
       - 'managed'
       - '--allow-unauthenticated'
       - '--port'
-      - '8080'
+      - '8000'
       - '--memory'
       - '1Gi'
       - '--cpu'
@@ -37,7 +37,7 @@ steps:
       - '--concurrency'
       - '80'
       - '--set-env-vars'
-      - 'CLOUDBUILD=true,SECRET_KEY=your-secret-key-here,PORT=8080,REDIS_HOST=,REDIS_URL='
+      - 'CLOUDBUILD=true,SECRET_KEY=your-secret-key-here,PORT=8000,REDIS_HOST=,REDIS_URL='
       - '--service-account'
       - '691352445702-compute@developer.gserviceaccount.com'
 

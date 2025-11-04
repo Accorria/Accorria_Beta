@@ -94,17 +94,21 @@ app = FastAPI(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# Security middleware stack
-app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.ALLOWED_HOSTS)
-app.add_middleware(GZipMiddleware, minimum_size=1000)
+# CORS middleware - MUST be first to handle preflight requests
+# Ensure localhost:3000 is always included
+cors_origins = list(set(settings.ALLOWED_ORIGINS + ["http://localhost:3000", "http://127.0.0.1:3000"]))
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.ALLOWED_ORIGINS,
+    allow_origins=cors_origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
     expose_headers=["X-Total-Count", "X-Rate-Limit-Remaining"]
 )
+
+# Security middleware stack (after CORS)
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.ALLOWED_HOSTS)
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # Rate limiting middleware (temporarily disabled for debugging)
 # app.middleware("http")(rate_limit_middleware)
@@ -113,42 +117,67 @@ app.add_middleware(
 @app.get("/health")
 async def health_check():
     """Health check endpoint with API connectivity verification"""
-    from app.core.config import settings
-    import os
-    
-    print(f"[HEALTH CHECK] ===== HEALTH CHECK CALLED =====")
-    
-    # Check API keys are set
-    openai_key_set = bool(settings.OPENAI_API_KEY and settings.OPENAI_API_KEY != "")
-    gemini_key_set = bool(settings.GEMINI_API_KEY and settings.GEMINI_API_KEY != "")
-    supabase_url_set = bool(settings.SUPABASE_URL and settings.SUPABASE_URL != "")
-    
-    # Test OpenAI connection (quick test without actual API call)
-    openai_status = "configured" if openai_key_set else "missing_key"
-    gemini_status = "configured" if gemini_key_set else "missing_key"
-    
-    print(f"[HEALTH CHECK] OpenAI API Key: {'SET' if openai_key_set else 'MISSING'}")
-    print(f"[HEALTH CHECK] Gemini API Key: {'SET' if gemini_key_set else 'MISSING'}")
-    print(f"[HEALTH CHECK] Supabase URL: {'SET' if supabase_url_set else 'MISSING'}")
-    print(f"[HEALTH CHECK] =============================")
-    
-    return {
-        "status": "healthy",
-        "service": "Accorria Backend",
-        "version": "1.0.0",
-        "apis": {
-            "openai_vision": openai_status,
-            "openai": openai_status,
-            "gemini": gemini_status,
-            "google_search_grounding": gemini_status,
-            "supabase": "configured" if supabase_url_set else "missing_config"
-        },
-        "api_keys_configured": {
-            "openai": openai_key_set,
-            "gemini": gemini_key_set,
-            "supabase": supabase_url_set
+    try:
+        from app.core.config import settings
+        import os
+        
+        print(f"[HEALTH CHECK] ===== HEALTH CHECK CALLED =====")
+        
+        # Check API keys are set (with error handling)
+        try:
+            openai_key_set = bool(settings.OPENAI_API_KEY and settings.OPENAI_API_KEY != "")
+        except:
+            openai_key_set = False
+            
+        try:
+            gemini_key_set = bool(settings.GEMINI_API_KEY and settings.GEMINI_API_KEY != "")
+        except:
+            gemini_key_set = False
+            
+        try:
+            supabase_url_set = bool(settings.SUPABASE_URL and settings.SUPABASE_URL != "")
+        except:
+            supabase_url_set = False
+        
+        # Test OpenAI connection (quick test without actual API call)
+        openai_status = "configured" if openai_key_set else "missing_key"
+        gemini_status = "configured" if gemini_key_set else "missing_key"
+        
+        print(f"[HEALTH CHECK] OpenAI API Key: {'SET' if openai_key_set else 'MISSING'}")
+        print(f"[HEALTH CHECK] Gemini API Key: {'SET' if gemini_key_set else 'MISSING'}")
+        print(f"[HEALTH CHECK] Supabase URL: {'SET' if supabase_url_set else 'MISSING'}")
+        print(f"[HEALTH CHECK] =============================")
+        
+        return {
+            "status": "healthy",
+            "service": "Accorria Backend",
+            "version": "1.0.0",
+            "apis": {
+                "openai_vision": openai_status,
+                "openai": openai_status,
+                "gemini": gemini_status,
+                "google_search_grounding": gemini_status,
+                "supabase": "configured" if supabase_url_set else "missing_config"
+            },
+            "api_keys_configured": {
+                "openai": openai_key_set,
+                "gemini": gemini_key_set,
+                "supabase": supabase_url_set
+            }
         }
-    }
+    except Exception as e:
+        logger.error(f"Health check error: {e}", exc_info=True)
+        # Return a simple healthy response even if config check fails
+        try:
+            debug_mode = settings.DEBUG
+        except:
+            debug_mode = False
+        return {
+            "status": "healthy",
+            "service": "Accorria Backend",
+            "version": "1.0.0",
+            "error": str(e) if debug_mode else "Configuration check failed"
+        }
 
 # Enhanced security headers middleware
 @app.middleware("http")
@@ -157,8 +186,12 @@ async def add_security_headers(request: Request, call_next):
     response = await call_next(request)
     
     # Add all security headers from configuration
-    for header, value in SECURITY_HEADERS.items():
-        response.headers[header] = value
+    try:
+        from app.core.security import SECURITY_HEADERS as headers
+        for header, value in headers.items():
+            response.headers[header] = value
+    except Exception as e:
+        logger.warning(f"Could not add security headers: {e}")
     
     return response
 
@@ -306,8 +339,8 @@ if __name__ == "__main__":
     import uvicorn
     import os
     
-    # Use PORT environment variable or default to 8080 (Cloud Run standard)
-    port = int(os.getenv("PORT", 8080))
+    # Use PORT environment variable or default to 8000 (Cloud Run standard)
+    port = int(os.getenv("PORT", 8000))
     
     uvicorn.run(
         "app.main:app",
