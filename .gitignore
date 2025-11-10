@@ -33,6 +33,12 @@ frontend/venv/
 .env.staging
 .env.backup
 *.env
+*.env.yaml
+*.env.yml
+env.yaml
+env.yml
+backend/env.yaml
+backend/env.yml
 
 # API Keys and Secrets (CRITICAL SECURITY)
 secrets.json
@@ -130,6 +136,9 @@ BETA_SIGNUP_ERROR_ANALYSIS.md
 !PRODUCTION_READINESS_CHECKLIST.md
 !MANUAL_TESTING_GUIDE.md
 !TESTING_SUMMARY.md
+# Exception: README files
+!README.md
+!README*.md
 
 # Password files (CRITICAL SECURITY)
 *password*.txt

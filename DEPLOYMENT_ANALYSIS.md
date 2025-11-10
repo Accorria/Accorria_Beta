@@ -200,8 +200,8 @@ SMTP_USERNAME=your-email@gmail.com
 SMTP_PASSWORD=your-app-password
 
 # AI APIs (Partially Configured)
-OPENAI_API_KEY=sk-proj-pbjzCs6lpZwkIp0XqMD1fkz0-MsSQw... (partially visible)
-GEMINI_API_KEY=AIzaSyDlMfEGMOZ-fHJfVauGsymyFS3XkPNGXnl... (partially visible)
+OPENAI_API_KEY=YOUR_OPENAI_API_KEY_HERE
+GEMINI_API_KEY=YOUR_GEMINI_API_KEY_HERE
 ```
 
 ---
