@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import carDataRaw from '../data/carData.json';
+import carDataRaw from '@/data/carData.json';
 const carData = carDataRaw as Record<string, string[]>;
 
 interface SimpleMarketSearchProps {

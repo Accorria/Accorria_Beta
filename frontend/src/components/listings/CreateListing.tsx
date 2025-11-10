@@ -3,13 +3,13 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useDropzone, FileRejection } from 'react-dropzone';
-import carDataRaw from '../../data/carData.json';
-import carTrimsRaw from '../../data/carTrims.json';
-import { api } from '../../utils/api';
-import { getBackendUrl, API_ENDPOINTS } from '../../config/api';
-import { ListingsService } from '../../services/listingsService';
-import FacebookOAuth2 from '../FacebookOAuth2';
-import { authenticatedFetch } from '../../utils/api';
+import carDataRaw from '@/data/carData.json';
+import carTrimsRaw from '@/data/carTrims.json';
+import { api } from '@/utils/api';
+import { getBackendUrl, API_ENDPOINTS } from '@/config/api';
+import { ListingsService } from '@/services/listingsService';
+import FacebookOAuth2 from '@/components/FacebookOAuth2';
+import { authenticatedFetch } from '@/utils/api';
 const carData = carDataRaw as Record<string, string[]>;
 const carTrims = carTrimsRaw as Record<string, Record<string, string[]>>;
 
@@ -151,6 +151,7 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
   const [customModel, setCustomModel] = useState('');
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const [priceWarning, setPriceWarning] = useState<{ type: 'high' | 'low' | 'good' | null; message: string; marketAvg: number | null }>({ type: null, message: '', marketAvg: null });
   
   // Clear any existing error on component mount
   useEffect(() => {
@@ -170,19 +171,62 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
   useEffect(() => {
     const loadConnections = async () => {
       try {
-        // Check Facebook connection - use backend URL
+        // Check Facebook connection - use backend URL with shorter timeout (10 seconds)
         const backendUrl = getBackendUrl();
-        const response = await authenticatedFetch(`${backendUrl}/api/v1/facebook/connection-status`);
-        if (response.ok) {
-          const data = await response.json();
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+        
+        try {
+          const response = await authenticatedFetch(`${backendUrl}/api/v1/facebook/connection-status`, {
+            signal: controller.signal
+          });
+          clearTimeout(timeoutId);
+          
+          if (response.ok) {
+            const data = await response.json();
+            setConnectedPlatforms(prev => ({
+              ...prev,
+              facebook_marketplace: data.connected || false
+            }));
+          } else {
+            // Facebook not connected or not configured - this is expected
+            // Silently set to false
+            setConnectedPlatforms(prev => ({
+              ...prev,
+              facebook_marketplace: false
+            }));
+          }
+        } catch (fetchErr: any) {
+          clearTimeout(timeoutId);
+          // Handle timeout or fetch errors gracefully
+          if (fetchErr.name === 'AbortError' || fetchErr.message?.includes('timeout')) {
+            // Timeout - silently set to false
+            setConnectedPlatforms(prev => ({
+              ...prev,
+              facebook_marketplace: false
+            }));
+          } else {
+            throw fetchErr; // Re-throw to be caught by outer catch
+          }
+        }
+      } catch (err: any) {
+        // Facebook connection check failed - this is expected if Facebook isn't configured
+        // Silently set to false and don't log errors for 500 responses (Facebook not set up)
+        if (err?.message?.includes('500') || err?.status === 500 || err?.message?.includes('timeout')) {
+          // Expected: Facebook OAuth not configured or timeout
           setConnectedPlatforms(prev => ({
             ...prev,
-            facebook_marketplace: data.connected || false
+            facebook_marketplace: false
+          }));
+        } else {
+          // Only log unexpected errors
+          console.warn('Platform connection check (optional):', err?.message || 'Connection check failed');
+          // Still set to false on any error
+          setConnectedPlatforms(prev => ({
+            ...prev,
+            facebook_marketplace: false
           }));
         }
-      } catch (err) {
-        console.error('Error loading platform connections:', err);
-        // Silently fail - connections are optional
       }
     };
 
@@ -567,7 +611,7 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
         year: carDetails.year ? parseInt(carDetails.year) : undefined,
         mileage: carDetails.mileage ? parseInt(carDetails.mileage) : undefined,
         location: marketLocation,
-        analysis_type: 'comprehensive',
+        analysis_type: 'pricing_analysis',  // Changed from 'comprehensive' to 'pricing_analysis' for faster results
         radius_miles: 50,
       }) as { data?: Record<string, unknown>; success?: boolean };
       
@@ -582,10 +626,31 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
           if (marketAvg && carDetails.price) {
             const currentPrice = parseInt(carDetails.price);
             // Validate price against market
+            const priceDiff = currentPrice - marketAvg;
+            const priceDiffPct = (priceDiff / marketAvg * 100);
+            
             if (currentPrice < marketAvg * 0.8) {
-              console.log('Price is below market average - good for quick sale');
+              // Price is too low (good for quick sale)
+              setPriceWarning({
+                type: 'low',
+                message: `Your price is ${Math.abs(priceDiffPct).toFixed(1)}% below market average ($${marketAvg.toLocaleString()}). Good for quick sale!`,
+                marketAvg
+              });
             } else if (currentPrice > marketAvg * 1.2) {
-              console.log('Price is above market average - may take longer to sell');
+              // Price is too high
+              const recommendedPrice = Math.round(marketAvg * 1.1);
+              setPriceWarning({
+                type: 'high',
+                message: `Your price is ${priceDiffPct.toFixed(1)}% above market average ($${marketAvg.toLocaleString()}). Consider lowering to $${recommendedPrice.toLocaleString()} for better market fit.`,
+                marketAvg
+              });
+            } else {
+              // Price is within range
+              setPriceWarning({
+                type: 'good',
+                message: `Your price is within market range (market average: $${marketAvg.toLocaleString()}).`,
+                marketAvg
+              });
             }
           }
         }
@@ -659,32 +724,97 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
         const backendUrl = getBackendUrl();
         console.log('🏥 [ANALYZE] Starting health check using backend URL:', backendUrl);
         const healthCheckStart = Date.now();
+        const healthCheckUrl = API_ENDPOINTS.HEALTH;
         
-        // Add timeout for health check (10 seconds)
+        console.log(`🔍 [ANALYZE] Starting health check to: ${healthCheckUrl}`);
+        console.log(`🔍 [ANALYZE] Backend URL: ${backendUrl}`);
+        
+        // Add timeout for health check (5 seconds - reduced for faster failure)
         const healthCheckController = new AbortController();
-        const healthCheckTimeout = setTimeout(() => healthCheckController.abort(), 10000);
+        const healthCheckTimeout = setTimeout(() => {
+          console.error('⏱️  [ANALYZE] Health check timeout - aborting request');
+          healthCheckController.abort();
+        }, 3000); // Reduced to 3 seconds for faster failure
         
-        const healthCheck = await api.authenticatedFetch(API_ENDPOINTS.HEALTH, {
-          signal: healthCheckController.signal
-        });
-        
-        clearTimeout(healthCheckTimeout);
-        const healthCheckTime = Date.now() - healthCheckStart;
-        console.log(`⏱️  [ANALYZE] Health check completed in ${healthCheckTime}ms`);
-        
-        if (!healthCheck.ok) {
-          console.error('❌ [ANALYZE] Health check failed with status:', healthCheck.status);
-          throw new Error(`Backend health check failed: ${healthCheck.status}`);
+        try {
+          // Use fetch directly with short timeout instead of authenticatedFetch
+          const healthCheck = await fetch(healthCheckUrl, {
+            signal: healthCheckController.signal,
+            method: 'GET',
+            cache: 'no-cache',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+          
+          clearTimeout(healthCheckTimeout);
+          const healthCheckTime = Date.now() - healthCheckStart;
+          console.log(`⏱️  [ANALYZE] Health check completed in ${healthCheckTime}ms`);
+          
+          if (!healthCheck.ok) {
+            console.error('❌ [ANALYZE] Health check failed with status:', healthCheck.status);
+            const errorText = await healthCheck.text().catch(() => 'Unable to read error response');
+            console.error('❌ [ANALYZE] Health check error response:', errorText);
+            throw new Error(`Backend health check failed: ${healthCheck.status} - ${errorText}`);
+          }
+          
+          const healthData = await healthCheck.json().catch(() => ({}));
+          console.log('✅ [ANALYZE] Backend health check passed', healthData);
+        } catch (fetchError: any) {
+          clearTimeout(healthCheckTimeout);
+          throw fetchError; // Re-throw to be caught by outer catch
         }
-        console.log('✅ [ANALYZE] Backend health check passed');
       } catch (healthError: any) {
         const healthCheckTime = Date.now() - startTime;
-        if (healthError.name === 'AbortError') {
-          console.error('❌ [ANALYZE] Health check timed out after 10 seconds');
-          setAnalysisError('Backend service is not responding. Make sure your local backend is running at http://localhost:8000');
+        const backendUrl = getBackendUrl();
+        const healthCheckUrl = API_ENDPOINTS.HEALTH;
+        
+        console.error('❌ [ANALYZE] Health check error:', {
+          name: healthError.name,
+          message: healthError.message,
+          time: healthCheckTime,
+          url: healthCheckUrl,
+          backendUrl: backendUrl
+        });
+        
+        if (healthError.name === 'AbortError' || healthError.name === 'TimeoutError') {
+          console.error('❌ [ANALYZE] Health check timed out after 5 seconds');
+          const isLocal = backendUrl.includes('localhost') || backendUrl.includes('127.0.0.1');
+          
+          if (isLocal) {
+            setAnalysisError(
+              `Local backend is not responding (${healthCheckUrl}). ` +
+              `Make sure your local backend is running at http://localhost:8000. ` +
+              `If you want to use the production backend, set NEXT_PUBLIC_API_URL=https://accorria-backend-tv2qihivdq-uc.a.run.app in your .env.local file.`
+            );
+          } else {
+            setAnalysisError(
+              `Backend service (${backendUrl}) is not responding. ` +
+              `This could be due to network issues or the service being down. ` +
+              `Please check your connection or try again later.`
+            );
+          }
+        } else if (healthError.message?.includes('Failed to fetch') || healthError.message?.includes('NetworkError')) {
+          console.error('❌ [ANALYZE] Network error - backend may be unreachable');
+          const isLocal = backendUrl.includes('localhost') || backendUrl.includes('127.0.0.1');
+          
+          if (isLocal) {
+            setAnalysisError(
+              `Cannot connect to local backend (${backendUrl}). ` +
+              `Make sure your backend is running: cd backend && source .venv/bin/activate && uvicorn app.main:app --reload --host 0.0.0.0 --port 8000`
+            );
+          } else {
+            setAnalysisError(
+              `Cannot connect to backend service (${backendUrl}). ` +
+              `Check your internet connection or try again later.`
+            );
+          }
         } else {
-          console.error('❌ [ANALYZE] Backend health check failed after', healthCheckTime, 'ms:', healthError);
-          setAnalysisError(`Backend service unavailable: ${healthError.message || 'Connection failed'}`);
+          console.error('❌ [ANALYZE] Backend health check failed:', healthError);
+          setAnalysisError(
+            `Backend health check failed: ${healthError.message || 'Unknown error'}. ` +
+            `URL: ${healthCheckUrl}`
+          );
         }
         setIsAnalyzing(false);
         return;
@@ -743,6 +873,25 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
       
       setAnalysisResult(result);
       setShowAnalysis(true);
+      
+      // Extract price warnings from backend response
+      if (result.price_warnings) {
+        const warnings = result.price_warnings as {
+          type: 'high' | 'low' | 'good';
+          message: string;
+          market_average: number;
+          recommendation?: string;
+        };
+        setPriceWarning({
+          type: warnings.type,
+          message: warnings.message,
+          marketAvg: warnings.market_average
+        });
+        console.log('⚠️ [ANALYZE] Price warning received:', warnings);
+      } else {
+        // Clear price warning if not provided
+        setPriceWarning({ type: null, message: '', marketAvg: null });
+      }
       
       // Generate AI description based on enhanced analysis
       const analysisResult = result;
@@ -1329,12 +1478,12 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                     {isAnalyzing ? (
                       <>
                         <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                        <span>Coordinating Listing...</span>
+                        <span>Accorrarating...</span>
                       </>
                     ) : (
                       <>
                         <span>⚡</span>
-                        <span>Coordinate Listing</span>
+                        <span>Accorrarate</span>
                       </>
                     )}
                   </button>
@@ -1486,11 +1635,58 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                   // Remove all non-numeric characters and convert to number
                   const numericValue = e.target.value.replace(/[^0-9]/g, '');
                   setCarDetails(prev => ({ ...prev, price: numericValue }));
+                  // Clear price warning when price changes
+                  setPriceWarning({ type: null, message: '', marketAvg: null });
                 }}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-bold focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-bold focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  priceWarning.type === 'high' ? 'border-red-500 dark:border-red-500' :
+                  priceWarning.type === 'low' ? 'border-green-500 dark:border-green-500' :
+                  priceWarning.type === 'good' ? 'border-blue-500 dark:border-blue-500' :
+                  'border-gray-300 dark:border-gray-600'
+                }`}
                 placeholder="Enter asking price"
                 required
               />
+              {/* Price Warning Display */}
+              {priceWarning.type && priceWarning.marketAvg && (
+                <div className={`mt-2 p-3 rounded-lg ${
+                  priceWarning.type === 'high' ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800' :
+                  priceWarning.type === 'low' ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800' :
+                  'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800'
+                }`}>
+                  <div className="flex items-start">
+                    <span className={`text-lg mr-2 ${
+                      priceWarning.type === 'high' ? 'text-red-600 dark:text-red-400' :
+                      priceWarning.type === 'low' ? 'text-green-600 dark:text-green-400' :
+                      'text-blue-600 dark:text-blue-400'
+                    }`}>
+                      {priceWarning.type === 'high' ? '⚠️' : priceWarning.type === 'low' ? '✅' : 'ℹ️'}
+                    </span>
+                    <div className="flex-1">
+                      <p className={`text-sm font-medium ${
+                        priceWarning.type === 'high' ? 'text-red-700 dark:text-red-300' :
+                        priceWarning.type === 'low' ? 'text-green-700 dark:text-green-300' :
+                        'text-blue-700 dark:text-blue-300'
+                      }`}>
+                        {priceWarning.message}
+                      </p>
+                      {priceWarning.type === 'high' && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const recommendedPrice = Math.round(priceWarning.marketAvg! * 1.1);
+                            setCarDetails(prev => ({ ...prev, price: recommendedPrice.toString() }));
+                            setPriceWarning({ type: null, message: '', marketAvg: null });
+                          }}
+                          className="mt-2 text-xs text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 underline"
+                        >
+                          Click to set price to ${Math.round(priceWarning.marketAvg! * 1.1).toLocaleString()}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
               <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mt-2">
                 Lowest I&apos;ll Take
               </label>
@@ -1584,6 +1780,56 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
               />
             </div>
 
+            {/* Price Warning Display (above pricing tiers) */}
+            {priceWarning.type && priceWarning.marketAvg && (
+              <div className={`mb-4 p-4 rounded-lg ${
+                priceWarning.type === 'high' ? 'bg-red-50 dark:bg-red-900/20 border-2 border-red-200 dark:border-red-800' :
+                priceWarning.type === 'low' ? 'bg-green-50 dark:bg-green-900/20 border-2 border-green-200 dark:border-green-800' :
+                'bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-800'
+              }`}>
+                <div className="flex items-start">
+                  <span className={`text-2xl mr-3 ${
+                    priceWarning.type === 'high' ? 'text-red-600 dark:text-red-400' :
+                    priceWarning.type === 'low' ? 'text-green-600 dark:text-green-400' :
+                    'text-blue-600 dark:text-blue-400'
+                  }`}>
+                    {priceWarning.type === 'high' ? '⚠️' : priceWarning.type === 'low' ? '✅' : 'ℹ️'}
+                  </span>
+                  <div className="flex-1">
+                    <div className={`font-semibold mb-1 ${
+                      priceWarning.type === 'high' ? 'text-red-700 dark:text-red-300' :
+                      priceWarning.type === 'low' ? 'text-green-700 dark:text-green-300' :
+                      'text-blue-700 dark:text-blue-300'
+                    }`}>
+                      {priceWarning.type === 'high' ? 'Price Too High' : 
+                       priceWarning.type === 'low' ? 'Price Good for Quick Sale' : 
+                       'Price Within Market Range'}
+                    </div>
+                    <div className={`text-sm ${
+                      priceWarning.type === 'high' ? 'text-red-600 dark:text-red-400' :
+                      priceWarning.type === 'low' ? 'text-green-600 dark:text-green-400' :
+                      'text-blue-600 dark:text-blue-400'
+                    }`}>
+                      {priceWarning.message}
+                    </div>
+                    {priceWarning.type === 'high' && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const recommendedPrice = Math.round(priceWarning.marketAvg! * 1.1);
+                          setCarDetails(prev => ({ ...prev, price: recommendedPrice.toString() }));
+                          setPriceWarning({ type: null, message: '', marketAvg: null });
+                        }}
+                        className="mt-3 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+                      >
+                        Click to set price to ${Math.round(priceWarning.marketAvg! * 1.1).toLocaleString()}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Pricing Tier Selection */}
             {analysisResult && (
               <div className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 rounded-xl p-4 border border-green-200 dark:border-green-700">
@@ -1595,21 +1841,34 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                   )}
                 </h3>
                 {(() => {
-                  // Calculate prices based on market data if available, otherwise use user's price
-                  const basePrice = parseInt(carDetails.price || '10000');
-                  const marketData = analysisResult.market_intelligence?.pricing_analysis;
+                  // Use pricing tiers from backend if available, otherwise calculate from market data or user's price
+                  let quickPrice = 0;
+                  let marketPrice = 0;
+                  let premiumPrice = 0;
                   
-                  // Use market average if available, otherwise use user's price
-                  let quickPrice = Math.floor(basePrice * 0.85);
-                  let marketPrice = basePrice;
-                  let premiumPrice = Math.floor(basePrice * 1.15);
+                  // First, try to use pricing tiers from backend response
+                  if (analysisResult.pricing) {
+                    quickPrice = analysisResult.pricing.quick_sale?.price || 0;
+                    marketPrice = analysisResult.pricing.market_price?.price || 0;
+                    premiumPrice = analysisResult.pricing.premium?.price || 0;
+                  }
                   
-                  // Update prices based on market intelligence if available
-                  if (marketData?.market_prices?.market_average) {
-                    const marketAvg = (marketData.market_prices as { market_average?: number }).market_average || basePrice;
-                    quickPrice = Math.floor(marketAvg * 0.85);
-                    marketPrice = Math.floor(marketAvg);
-                    premiumPrice = Math.floor(marketAvg * 1.15);
+                  // If backend pricing not available, calculate from market data
+                  if (!quickPrice || !marketPrice || !premiumPrice) {
+                    const basePrice = parseInt(carDetails.price || '10000');
+                    const marketData = analysisResult.market_intelligence?.pricing_analysis;
+                    
+                    // Use market average if available, otherwise use user's price
+                    if (marketData?.market_prices?.market_average) {
+                      const marketAvg = (marketData.market_prices as { market_average?: number }).market_average || basePrice;
+                      quickPrice = Math.floor(marketAvg * 0.85);
+                      marketPrice = Math.floor(marketAvg);
+                      premiumPrice = Math.floor(marketAvg * 1.15);
+                    } else {
+                      quickPrice = Math.floor(basePrice * 0.85);
+                      marketPrice = basePrice;
+                      premiumPrice = Math.floor(basePrice * 1.15);
+                    }
                   }
                   
                   return (

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getBackendUrl, API_ENDPOINTS } from '../../config/api';
+import { getBackendUrl, API_ENDPOINTS } from '@/config/api';
 
 export default function TestApiPage() {
   const [config, setConfig] = useState<any>(null);

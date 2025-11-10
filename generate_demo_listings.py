@@ -24,7 +24,7 @@ def test_car_analysis(image_path, car_data):
     
     # Prepare the request
     backend_url = "http://localhost:8000"
-    endpoint = f"{backend_url}/analyze-car"
+    endpoint = f"{backend_url}/api/v1/enhanced-analyze"
     
     print(f"📡 Backend URL: {backend_url}")
     print("🚀 Sending request to car listing generator...")

@@ -203,17 +203,30 @@ async def get_facebook_connection_status(
     """
     Get user's Facebook connection status and available pages
     """
+    import asyncio
     try:
-        # Query user's Facebook connection
-        result = await db.execute(
-            select(UserPlatformConnection)
-            .where(
-                UserPlatformConnection.user_id == current_user_id,
-                UserPlatformConnection.platform == "facebook",
-                UserPlatformConnection.is_active == True
+        # Add timeout to prevent hanging (5 seconds max for database query)
+        async def query_connection():
+            result = await db.execute(
+                select(UserPlatformConnection)
+                .where(
+                    UserPlatformConnection.user_id == current_user_id,
+                    UserPlatformConnection.platform == "facebook",
+                    UserPlatformConnection.is_active == True
+                )
             )
-        )
-        connection = result.scalar_one_or_none()
+            return result.scalar_one_or_none()
+        
+        try:
+            connection = await asyncio.wait_for(query_connection(), timeout=5.0)
+        except asyncio.TimeoutError:
+            logger.warning(f"Database query timed out for Facebook connection status (user: {current_user_id})")
+            # Return not connected if query times out
+            return {
+                "connected": False,
+                "message": "Facebook account not connected",
+                "pages": []
+            }
         
         if not connection:
             return {
@@ -244,12 +257,17 @@ async def get_facebook_connection_status(
             "token_expires": connection.token_expires_at
         }
             
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error getting Facebook connection status: {str(e)}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to get connection status: {str(e)}"
-        )
+        # Return not connected instead of raising error to prevent frontend timeout
+        return {
+            "connected": False,
+            "message": "Facebook account not connected",
+            "pages": [],
+            "error": "Connection check failed"
+        }
 
 @router.post("/test-connection")
 async def test_facebook_connection(

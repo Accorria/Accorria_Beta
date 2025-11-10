@@ -273,7 +273,158 @@ async def test_all_apis():
         }
         logger.error(f"❌ Facebook API test execution failed: {e}")
     
-    # Test 5: eBay API
+    # Test 5: Gemini API (for Vision and Google Search)
+    try:
+        logger.info("Testing Gemini API...")
+        start_time = time.time()
+        
+        if not settings.GEMINI_API_KEY:
+            results["apis"]["gemini"] = {
+                "status": "not_configured",
+                "configured": False,
+                "error": "GEMINI_API_KEY not set in environment",
+                "purpose": "Image analysis (Vision API) and Google Search Grounding",
+                "response_time_ms": None
+            }
+        else:
+            try:
+                import httpx
+                async with httpx.AsyncClient() as client:
+                    response = await client.post(
+                        f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={settings.GEMINI_API_KEY}",
+                        json={
+                            "contents": [{
+                                "parts": [{"text": "Say 'Hello' in one word"}]
+                            }],
+                            "generationConfig": {
+                                "maxOutputTokens": 10,
+                                "temperature": 0.1
+                            }
+                        },
+                        timeout=10.0
+                    )
+                    
+                    response_time = (time.time() - start_time) * 1000
+                    
+                    if response.status_code == 200:
+                        results["apis"]["gemini"] = {
+                            "status": "connected",
+                            "configured": True,
+                            "response_time_ms": round(response_time, 2),
+                            "purpose": "Image analysis (Vision API) and Google Search Grounding",
+                            "usage": "Primary API for car image analysis and market data",
+                            "error": None
+                        }
+                        logger.info(f"✅ Gemini API test successful ({response_time:.2f}ms)")
+                    else:
+                        results["apis"]["gemini"] = {
+                            "status": "error",
+                            "configured": True,
+                            "response_time_ms": round(response_time, 2),
+                            "error": f"Status {response.status_code}: {response.text[:100]}",
+                            "purpose": "Image analysis (Vision API) and Google Search Grounding"
+                        }
+                        logger.error(f"❌ Gemini API test failed: {response.status_code}")
+                        
+            except Exception as e:
+                response_time = (time.time() - start_time) * 1000
+                results["apis"]["gemini"] = {
+                    "status": "error",
+                    "configured": True,
+                    "response_time_ms": round(response_time, 2),
+                    "error": str(e),
+                    "purpose": "Image analysis (Vision API) and Google Search Grounding"
+                }
+                logger.error(f"❌ Gemini API test failed: {e}")
+                
+    except Exception as e:
+        results["apis"]["gemini"] = {
+            "status": "test_failed",
+            "configured": False,
+            "error": f"Test execution failed: {str(e)}",
+            "purpose": "Image analysis (Vision API) and Google Search Grounding"
+        }
+        logger.error(f"❌ Gemini API test execution failed: {e}")
+    
+    # Test 6: Google Search Grounding (via Gemini)
+    try:
+        logger.info("Testing Google Search Grounding...")
+        start_time = time.time()
+        
+        if not settings.GEMINI_API_KEY:
+            results["apis"]["google_search"] = {
+                "status": "not_configured",
+                "configured": False,
+                "error": "GEMINI_API_KEY not set (required for Google Search)",
+                "purpose": "Real-time market pricing data via Google Search",
+                "response_time_ms": None
+            }
+        else:
+            try:
+                import httpx
+                async with httpx.AsyncClient() as client:
+                    response = await client.post(
+                        f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={settings.GEMINI_API_KEY}",
+                        json={
+                            "contents": [{
+                                "parts": [{
+                                    "text": "Search Google for: '2020 Nissan Rogue price'. Return just the market average price as a number."
+                                }]
+                            }],
+                            "tools": [{
+                                "googleSearch": {}
+                            }],
+                            "generationConfig": {
+                                "maxOutputTokens": 50,
+                                "temperature": 0.1
+                            }
+                        },
+                        timeout=30.0
+                    )
+                    
+                    response_time = (time.time() - start_time) * 1000
+                    
+                    if response.status_code == 200:
+                        results["apis"]["google_search"] = {
+                            "status": "connected",
+                            "configured": True,
+                            "response_time_ms": round(response_time, 2),
+                            "purpose": "Real-time market pricing data via Google Search",
+                            "usage": "Getting current market prices for vehicles",
+                            "error": None
+                        }
+                        logger.info(f"✅ Google Search Grounding test successful ({response_time:.2f}ms)")
+                    else:
+                        results["apis"]["google_search"] = {
+                            "status": "error",
+                            "configured": True,
+                            "response_time_ms": round(response_time, 2),
+                            "error": f"Status {response.status_code}: {response.text[:100]}",
+                            "purpose": "Real-time market pricing data via Google Search"
+                        }
+                        logger.error(f"❌ Google Search Grounding test failed: {response.status_code}")
+                        
+            except Exception as e:
+                response_time = (time.time() - start_time) * 1000
+                results["apis"]["google_search"] = {
+                    "status": "error",
+                    "configured": True,
+                    "response_time_ms": round(response_time, 2),
+                    "error": str(e),
+                    "purpose": "Real-time market pricing data via Google Search"
+                }
+                logger.error(f"❌ Google Search Grounding test failed: {e}")
+                
+    except Exception as e:
+        results["apis"]["google_search"] = {
+            "status": "test_failed",
+            "configured": False,
+            "error": f"Test execution failed: {str(e)}",
+            "purpose": "Real-time market pricing data via Google Search"
+        }
+        logger.error(f"❌ Google Search Grounding test execution failed: {e}")
+    
+    # Test 7: eBay API
     try:
         logger.info("Testing eBay API configuration...")
         
@@ -322,10 +473,14 @@ async def test_all_apis():
         "not_configured": total_apis - configured_apis,
         "critical_apis": {
             "openai": results["apis"].get("openai", {}).get("status") == "connected",
+            "gemini": results["apis"].get("gemini", {}).get("status") == "connected",
+            "google_search": results["apis"].get("google_search", {}).get("status") == "connected",
             "supabase": results["apis"].get("supabase", {}).get("status") == "connected"
         },
         "all_critical_apis_working": (
             results["apis"].get("openai", {}).get("status") == "connected" and
+            results["apis"].get("gemini", {}).get("status") == "connected" and
+            results["apis"].get("google_search", {}).get("status") == "connected" and
             results["apis"].get("supabase", {}).get("status") == "connected"
         )
     }

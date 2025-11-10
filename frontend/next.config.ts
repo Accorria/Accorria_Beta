@@ -6,7 +6,7 @@ const nextConfig: NextConfig = {
       bodySizeLimit: '10mb' // Increase from default 1mb to 10mb
     }
   },
-  outputFileTracingRoot: '/Users/prestoneaton/QuickFlip_MVP/Accorria/frontend'
+  outputFileTracingRoot: '/Users/prestoneaton/QuickFlip_MVP/frontend'
 };
 
 export default nextConfig;

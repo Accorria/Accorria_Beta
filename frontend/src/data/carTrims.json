@@ -89,7 +89,7 @@
   "Nissan": {
     "Altima": ["S", "SV", "SR", "SL", "Platinum"],
     "Sentra": ["S", "SV", "SR", "SR Premium"],
-    "Rogue": ["S", "SV", "SL", "Platinum"],
+    "Rogue": ["S", "S Sport", "SV", "SL", "Platinum"],
     "Pathfinder": ["S", "SV", "SL", "Platinum", "Rock Creek"],
     "Frontier": ["S", "SV", "Pro-4X", "Pro-X", "SL"],
     "Armada": ["SV", "SL", "Platinum"]

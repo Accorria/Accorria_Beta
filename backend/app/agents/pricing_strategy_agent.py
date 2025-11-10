@@ -151,6 +151,12 @@ class PricingStrategyAgent(BaseAgent):
         """
         Get base market value from market intelligence
         """
+        # First, try to get market average from pricing analysis
+        pricing_analysis = market_intelligence.get("pricing_analysis", {})
+        market_prices = pricing_analysis.get("market_prices", {})
+        if market_prices.get("market_average", 0) > 0:
+            return float(market_prices["market_average"])
+        
         # Use market comps if available
         market_comps = market_intelligence.get("market_comps", [])
         if market_comps:
@@ -159,27 +165,39 @@ class PricingStrategyAgent(BaseAgent):
             if prices:
                 return sum(prices) / len(prices)
         
-        # Fallback: Use basic pricing based on year and make
+        # DO NOT use user's price - ONLY use real market data
+        # Fallback: Use realistic pricing based on year, make, model, and mileage
         year = vehicle_data.get("year", 2020)
         make = vehicle_data.get("make", "").lower()
+        model = vehicle_data.get("model", "").lower()
         mileage = vehicle_data.get("mileage", 100000)
+        trim = vehicle_data.get("trim", "").lower()
         
-        # Basic pricing logic (simplified)
-        base_price = 15000  # Default base price
+        # Realistic base pricing logic
+        base_price = 25000  # More realistic default for modern vehicles
         
-        # Adjust for year
-        year_factor = 1.0 + (year - 2020) * 0.05  # Newer cars worth more
+        # Adjust for year (newer = more valuable)
+        current_year = 2024  # Adjust if needed
+        year_factor = 1.0 + (year - 2020) * 0.08  # $800 per year for newer cars
         
-        # Adjust for mileage
-        mileage_factor = 1.0 - (mileage - 50000) / 100000 * 0.3  # Higher mileage = lower value
+        # Adjust for mileage (lower = more valuable)
+        mileage_factor = 1.0 - max(0, (mileage - 50000) / 100000 * 0.25)  # Up to 25% reduction for high mileage
         
-        # Adjust for make (premium brands)
-        make_factor = 1.0
-        premium_makes = ['bmw', 'mercedes', 'audi', 'lexus', 'acura', 'infiniti']
-        if make in premium_makes:
-            make_factor = 1.2
+        # Adjust for make/model (Jeep Wrangler holds value well)
+        make_model_factor = 1.0
+        if "jeep" in make and "wrangler" in model:
+            make_model_factor = 1.4  # Wranglers hold value very well
+            if "rubicon" in trim:
+                make_model_factor = 1.6  # Rubicon is premium trim
+        elif make in ['bmw', 'mercedes', 'audi', 'lexus', 'acura', 'infiniti']:
+            make_model_factor = 1.3  # Premium brands
+        elif make in ['honda', 'toyota']:
+            make_model_factor = 1.1  # Reliable brands hold value
         
-        return base_price * year_factor * mileage_factor * make_factor
+        calculated_price = base_price * year_factor * mileage_factor * make_model_factor
+        
+        # Ensure minimum reasonable price
+        return max(calculated_price, 10000)
     
     def _apply_vehicle_adjustments(self, base_value: float, vehicle_data: Dict) -> float:
         """

@@ -22,14 +22,39 @@ export async function authenticatedFetch(
       headers['Authorization'] = `Bearer ${session.access_token}`;
     }
     
-    // If signal is already in options, use it, otherwise create a default timeout
+    // Use provided signal or create a default timeout
+    // Market intelligence calls need longer timeout (60 seconds) for Google Search API
+    let timeoutController: AbortController | null = null;
+    let signal = options.signal;
+    if (!signal) {
+      timeoutController = new AbortController();
+      // Check if this is a market intelligence call - needs longer timeout
+      const isMarketIntelligence = url.includes('market-intelligence');
+      const timeout = isMarketIntelligence ? 60000 : 30000; // 60s for market intel, 30s for others
+      setTimeout(() => timeoutController!.abort(), timeout);
+      signal = timeoutController.signal;
+    }
+    
     const fetchOptions: RequestInit = {
       ...options,
       headers,
+      signal,
     };
     
-    // Make the request
-    const response = await fetch(url, fetchOptions);
+    // Make the request with better error handling
+    let response: Response;
+    try {
+      response = await fetch(url, fetchOptions);
+    } catch (fetchError: any) {
+      // Provide more context for network errors
+      if (fetchError.name === 'AbortError' || fetchError.name === 'TimeoutError') {
+        const timeout = url.includes('market-intelligence') ? 60 : 30;
+        throw new Error(`Request to ${url} timed out after ${timeout} seconds`);
+      } else if (fetchError.message?.includes('Failed to fetch')) {
+        throw new Error(`Failed to connect to ${url}. Check your network connection.`);
+      }
+      throw fetchError;
+    }
     
     return response;
   } catch (error) {

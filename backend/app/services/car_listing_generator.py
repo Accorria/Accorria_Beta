@@ -28,14 +28,16 @@ class CarListingGenerator:
     """
     
     def __init__(self):
-        self.openai_api_key = os.getenv("OPENAI_API_KEY")
-        self.gemini_api_key = os.getenv("GEMINI_API_KEY")
+        # Use settings instead of os.getenv for consistency
+        from app.core.config import settings
+        self.openai_api_key = settings.OPENAI_API_KEY or os.getenv("OPENAI_API_KEY")
+        self.gemini_api_key = settings.GEMINI_API_KEY or os.getenv("GEMINI_API_KEY")
         self.openai_base_url = "https://api.openai.com/v1"
         
         if not self.openai_api_key:
-            logger.warning("OpenAI API key not found")
+            logger.warning("OpenAI API key not found - some features may not work")
         if not self.gemini_api_key:
-            logger.warning("Gemini API key not found")
+            logger.warning("Gemini API key not found - some features may not work")
     
     async def generate_car_listing(
         self,

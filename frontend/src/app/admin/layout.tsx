@@ -5,7 +5,12 @@ import { useRouter } from 'next/navigation';
 import CRMSidebar from '@/components/CRM/CRMSidebar';
 import CRMHeader from '@/components/CRM/CRMHeader';
 
-const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || 'accorria2024';
+// SECURITY: Admin password should be set via environment variable
+// Never hardcode passwords in production code
+const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD;
+if (!ADMIN_PASSWORD) {
+  console.warn('⚠️ ADMIN_PASSWORD not set in environment variables. Admin access is disabled.');
+}
 
 export default function AdminLayout({
   children,
@@ -30,6 +35,13 @@ export default function AdminLayout({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // SECURITY: Require admin password to be set via environment variable
+    if (!ADMIN_PASSWORD) {
+      setError('Admin access is not configured. Please set NEXT_PUBLIC_ADMIN_PASSWORD environment variable.');
+      setPassword('');
+      return;
+    }
     
     if (password === ADMIN_PASSWORD) {
       setIsAuthenticated(true);

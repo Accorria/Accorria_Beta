@@ -5,7 +5,7 @@ Entry point for the Accorria backend API.
 """
 
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, Request, Response, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
@@ -16,6 +16,7 @@ from slowapi.errors import RateLimitExceeded
 import logging
 import asyncio
 import time
+from datetime import datetime
 
 from app.core.config import settings
 from app.core.database import async_engine, Base
@@ -113,71 +114,18 @@ app.add_middleware(GZipMiddleware, minimum_size=1000)
 # Rate limiting middleware (temporarily disabled for debugging)
 # app.middleware("http")(rate_limit_middleware)
 
-# Health check endpoint
+# Health check endpoint - optimized for speed
 @app.get("/health")
 async def health_check():
-    """Health check endpoint with API connectivity verification"""
-    try:
-        from app.core.config import settings
-        import os
-        
-        print(f"[HEALTH CHECK] ===== HEALTH CHECK CALLED =====")
-        
-        # Check API keys are set (with error handling)
-        try:
-            openai_key_set = bool(settings.OPENAI_API_KEY and settings.OPENAI_API_KEY != "")
-        except:
-            openai_key_set = False
-            
-        try:
-            gemini_key_set = bool(settings.GEMINI_API_KEY and settings.GEMINI_API_KEY != "")
-        except:
-            gemini_key_set = False
-            
-        try:
-            supabase_url_set = bool(settings.SUPABASE_URL and settings.SUPABASE_URL != "")
-        except:
-            supabase_url_set = False
-        
-        # Test OpenAI connection (quick test without actual API call)
-        openai_status = "configured" if openai_key_set else "missing_key"
-        gemini_status = "configured" if gemini_key_set else "missing_key"
-        
-        print(f"[HEALTH CHECK] OpenAI API Key: {'SET' if openai_key_set else 'MISSING'}")
-        print(f"[HEALTH CHECK] Gemini API Key: {'SET' if gemini_key_set else 'MISSING'}")
-        print(f"[HEALTH CHECK] Supabase URL: {'SET' if supabase_url_set else 'MISSING'}")
-        print(f"[HEALTH CHECK] =============================")
-        
-        return {
-            "status": "healthy",
-            "service": "Accorria Backend",
-            "version": "1.0.0",
-            "apis": {
-                "openai_vision": openai_status,
-                "openai": openai_status,
-                "gemini": gemini_status,
-                "google_search_grounding": gemini_status,
-                "supabase": "configured" if supabase_url_set else "missing_config"
-            },
-            "api_keys_configured": {
-                "openai": openai_key_set,
-                "gemini": gemini_key_set,
-                "supabase": supabase_url_set
-            }
-        }
-    except Exception as e:
-        logger.error(f"Health check error: {e}", exc_info=True)
-        # Return a simple healthy response even if config check fails
-        try:
-            debug_mode = settings.DEBUG
-        except:
-            debug_mode = False
-        return {
-            "status": "healthy",
-            "service": "Accorria Backend",
-            "version": "1.0.0",
-            "error": str(e) if debug_mode else "Configuration check failed"
-        }
+    """Health check endpoint - fast response without blocking operations"""
+    # Return immediately without any blocking operations
+    # This ensures the health check always responds quickly (< 1 second)
+    return {
+        "status": "healthy",
+        "service": "Accorria Backend",
+        "version": "1.0.0",
+        "timestamp": datetime.now().isoformat()
+    }
 
 # Enhanced security headers middleware
 @app.middleware("http")
@@ -257,6 +205,47 @@ app.include_router(car_listing_generator_router.router, prefix="/api/v1", tags=[
 app.include_router(car_analysis_router.router, prefix="/api/v1", tags=["Car Analysis"])
 app.include_router(market_intelligence_router.router, prefix="/api/v1", tags=["Market Intelligence"])
 app.include_router(enhanced_analysis_router.router, prefix="/api/v1", tags=["Enhanced Analysis"])
+
+# Add helpful error messages for common wrong paths (for backward compatibility)
+@app.post("/analyze-car")
+async def redirect_analyze_car():
+    """Old /analyze-car endpoint - moved to /api/v1/enhanced-analyze"""
+    raise HTTPException(
+        status_code=404, 
+        detail="Endpoint moved. Use /api/v1/enhanced-analyze instead"
+    )
+
+@app.post("/enhanced-analyze")
+async def redirect_enhanced_analyze():
+    """Old /enhanced-analyze endpoint - moved to /api/v1/enhanced-analyze"""
+    raise HTTPException(
+        status_code=404, 
+        detail="Endpoint moved. Use /api/v1/enhanced-analyze instead"
+    )
+
+@app.post("/enhanced-analyze-with-rag")
+async def redirect_enhanced_analyze_with_rag():
+    """Old /enhanced-analyze-with-rag endpoint - moved to /api/v1/enhanced-analyze-with-rag"""
+    raise HTTPException(
+        status_code=404, 
+        detail="Endpoint moved. Use /api/v1/enhanced-analyze-with-rag instead"
+    )
+
+@app.post("/api/v1/enhanced_analysis/real-analyze")
+async def redirect_enhanced_analysis_real_analyze():
+    """Wrong path - use /api/v1/real-analyze instead"""
+    raise HTTPException(
+        status_code=404, 
+        detail="Wrong path. Use /api/v1/real-analyze instead"
+    )
+
+@app.post("/api/v1/enhanced_analysis/enhanced-analyze-with-rag")
+async def redirect_enhanced_analysis_with_rag():
+    """Wrong path - use /api/v1/enhanced-analyze-with-rag instead"""
+    raise HTTPException(
+        status_code=404, 
+        detail="Wrong path. Use /api/v1/enhanced-analyze-with-rag instead"
+    )
 app.include_router(synthesis_router.router, prefix="/api/v1", tags=["Synthesis"])
 app.include_router(flip_car_router.router, prefix="/api/v1", tags=["Flip Car"])
 app.include_router(listings.router, prefix="/api/v1/listings", tags=["Listings"])

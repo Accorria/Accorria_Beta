@@ -2,8 +2,8 @@
 // @ts-nocheck - Temporary disable for deployment
 
 import React, { useState, useRef } from 'react';
-import { api } from '../utils/api';
-import FacebookAuth from './FacebookAuth';
+import { api } from '@/utils/api';
+import FacebookAuth from '@/components/FacebookAuth';
 import { 
   Box, 
   Button, 

@@ -1,9 +1,9 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { supabase } from '../utils/supabase';
+import { supabase } from '@/utils/supabase';
 import { User, Session, AuthError } from '@supabase/supabase-js';
-import { getAppUrl, getHomeUrl } from '../utils/urls';
+import { getAppUrl, getHomeUrl } from '@/utils/urls';
 
 interface AuthContextType {
   user: User | null;
@@ -43,11 +43,38 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Check for existing session on mount
   useEffect(() => {
     const getSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setSession(session);
-      setUser(session?.user ?? null);
-      setIsEmailVerified(session?.user?.email_confirmed_at ? true : false);
-      setLoading(false);
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        // Handle refresh token errors gracefully
+        if (error) {
+          console.warn('Session error (will clear invalid session):', error.message);
+          
+          // If refresh token is missing or invalid, clear the session
+          if (error.message?.includes('Refresh Token') || error.message?.includes('refresh_token')) {
+            // Clear invalid session
+            await supabase.auth.signOut();
+            setSession(null);
+            setUser(null);
+            setIsEmailVerified(false);
+            setLoading(false);
+            return;
+          }
+        }
+        
+        setSession(session);
+        setUser(session?.user ?? null);
+        setIsEmailVerified(session?.user?.email_confirmed_at ? true : false);
+        setLoading(false);
+      } catch (error) {
+        console.error('Error getting session:', error);
+        // Clear session on any error
+        await supabase.auth.signOut();
+        setSession(null);
+        setUser(null);
+        setIsEmailVerified(false);
+        setLoading(false);
+      }
     };
 
     getSession();
@@ -55,9 +82,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        setIsEmailVerified(session?.user?.email_confirmed_at ? true : false);
+        // Handle token refresh errors
+        if (event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN') {
+          setSession(session);
+          setUser(session?.user ?? null);
+          setIsEmailVerified(session?.user?.email_confirmed_at ? true : false);
+        } else if (event === 'SIGNED_OUT') {
+          setSession(null);
+          setUser(null);
+          setIsEmailVerified(false);
+        } else {
+          setSession(session);
+          setUser(session?.user ?? null);
+          setIsEmailVerified(session?.user?.email_confirmed_at ? true : false);
+        }
         setLoading(false);
       }
     );

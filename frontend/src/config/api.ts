@@ -3,8 +3,9 @@
  * Centralized configuration for all API endpoints
  */
 
-// Production backend URL
+// Production backend URLs (multiple options for redundancy)
 const PRODUCTION_BACKEND_URL = 'https://accorria-backend-tv2qihivdq-uc.a.run.app';
+const PRODUCTION_BACKEND_URL_ALT = 'https://accorria-backend-19949436301.us-central1.run.app';
 
 // Development backend URL (if you want to use local backend during development)
 const DEVELOPMENT_BACKEND_URL = 'http://localhost:8000';
@@ -13,24 +14,31 @@ const DEVELOPMENT_BACKEND_URL = 'http://localhost:8000';
  * Get the backend URL based on environment
  */
 export const getBackendUrl = (): string => {
-  // In browser environment, check for environment variable
+  // Always check environment variable first (highest priority)
+  // NEXT_PUBLIC_ variables are available in both server and client in Next.js
+  const envApiUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (envApiUrl) {
+    return envApiUrl;
+  }
+  
+  // In browser environment, check if we're in development mode
   if (typeof window !== 'undefined') {
-    // Check if we're in development mode
     const isDevelopment = window.location.hostname === 'localhost' || 
                          window.location.hostname === '127.0.0.1' ||
                          window.location.hostname.includes('localhost');
     
-    // For production, always use the deployed backend
+    // For production domains, always use the deployed backend
     if (!isDevelopment) {
       return PRODUCTION_BACKEND_URL;
     }
     
-    // For development, use local backend
+    // For development (localhost), use local backend
+    // This allows devs to use local backend if running, or override with env var
     return DEVELOPMENT_BACKEND_URL;
   }
   
-  // Server-side rendering fallback
-  return process.env.NEXT_PUBLIC_API_URL || PRODUCTION_BACKEND_URL;
+  // Server-side rendering fallback (use production by default)
+  return PRODUCTION_BACKEND_URL;
 };
 
 /**

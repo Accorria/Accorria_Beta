@@ -44,12 +44,22 @@ service-account-key.json
 *.p12
 *.pfx
 
+# Browser session files (CRITICAL SECURITY)
+fb_session.json
+*_session.json
+preview.png
+
 # Database files (CRITICAL SECURITY)
 *.db
 *.sqlite
 *.sqlite3
 accorria.db
 quickflip.db
+
+# Database connection directories (CRITICAL SECURITY)
+*:*@*:*/
+username:password@*/
+*@localhost:*/
 
 # VS Code
 .vscode/
@@ -116,3 +126,12 @@ BETA_SIGNUP_ERROR_ANALYSIS.md
 
 # All Markdown Documentation (CRITICAL SECURITY)
 *.md
+# Exception: Testing documentation should be included
+!PRODUCTION_READINESS_CHECKLIST.md
+!MANUAL_TESTING_GUIDE.md
+!TESTING_SUMMARY.md
+
+# Password files (CRITICAL SECURITY)
+*password*.txt
+*.password
+.audit_*_password.txt

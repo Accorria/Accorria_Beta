@@ -8,7 +8,7 @@ const CRM_API_URL = 'https://accorria.com/api/leads'; // Your live Vercel deploy
 const LOCAL_CRM_URL = 'http://localhost:3002/api/leads'; // For local testing (not used by Google Apps Script)
 
 // SendGrid Configuration
-const SENDGRID_API_KEY = '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';
+const SENDGRID_API_KEY = 'YOUR_SENDGRID_API_KEY_HERE'; // Replace with your actual SendGrid API key
 const SENDGRID_FROM_EMAIL = 'noreply@accorria.com';
 const SENDGRID_TEMPLATE_ID = 'd-REPLACE_WITH_YOUR_TEMPLATE_ID'; // You'll need to create this template
 const SENDGRID_FOLLOWUP_TEMPLATE_ID = 'd-b371da7e588146fcb2d62d08aa28faed'; // Dealer Follow-Up Email template

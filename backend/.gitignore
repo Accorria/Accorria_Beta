@@ -39,6 +39,11 @@ workload-identity-config.json
 *.sqlite
 *.sqlite3
 
+# Database connection directories (CRITICAL SECURITY)
+*:*@*:*/
+username:password@*/
+*@localhost:*/
+
 # Testing
 .pytest_cache/
 .coverage
