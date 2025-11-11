@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import path from "path";
 
 const nextConfig: NextConfig = {
   experimental: {
@@ -20,6 +21,16 @@ const nextConfig: NextConfig = {
       },
     ],
     unoptimized: false,
+  },
+  webpack: (config) => {
+    // Explicitly resolve path aliases for webpack
+    // Use process.cwd() which should be the frontend directory during build
+    const srcPath = path.resolve(process.cwd(), 'src');
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@': srcPath,
+    };
+    return config;
   },
 };
 
