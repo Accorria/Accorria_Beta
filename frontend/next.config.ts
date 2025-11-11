@@ -6,7 +6,20 @@ const nextConfig: NextConfig = {
       bodySizeLimit: '10mb' // Increase from default 1mb to 10mb
     }
   },
-  outputFileTracingRoot: '/Users/prestoneaton/QuickFlip_MVP/frontend'
+  // outputFileTracingRoot removed - causes issues on Vercel builds
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**',
+      },
+      {
+        protocol: 'http',
+        hostname: '**',
+      },
+    ],
+    unoptimized: false,
+  },
 };
 
 export default nextConfig;

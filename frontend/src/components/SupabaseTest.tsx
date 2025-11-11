@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { supabaseBrowser } from '@/lib/supabaseBrowser';
+import { supabaseBrowser } from '../lib/supabaseBrowser';
 
 export const SupabaseTest: React.FC = () => {
   const [status, setStatus] = useState<string>('Testing...');

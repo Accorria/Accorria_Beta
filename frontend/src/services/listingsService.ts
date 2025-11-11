@@ -1,4 +1,4 @@
-import { supabaseBrowser } from '@/lib/supabaseBrowser';
+import { supabaseBrowser } from '../lib/supabaseBrowser';
 
 export interface Listing {
   id: string;
@@ -341,10 +341,23 @@ export class ListingsService {
     try {
       const { data: { user } } = await this.supabase.auth.getUser();
       
-      if (!user) {
-        throw new Error('User not authenticated');
+      // For demo users, delete from localStorage
+      if (!user || user.id === '00000000-0000-0000-0000-000000000123' || user.email === 'preston@accorria.com') {
+        console.log('Demo user detected, deleting from localStorage');
+        const testListings = JSON.parse(localStorage.getItem('testListings') || '[]');
+        const demoListings = JSON.parse(localStorage.getItem('demoListings') || '[]');
+        
+        const updatedTestListings = testListings.filter((l: Listing) => l.id !== id);
+        const updatedDemoListings = demoListings.filter((l: Listing) => l.id !== id);
+        
+        localStorage.setItem('testListings', JSON.stringify(updatedTestListings));
+        localStorage.setItem('demoListings', JSON.stringify(updatedDemoListings));
+        
+        console.log('Deleted listing from localStorage');
+        return true;
       }
 
+      // For real users, delete from database
       const { error } = await this.supabase
         .from('car_listings')
         .delete()
