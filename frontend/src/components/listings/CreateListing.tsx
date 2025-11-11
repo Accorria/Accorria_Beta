@@ -52,6 +52,7 @@ interface AnalysisResult {
     make?: string;
     model?: string;
     year?: number;
+    drivetrain?: string;
   };
   analysis_json?: Record<string, unknown>;
   listing_context?: Record<string, unknown>;
@@ -108,6 +109,17 @@ interface AnalysisResult {
   price_recommendations?: {
     price_recommendations?: Record<string, { price: number; description?: string; estimated_days_to_sell?: number }>;
   };
+  pricing?: {
+    quick_sale?: { price: number };
+    premium?: { price: number };
+    market_price?: { price: number };
+  };
+  price_warnings?: {
+    type: 'high' | 'low' | 'good';
+    message: string;
+    market_average: number;
+    recommendation?: string;
+  };
   data?: {
     price_trends?: Record<string, unknown>;
     demand_analysis?: Record<string, unknown>;
@@ -152,6 +164,7 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [priceWarning, setPriceWarning] = useState<{ type: 'high' | 'low' | 'good' | null; message: string; marketAvg: number | null }>({ type: null, message: '', marketAvg: null });
+  const [priceWarningDismissed, setPriceWarningDismissed] = useState(false); // Track if user dismissed the warning
   
   // Clear any existing error on component mount
   useEffect(() => {
@@ -413,32 +426,59 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
   const generateAIDescription = (analysisResult: AnalysisResult, carDetails: CarDetails, titleRebuildExplanation?: string): string => {
     let description = '';
     
-    // Start with basic car info (use actual user input)
-    const make = carDetails.make || "Unknown";
-    const model = carDetails.model || "Unknown";
-    const year = carDetails.year || "Unknown";
+    // CRITICAL: Use DETECTED values from Gemini Vision if available, otherwise fall back to user input
+    // This ensures we use what the AI actually saw in the photos, not what the user typed
+    const detectedMake = analysisResult?.detected?.make;
+    const detectedModel = analysisResult?.detected?.model;
+    const detectedYear = analysisResult?.detected?.year;
+    
+    const make = (detectedMake && detectedMake !== "Unknown") ? detectedMake : (carDetails.make || "Unknown");
+    const model = (detectedModel && detectedModel !== "Unknown") ? detectedModel : (carDetails.model || "Unknown");
+    const year = detectedYear ? detectedYear.toString() : (carDetails.year || "Unknown");
     const mileage = carDetails.mileage || "Unknown";
     const price = carDetails.price || '';
     const titleStatus = carDetails.titleStatus || 'clean';
     
-    // Calculate price based on selected tier and market data if available
-    let displayPrice = parseInt(price || '0');
-    const marketData = analysisResult.market_intelligence?.pricing_analysis;
-    let basePriceForTier = displayPrice;
-    
-    // Use market average if available, otherwise use user's price
-    if (marketData?.market_prices?.market_average) {
-      const marketAvg = (marketData.market_prices as { market_average?: number }).market_average || displayPrice;
-      basePriceForTier = Math.floor(marketAvg);
+    // Log what we're using for debugging
+    if (detectedMake || detectedModel) {
+      console.log('📸 Using DETECTED vehicle info:', { detectedMake, detectedModel, detectedYear });
+      console.log('📝 User provided:', { make: carDetails.make, model: carDetails.model, year: carDetails.year });
+      console.log('✅ Final values:', { make, model, year });
     }
     
-    if (selectedPricingTier === 'quick') {
-      displayPrice = Math.floor(basePriceForTier * 0.85);
-    } else if (selectedPricingTier === 'premium') {
-      displayPrice = Math.floor(basePriceForTier * 1.15);
-    } else {
-      // For market rate, use the base price (market average or user's price)
-      displayPrice = basePriceForTier;
+    // Calculate price based on selected tier and market data if available
+    let displayPrice = parseInt(price || '0');
+    
+    // First, try to use pricing tiers from analysis result
+    if (analysisResult.pricing) {
+      if (selectedPricingTier === 'quick' && analysisResult.pricing.quick_sale?.price) {
+        displayPrice = analysisResult.pricing.quick_sale.price;
+      } else if (selectedPricingTier === 'premium' && analysisResult.pricing.premium?.price) {
+        displayPrice = analysisResult.pricing.premium.price;
+      } else if ((selectedPricingTier === 'market' || !selectedPricingTier) && analysisResult.pricing.market_price?.price) {
+        displayPrice = analysisResult.pricing.market_price.price;
+      }
+    }
+    
+    // Fallback: Calculate price based on market data if pricing tiers not available
+    if (displayPrice === parseInt(price || '0') || displayPrice === 0) {
+      const marketData = analysisResult.market_intelligence?.pricing_analysis;
+      let basePriceForTier = displayPrice;
+      
+      // Use market average if available, otherwise use user's price
+      if (marketData?.market_prices?.market_average) {
+        const marketAvg = (marketData.market_prices as { market_average?: number }).market_average || displayPrice;
+        basePriceForTier = Math.floor(marketAvg);
+      }
+      
+      if (selectedPricingTier === 'quick') {
+        displayPrice = Math.floor(basePriceForTier * 0.85);
+      } else if (selectedPricingTier === 'premium') {
+        displayPrice = Math.floor(basePriceForTier * 1.15);
+      } else {
+        // For market rate, use the base price (market average or user's price)
+        displayPrice = basePriceForTier;
+      }
     }
     
     // Build description in your exact format with emojis
@@ -548,8 +588,21 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
         'fog_lights': 'Fog lights',
         'spoiler': 'Rear spoiler',
         'chrome_trim': 'Chrome trim',
-        'premium_wheels': 'Premium wheels'
+        'premium_wheels': 'Premium wheels',
+        'awd': 'All-wheel drive (AWD)',
+        '4wd': 'Four-wheel drive (4WD)',
+        '4x4': 'Four-wheel drive (4x4)'
       };
+      
+      // Add drivetrain if detected
+      if (analysisResult.detected?.drivetrain) {
+        const drivetrain = analysisResult.detected.drivetrain.toLowerCase();
+        if (drivetrain.includes('awd') || drivetrain.includes('all-wheel')) {
+          featureList.push('awd');
+        } else if (drivetrain.includes('4wd') || drivetrain.includes('4x4') || drivetrain.includes('four-wheel')) {
+          featureList.push('4wd');
+        }
+      }
       
       const uniqueFeatures = [...new Set(featureList.slice(0, 6))];
       uniqueFeatures.forEach(feature => {
@@ -575,23 +628,28 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
       : 'vehicle';
     
     if (titleStatus === 'clean') {
-      titleContext = `${make} ${model} with a clean title—priced competitively.`;
+      titleContext = `${make} ${model} with a clean title, priced competitively.`;
     } else if (titleStatus === 'rebuilt') {
-      titleContext = `Rebuilt title ${make} ${model}—professionally restored and ready to drive.`;
+      titleContext = `Rebuilt title ${make} ${model}, professionally restored and ready to drive.`;
     } else if (titleStatus === 'salvage') {
-      titleContext = `Salvage title ${make} ${model}—great for parts or restoration project.`;
+      titleContext = `Salvage title ${make} ${model}, great for parts or restoration project.`;
     } else if (titleStatus === 'flood') {
-      titleContext = `Flood title ${make} ${model}—sold as-is for parts or restoration.`;
+      titleContext = `Flood title ${make} ${model}, sold as-is for parts or restoration.`;
     } else if (titleStatus === 'lemon') {
-      titleContext = `Lemon title ${make} ${model}—sold as-is, great for parts.`;
+      titleContext = `Lemon title ${make} ${model}, sold as-is, great for parts.`;
     } else if (titleStatus === 'junk') {
-      titleContext = `Junk title ${make} ${model}—sold for parts only.`;
+      titleContext = `Junk title ${make} ${model}, sold for parts only.`;
     } else {
-      titleContext = `${make} ${model}—priced right for the market.`;
+      titleContext = `${make} ${model}, priced right for the market.`;
     }
     
     description += `\n🔑 ${titleContext}\n\n`;
     description += `📱 Message me to schedule a test drive or make an offer!`;
+    
+    // Remove all hyphens (-) and em dashes (—), preserve line breaks
+    description = description.replace(/-/g, ' ').replace(/—/g, ' ');
+    // Clean up multiple spaces but preserve newlines
+    description = description.replace(/[ \t]+/g, ' ').replace(/[ \t]*\n[ \t]*/g, '\n');
     
     return description;
   };
@@ -660,27 +718,28 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
     }
   }, [carDetails.make, carDetails.model, carDetails.year, carDetails.mileage, carDetails.city, carDetails.zipCode]);
 
-  // Fetch market intelligence when zip code changes
-  useEffect(() => {
-    if (carDetails.zipCode && carDetails.zipCode.length >= 5 && carDetails.make && carDetails.model) {
-      // Debounce the API call
-      const timer = setTimeout(() => {
-        fetchMarketIntelligence();
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [carDetails.zipCode, carDetails.make, carDetails.model, fetchMarketIntelligence]);
+  // DISABLED: Don't fetch market intelligence automatically before "Coordinate" is clicked
+  // This prevents showing incorrect pricing before the AI analysis is complete
+  // Market intelligence will be fetched when "Coordinate" button is clicked (in analyzeImages)
+  // useEffect(() => {
+  //   if (carDetails.zipCode && carDetails.zipCode.length >= 5 && carDetails.make && carDetails.model) {
+  //     const timer = setTimeout(() => {
+  //       fetchMarketIntelligence();
+  //     }, 1000);
+  //     return () => clearTimeout(timer);
+  //   }
+  // }, [carDetails.zipCode, carDetails.make, carDetails.model, fetchMarketIntelligence]);
 
-  // Fetch market intelligence when price is set (to validate against market)
-  useEffect(() => {
-    if (carDetails.price && parseInt(carDetails.price) > 0 && carDetails.make && carDetails.model && analysisResult) {
-      // Debounce the API call
-      const timer = setTimeout(() => {
-        fetchMarketIntelligence();
-      }, 1500);
-      return () => clearTimeout(timer);
-    }
-  }, [carDetails.price, carDetails.make, carDetails.model, analysisResult, fetchMarketIntelligence]);
+  // DISABLED: Don't fetch market intelligence when price is set
+  // Wait until "Coordinate" is clicked to get accurate pricing
+  // useEffect(() => {
+  //   if (carDetails.price && parseInt(carDetails.price) > 0 && carDetails.make && carDetails.model && analysisResult) {
+  //     const timer = setTimeout(() => {
+  //       fetchMarketIntelligence();
+  //     }, 1500);
+  //     return () => clearTimeout(timer);
+  //   }
+  // }, [carDetails.price, carDetails.make, carDetails.model, analysisResult, fetchMarketIntelligence]);
 
   // Regenerate description when any relevant field changes
   useEffect(() => {
@@ -707,6 +766,7 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
   const analyzeImages = async () => {
     const startTime = Date.now();
     console.log('🚀 [ANALYZE] analyzeImages called at:', new Date().toISOString());
+    setPriceWarningDismissed(false); // Reset dismissed flag for new analysis
     
     if (selectedFiles.length === 0) {
       console.log('❌ [ANALYZE] No files selected');
@@ -874,8 +934,8 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
       setAnalysisResult(result);
       setShowAnalysis(true);
       
-      // Extract price warnings from backend response
-      if (result.price_warnings) {
+      // Extract price warnings from backend response (only if not dismissed)
+      if (result.price_warnings && !priceWarningDismissed) {
         const warnings = result.price_warnings as {
           type: 'high' | 'low' | 'good';
           message: string;
@@ -1077,6 +1137,70 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
         console.log('✅ [FRONTEND] Listing posted successfully:', result);
         console.log('📝 [FRONTEND] Generated description length:', result.car_analysis?.description?.length || 0);
         
+        // Upload images to Supabase Storage and get public URLs
+        const imageUrls: string[] = [];
+        console.log('📤 Starting image upload for', files.length, 'files');
+        
+        if (files.length === 0) {
+          console.warn('⚠️ No files to upload!');
+        }
+        
+        try {
+          const { supabase } = await import('@/utils/supabase');
+          const timestamp = Date.now();
+
+          for (let i = 0; i < files.length; i++) {
+            const file = files[i].file;
+            const fileExt = file.name.split('.').pop() || 'jpg';
+            const fileName = `${timestamp}-${i}.${fileExt}`;
+            const filePath = `listings/${fileName}`;
+
+            console.log(`📤 Uploading image ${i + 1}/${files.length}: ${file.name} -> ${filePath}`);
+
+            // Upload to Supabase Storage
+            const { data: uploadData, error: uploadError } = await supabase.storage
+              .from('car-images')
+              .upload(filePath, file, {
+                cacheControl: '3600',
+                upsert: false
+              });
+
+            if (uploadError) {
+              console.error(`❌ Failed to upload image ${i + 1}:`, uploadError);
+              // Fallback to data URL if upload fails
+              const reader = new FileReader();
+              const dataUrl = await new Promise<string>((resolve) => {
+                reader.onload = () => resolve(reader.result as string);
+                reader.readAsDataURL(file);
+              });
+              imageUrls.push(dataUrl);
+              console.log(`⚠️ Using data URL fallback for image ${i + 1}`);
+            } else {
+              // Get public URL
+              const { data: urlData } = supabase.storage
+                .from('car-images')
+                .getPublicUrl(filePath);
+              imageUrls.push(urlData.publicUrl);
+              console.log(`✅ Successfully uploaded image ${i + 1}: ${urlData.publicUrl}`);
+            }
+          }
+          
+          console.log(`✅ Image upload complete: ${imageUrls.length} URLs generated`);
+        } catch (error) {
+          console.error('❌ Failed to upload images to Supabase:', error);
+          // Fallback: create data URLs from files
+          console.log('🔄 Falling back to data URLs...');
+          for (const fileWithId of files) {
+            const reader = new FileReader();
+            const dataUrl = await new Promise<string>((resolve) => {
+              reader.onload = () => resolve(reader.result as string);
+              reader.readAsDataURL(fileWithId.file);
+            });
+            imageUrls.push(dataUrl);
+          }
+          console.log(`⚠️ Generated ${imageUrls.length} data URLs as fallback`);
+        }
+        
         // Save listing locally for demo users (in addition to backend save)
         try {
           const { listingsService } = await import('@/services/listingsService');
@@ -1089,7 +1213,7 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
             price: result.car_analysis?.price || parseFloat(carDetails.price) || 0,
             platforms: selectedPlatforms,
             status: 'active' as const,
-            images: files.map(fileWithId => fileWithId.file.name), // Store file names for demo
+            images: imageUrls.length > 0 ? imageUrls : files.map(fileWithId => fileWithId.file.name), // Use uploaded URLs or fallback to file names
             make: result.car_analysis?.make || carDetails.make,
             model: result.car_analysis?.model || carDetails.model,
             year: result.car_analysis?.year || carDetails.year,
@@ -1635,8 +1759,10 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                   // Remove all non-numeric characters and convert to number
                   const numericValue = e.target.value.replace(/[^0-9]/g, '');
                   setCarDetails(prev => ({ ...prev, price: numericValue }));
-                  // Clear price warning when price changes
-                  setPriceWarning({ type: null, message: '', marketAvg: null });
+                  // Clear price warning when price changes (but only if not dismissed)
+                  if (!priceWarningDismissed) {
+                    setPriceWarning({ type: null, message: '', marketAvg: null });
+                  }
                 }}
                 className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-bold focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                   priceWarning.type === 'high' ? 'border-red-500 dark:border-red-500' :
@@ -1648,7 +1774,7 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                 required
               />
               {/* Price Warning Display */}
-              {priceWarning.type && priceWarning.marketAvg && (
+              {priceWarning.type && priceWarning.marketAvg && !priceWarningDismissed && (
                 <div className={`mt-2 p-3 rounded-lg ${
                   priceWarning.type === 'high' ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800' :
                   priceWarning.type === 'low' ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800' :
@@ -1781,7 +1907,7 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
             </div>
 
             {/* Price Warning Display (above pricing tiers) */}
-            {priceWarning.type && priceWarning.marketAvg && (
+            {priceWarning.type && priceWarning.marketAvg && !priceWarningDismissed && (
               <div className={`mb-4 p-4 rounded-lg ${
                 priceWarning.type === 'high' ? 'bg-red-50 dark:bg-red-900/20 border-2 border-red-200 dark:border-red-800' :
                 priceWarning.type === 'low' ? 'bg-green-50 dark:bg-green-900/20 border-2 border-green-200 dark:border-green-800' :
@@ -1796,19 +1922,10 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                     {priceWarning.type === 'high' ? '⚠️' : priceWarning.type === 'low' ? '✅' : 'ℹ️'}
                   </span>
                   <div className="flex-1">
-                    <div className={`font-semibold mb-1 ${
+                    <div className={`text-sm font-medium ${
                       priceWarning.type === 'high' ? 'text-red-700 dark:text-red-300' :
                       priceWarning.type === 'low' ? 'text-green-700 dark:text-green-300' :
                       'text-blue-700 dark:text-blue-300'
-                    }`}>
-                      {priceWarning.type === 'high' ? 'Price Too High' : 
-                       priceWarning.type === 'low' ? 'Price Good for Quick Sale' : 
-                       'Price Within Market Range'}
-                    </div>
-                    <div className={`text-sm ${
-                      priceWarning.type === 'high' ? 'text-red-600 dark:text-red-400' :
-                      priceWarning.type === 'low' ? 'text-green-600 dark:text-green-400' :
-                      'text-blue-600 dark:text-blue-400'
                     }`}>
                       {priceWarning.message}
                     </div>
@@ -1819,6 +1936,7 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                           const recommendedPrice = Math.round(priceWarning.marketAvg! * 1.1);
                           setCarDetails(prev => ({ ...prev, price: recommendedPrice.toString() }));
                           setPriceWarning({ type: null, message: '', marketAvg: null });
+                          setPriceWarningDismissed(true); // Mark as dismissed so it doesn't reappear
                         }}
                         className="mt-3 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
                       >
