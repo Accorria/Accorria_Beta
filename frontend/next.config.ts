@@ -6,7 +6,8 @@ const nextConfig: NextConfig = {
       bodySizeLimit: '10mb' // Increase from default 1mb to 10mb
     }
   },
-  // outputFileTracingRoot removed - causes issues on Vercel builds
+  // Set outputFileTracingRoot to current directory (frontend) to fix workspace detection
+  outputFileTracingRoot: process.cwd(),
   images: {
     remotePatterns: [
       {
