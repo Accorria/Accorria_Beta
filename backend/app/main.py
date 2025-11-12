@@ -100,8 +100,15 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # CORS middleware - MUST be first to handle preflight requests
-# Ensure localhost:3000 is always included
-cors_origins = list(set(settings.ALLOWED_ORIGINS + ["http://localhost:3000", "http://127.0.0.1:3000"]))
+# Ensure localhost:3000 is always included and all accorria.com domains
+cors_origins = list(set(settings.ALLOWED_ORIGINS + [
+    "http://localhost:3000", 
+    "http://127.0.0.1:3000",
+    "https://www.accorria.com",
+    "https://accorria.com",
+    "https://accorria.vercel.app"
+]))
+logger.info(f"CORS origins configured: {cors_origins}")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
