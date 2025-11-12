@@ -40,9 +40,13 @@ from app.api.v1 import (
     search_history as search_history_router,
     facebook_oauth as facebook_oauth_router,
     user_facebook_posting as user_facebook_posting_router,
-    user_ebay_posting as user_ebay_posting_router,
-    test_apis as test_apis_router
+    user_ebay_posting as user_ebay_posting_router
 )
+# Import test_apis_router separately since it's optional
+try:
+    from app.api.v1 import test_apis_router
+except ImportError:
+    test_apis_router = None
 from app.api.v1.market_search import router as market_search_router
 from app.api.v1.market_search_real_scrape import router as market_search_real_scrape_router
 from app.api.v1.market_search_scrapingbee import router as market_search_scrapingbee_router
@@ -268,8 +272,13 @@ app.include_router(user_facebook_posting_router.router, prefix="/api/v1/facebook
 # eBay User-Specific Posting
 app.include_router(user_ebay_posting_router.router, prefix="/api/v1/ebay", tags=["User eBay Posting"])
 
+# User Presets
+from app.api.v1 import user_presets
+app.include_router(user_presets.router, prefix="/api/v1", tags=["User Presets"])
+
 # API Testing
-app.include_router(test_apis_router.router, prefix="/api/v1", tags=["API Testing"])
+if test_apis_router:
+    app.include_router(test_apis_router, prefix="/api/v1", tags=["API Testing"])
 
 # Test endpoint
 @app.get("/test")
