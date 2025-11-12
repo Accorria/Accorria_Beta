@@ -21,7 +21,6 @@
     "framer-motion": "^12.23.12",
     "heic2any": "^0.0.4",
     "lucide-react": "^0.546.0",
-    "heic2any": "^0.0.4",
     "next": "^15.5.2",
     "next-auth": "^4.24.11",
     "openai": "^5.19.1",
