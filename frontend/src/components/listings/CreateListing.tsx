@@ -144,6 +144,10 @@ interface FileWithId {
   _errorLogged?: boolean; // Track if we've already logged an error for this file
   _retryCount?: number; // Track retry attempts
   _urlType?: 'blob' | 'data'; // Track which type of URL we're using
+  _corrupted?: boolean; // Track if file is corrupted and can't be loaded
+  _heicConverted?: boolean; // Track if HEIC file was already converted
+  _recreatingDataUrl?: boolean; // Track if we're recreating data URL
+  _originalHeicFile?: File; // Store original HEIC file if converted
 }
 
 export default function CreateListing({ onClose, onListingCreated }: CreateListingProps) {
