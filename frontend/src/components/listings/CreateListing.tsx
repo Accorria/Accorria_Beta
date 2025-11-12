@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { useDropzone, FileRejection } from 'react-dropzone';
 import carDataRaw from '@/data/carData.json';
@@ -139,6 +139,11 @@ interface AnalysisResult {
 interface FileWithId {
   id: string;
   file: File;
+  url?: string; // Store the object URL with the file
+  dataUrl?: string; // Fallback: data URL if blob URL fails
+  _errorLogged?: boolean; // Track if we've already logged an error for this file
+  _retryCount?: number; // Track retry attempts
+  _urlType?: 'blob' | 'data'; // Track which type of URL we're using
 }
 
 export default function CreateListing({ onClose, onListingCreated }: CreateListingProps) {
@@ -175,10 +180,12 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [connectedPlatforms, setConnectedPlatforms] = useState<Record<string, boolean>>({});
   const [isPosting, setIsPosting] = useState(false);
-  const [selectedPricingTier, setSelectedPricingTier] = useState<'quick' | 'market' | 'premium' | null>(null);
+  const [selectedPricingTier, setSelectedPricingTier] = useState<'quick' | 'market' | 'premium' | 'original' | null>(null);
   const [titleRebuildExplanation, setTitleRebuildExplanation] = useState('');
   const [postSuccess, setPostSuccess] = useState(false);
   const [postResult, setPostResult] = useState<{successCount: number, totalCount: number} | null>(null);
+  const [userPresets, setUserPresets] = useState<Array<{preset_value: string, usage_count: number}>>([]);
+  const [isLoadingPresets, setIsLoadingPresets] = useState(false);
 
   // Load connection statuses for platforms
   useEffect(() => {
@@ -212,14 +219,24 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
         } catch (fetchErr: any) {
           clearTimeout(timeoutId);
           // Handle timeout or fetch errors gracefully
-          if (fetchErr.name === 'AbortError' || fetchErr.message?.includes('timeout')) {
-            // Timeout - silently set to false
+          if (fetchErr.name === 'AbortError' || 
+              fetchErr.message?.includes('timeout') || 
+              fetchErr.message?.includes('Failed to connect') ||
+              fetchErr.message?.includes('Failed to fetch') ||
+              fetchErr.message?.includes('network')) {
+            // Connection error - silently set to false (backend may not be ready or not configured)
+            console.warn('Facebook connection check failed (backend may not be ready):', fetchErr.message);
             setConnectedPlatforms(prev => ({
               ...prev,
               facebook_marketplace: false
             }));
           } else {
-            throw fetchErr; // Re-throw to be caught by outer catch
+            // Other errors - also handle gracefully
+            console.warn('Facebook connection check error:', fetchErr.message);
+            setConnectedPlatforms(prev => ({
+              ...prev,
+              facebook_marketplace: false
+            }));
           }
         }
       } catch (err: any) {
@@ -246,89 +263,586 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
     loadConnections();
   }, []);
 
+  // Load user presets (saved phrases) - OPTIONAL FEATURE
+  // DISABLED: Endpoint doesn't exist yet, causing 404 errors
+  // Uncomment when /api/v1/presets endpoint is implemented
+  useEffect(() => {
+    // Temporarily disabled to prevent 404 errors
+    setIsLoadingPresets(false);
+    setUserPresets([]);
+    
+    /* 
+    const loadUserPresets = async () => {
+      try {
+        setIsLoadingPresets(true);
+        const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+        const response = await fetch(`${backendUrl}/api/v1/presets?preset_type=description_phrase&limit=10`, {
+          credentials: 'include'
+        });
+        
+        if (response.ok) {
+          const presets = await response.json();
+          setUserPresets(presets || []);
+        }
+      } catch (error) {
+        // Silently fail - presets are optional
+      } finally {
+        setIsLoadingPresets(false);
+      }
+    };
+    loadUserPresets();
+    */
+  }, []);
+
+  // Load user profile (city, zip code) from Supabase
+  useEffect(() => {
+    const loadUserProfile = async () => {
+      try {
+        const { supabase } = await import('@/utils/supabase');
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (user) {
+          try {
+            // Try to get profile - use select('*') to avoid column errors
+            const { data: profile, error } = await supabase
+              .from('profiles')
+              .select('*') // Select all columns to avoid 400 if specific columns don't exist
+              .eq('id', user.id)
+              .maybeSingle();
+            
+            if (error) {
+              // Check if it's a column/table error (400) - that's okay, just skip
+              const errorStatus = (error as any).status;
+              if (error.code === 'PGRST116' || error.code === '42P01' || errorStatus === 400) {
+                console.log('Profile table/columns not available (optional feature)');
+                return;
+              }
+              // Other errors - log but don't break
+              console.warn('Profile query error:', error.message);
+              return;
+            }
+            
+            if (profile) {
+              // Auto-fill city and zip code from profile if available
+              // Use optional chaining since columns might not exist
+              if (profile.city && !carDetails.city) {
+                setCarDetails(prev => ({ ...prev, city: profile.city }));
+              }
+              if (profile.zip_code && !carDetails.zipCode) {
+                setCarDetails(prev => ({ ...prev, zipCode: profile.zip_code }));
+              }
+              // Note: state is not part of CarDetails interface, so we skip it
+            }
+          } catch (profileError: any) {
+            // Handle any errors gracefully - profile is optional
+            const errorStatus = profileError?.status;
+            if (profileError?.code === 'PGRST116' || profileError?.code === '42P01' || errorStatus === 400) {
+              console.log('Profile table structure different (optional feature)');
+            } else {
+              console.warn('Failed to load profile:', profileError?.message || profileError);
+            }
+          }
+        }
+      } catch (error: any) {
+        console.warn('Failed to get user for profile:', error?.message || error);
+        // Silently fail - profile loading is optional
+      }
+    };
+
+    loadUserProfile();
+  }, []);
+
 
   const onDrop = useCallback(async (acceptedFiles: File[], rejectedFiles: FileRejection[]) => {
-    console.log('onDrop called with', acceptedFiles.length, 'accepted files');
+    console.log('📥 onDrop called with', acceptedFiles.length, 'accepted files');
+    console.log('📁 Accepted file names:', acceptedFiles.map(f => f.name));
     
     if (rejectedFiles.length > 0) {
-      console.log('Rejected files details:', rejectedFiles);
+      console.log('❌ Rejected files details:', rejectedFiles);
               alert(`Some files were rejected. Please check file size (max 5MB) and format (JPEG, PNG, WebP).`);
     }
     
     if (acceptedFiles.length > 0) {
-      // Convert and compress files
-      const convertedFiles = await Promise.all(
-        acceptedFiles.map(async (file): Promise<File> => {
-          // Compress images to reduce file size
-          if (file.type.startsWith('image/')) {
+      // Validate files before processing
+      // Handle files that might have been converted (e.g., from phone to Google Drive to JPEG)
+      const validFiles = acceptedFiles.filter(file => {
+        // Check file size (max 10MB)
+        if (file.size > 10 * 1024 * 1024) {
+          console.warn('⚠️ File too large, skipping:', file.name, 'Size:', file.size);
+          return false;
+        }
+        // Check if file is readable
+        if (file.size === 0) {
+          console.warn('⚠️ File is empty, skipping:', file.name);
+          return false;
+        }
+        
+        // Check if it's an image - be more lenient for converted files
+        const isImage = file.type.startsWith('image/') || 
+                       file.name.toLowerCase().match(/\.(jpg|jpeg|png|webp|gif|bmp)$/i);
+        
+        if (!isImage) {
+          console.warn('⚠️ Not an image file, skipping:', file.name, 'Type:', file.type);
+          return false;
+        }
+        
+        // For files that might have been converted, ensure they have a proper MIME type
+        // If type is empty or generic, try to infer from filename
+        if (!file.type || file.type === 'application/octet-stream') {
+          const ext = file.name.toLowerCase().split('.').pop();
+          const mimeTypes: Record<string, string> = {
+            'jpg': 'image/jpeg',
+            'jpeg': 'image/jpeg',
+            'png': 'image/png',
+            'webp': 'image/webp',
+            'gif': 'image/gif',
+            'bmp': 'image/bmp'
+          };
+          if (ext && mimeTypes[ext]) {
+            // Create a new File object with the correct MIME type
+            // This helps with files that lost their MIME type during conversion
+            Object.defineProperty(file, 'type', {
+              value: mimeTypes[ext],
+              writable: false,
+              configurable: true
+            });
+            console.log('🔧 Fixed MIME type for converted file:', file.name, '→', mimeTypes[ext]);
+          }
+        }
+        
+        return true;
+      });
+
+      if (validFiles.length === 0) {
+        alert('No valid image files were selected. Please select JPEG, PNG, WebP, or other image files (max 10MB each).');
+        return;
+      }
+
+      if (validFiles.length < acceptedFiles.length) {
+        const skipped = acceptedFiles.length - validFiles.length;
+        console.warn(`⚠️ Skipped ${skipped} invalid file(s)`);
+      }
+
+      // ADD FILES TO STATE IMMEDIATELY (before compression) so they show up right away
+      // Use a robust approach: Create data URL FIRST (most reliable), blob URL as secondary
+      // Data URLs work for ALL file types, even files that went through multiple conversions
+      // IMPORTANT: Convert HEIC files immediately so they can be previewed
+      const tempFilesWithIds = await Promise.all(validFiles.map(async (file, idx) => {
+        // STEP 0: Convert HEIC files immediately for preview
+        const isHeic = file.name.toLowerCase().match(/\.(heic|heif)$/i) || 
+                      file.type === 'image/heic' || 
+                      file.type === 'image/heif';
+        
+        let previewFile = file;
+        if (isHeic) {
+          console.log('🔄 Converting HEIC file immediately for preview:', file.name);
+          try {
+            // Dynamic import to avoid SSR issues
+            const heic2any = (await import('heic2any')).default;
+            const convertedBlob = await heic2any({
+              blob: file,
+              toType: 'image/jpeg',
+              quality: 0.92
+            });
+            const blob = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
+            const jpegName = file.name.replace(/\.(heic|heif)$/i, '.jpg');
+            previewFile = new File([blob], jpegName, {
+              type: 'image/jpeg',
+              lastModified: file.lastModified
+            });
+            console.log('✅ Converted HEIC to JPEG for preview:', file.name, '→', jpegName);
+          } catch (heicError) {
+            console.error('❌ HEIC conversion failed for preview:', file.name, heicError);
+            // Continue with original file - conversion will be retried later
+          }
+        }
+        
+        const fileWithId: FileWithId = {
+          id: `temp-${previewFile.name}-${previewFile.size}-${Date.now()}-${idx}`,
+          file: previewFile // Use converted file for preview, original will be used in background conversion
+        };
+        
+        // Verify file is valid
+        const isValidImage = previewFile && previewFile.size > 0 && (
+          previewFile.type.startsWith('image/') || 
+          previewFile.name.toLowerCase().match(/\.(jpg|jpeg|png|webp|gif|bmp|heic|heif)$/i)
+        );
+        
+        if (!isValidImage) {
+          console.warn('⚠️ Invalid file, skipping:', previewFile.name, 'Type:', previewFile.type);
+          return fileWithId;
+        }
+        
+        // PRIORITY: Create data URL FIRST (most reliable for converted files)
+        // Data URLs work even if files lost metadata during conversion
+        try {
+          fileWithId.dataUrl = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            const timeout = setTimeout(() => {
+              reject(new Error('FileReader timeout'));
+            }, 15000); // 15 second timeout for large/converted files
             
-            // Create a canvas to compress the image
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            const img = new Image();
+            reader.onload = () => {
+              clearTimeout(timeout);
+              const result = reader.result as string;
+              
+              // Validate that the data URL is actually an image
+              if (result && result.startsWith('data:image/')) {
+                resolve(result);
+              } else {
+                reject(new Error('File does not appear to be a valid image'));
+              }
+            };
+            reader.onerror = (error) => {
+              clearTimeout(timeout);
+              reject(error);
+            };
             
-            return new Promise<File>((resolve) => {
-              img.onload = () => {
-                // Calculate new dimensions (max 1200px width/height)
-                const maxSize = 1200;
-                let { width, height } = img;
+            try {
+              // Read the entire file as data URL (use converted file for HEIC)
+              reader.readAsDataURL(previewFile);
+            } catch (readError) {
+              clearTimeout(timeout);
+              reject(readError);
+            }
+          });
+          
+          fileWithId._urlType = 'data';
+          console.log('✅ Created data URL (primary) for:', previewFile.name, 'Size:', (previewFile.size / 1024 / 1024).toFixed(2) + 'MB');
+        } catch (dataError: any) {
+          console.error('❌ Data URL creation failed for:', previewFile.name, dataError?.message || dataError);
+          // File might be corrupted - try blob URL as last resort
+        }
+        
+        // Try blob URL as secondary option (more memory efficient if it works)
+        // But data URL is primary because it's more reliable for converted files
+        if (!fileWithId.dataUrl) {
+          try {
+            fileWithId.url = URL.createObjectURL(previewFile);
+            fileWithId._urlType = 'blob';
+            console.log('✅ Created blob URL (fallback) for:', previewFile.name);
+          } catch (blobError) {
+            console.error('❌ Blob URL also failed for:', previewFile.name, blobError);
+            // Both failed - file is likely corrupted
+          }
+        } else {
+          // Also try blob URL for better performance, but data URL is primary
+          try {
+            fileWithId.url = URL.createObjectURL(previewFile);
+            console.log('✅ Created blob URL (secondary) for:', previewFile.name);
+          } catch (blobError) {
+            // That's okay - we have data URL
+            console.log('⚠️ Blob URL failed, but data URL available for:', previewFile.name);
+          }
+        }
+        
+        // Store original file if it was HEIC (for background conversion)
+        if (isHeic && previewFile !== file) {
+          (fileWithId as any)._originalHeicFile = file;
+        }
+        
+        return fileWithId;
+      }));
+      
+      console.log('⚡ Adding files to state immediately (before compression):', tempFilesWithIds.length, 'files');
+      setFiles(prev => {
+        const newFiles = [...prev, ...tempFilesWithIds];
+        console.log('📊 Total files in state (immediate):', newFiles.length);
+        return newFiles;
+      });
+      setRenderKey(prev => prev + 1);
+      
+      // Now convert HEIC files to JPEG first, then compress in background
+      console.log('🔄 Starting file processing (HEIC conversion + compression) for', acceptedFiles.length, 'files...');
+      try {
+        const convertedFiles = await Promise.all(
+          acceptedFiles.map(async (file, idx): Promise<File> => {
+            try {
+              // STEP 1: Check if this file was already converted from HEIC in preview step
+              // Find the corresponding temp file to see if it was already converted
+              const tempFile = tempFilesWithIds.find(tf => 
+                tf.file.name === file.name || 
+                (tf.file.name.replace(/\.jpg$/i, '') === file.name.replace(/\.(heic|heif)$/i, ''))
+              );
+              
+              // If file was already converted from HEIC, use the converted version
+              let processedFile = file;
+              if (tempFile && (tempFile as any)._originalHeicFile) {
+                console.log('♻️ Using already-converted HEIC file:', tempFile.file.name);
+                processedFile = tempFile.file; // Use the already-converted JPEG version
+              } else {
+                // STEP 1b: Convert HEIC/HEIF files to JPEG if not already converted
+                const isHeic = file.name.toLowerCase().match(/\.(heic|heif)$/i) || 
+                              file.type === 'image/heic' || 
+                              file.type === 'image/heif';
                 
-                if (width > height) {
-                  if (width > maxSize) {
-                    height = (height * maxSize) / width;
-                    width = maxSize;
-                  }
-                } else {
-                  if (height > maxSize) {
-                    width = (width * maxSize) / height;
-                    height = maxSize;
+                if (isHeic) {
+                  console.log('🔄 Converting HEIC file to JPEG:', file.name);
+                  try {
+                    // Dynamic import to avoid SSR issues
+                    const heic2any = (await import('heic2any')).default;
+                    const convertedBlob = await heic2any({
+                      blob: file,
+                      toType: 'image/jpeg',
+                      quality: 0.92
+                    });
+                    
+                    // heic2any returns an array, get the first result
+                    const blob = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
+                    
+                    // Create a new File object with JPEG extension
+                    const jpegName = file.name.replace(/\.(heic|heif)$/i, '.jpg');
+                    processedFile = new File([blob], jpegName, {
+                      type: 'image/jpeg',
+                      lastModified: file.lastModified
+                    });
+                    
+                    console.log('✅ Converted HEIC to JPEG:', file.name, '→', jpegName, 'Size:', processedFile.size);
+                  } catch (heicError) {
+                    console.error('❌ HEIC conversion failed for:', file.name, heicError);
+                    // If conversion fails, try to continue with original (might fail later)
+                    alert(`Failed to convert HEIC file ${file.name}. Please convert it to JPEG manually.`);
+                    return file;
                   }
                 }
-                
-                canvas.width = width;
-                canvas.height = height;
-                
-                // Draw and compress
-                ctx?.drawImage(img, 0, 0, width, height);
-                canvas.toBlob((blob) => {
-                  if (blob) {
-                    const compressedFile = new File([blob], file.name, {
-                      type: 'image/jpeg',
-                      lastModified: Date.now()
-                    });
-                    resolve(compressedFile);
-                  } else {
-                    resolve(file);
-                  }
-                }, 'image/jpeg', 0.8); // 80% quality
-              };
+              }
               
-              img.src = URL.createObjectURL(file);
-            });
+              // STEP 2: Now compress the file (or converted JPEG)
+              // Skip compression for small JPEG files (already optimized, compression can corrupt them)
+              if (processedFile.type === 'image/jpeg' && processedFile.size < 3 * 1024 * 1024) { // Less than 3MB
+                console.log('⏭️ Skipping compression for small JPEG:', processedFile.name, processedFile.size);
+                return processedFile;
+              }
+              
+              // Skip compression for small files in general
+              if (processedFile.size < 1 * 1024 * 1024) { // Less than 1MB
+                console.log('⏭️ Skipping compression for small file:', processedFile.name, processedFile.size);
+                return processedFile;
+              }
+              
+              // Skip compression for formats that don't compress well or might get corrupted
+              const skipCompressionTypes = ['image/gif', 'image/webp', 'image/bmp'];
+              if (skipCompressionTypes.includes(processedFile.type)) {
+                console.log('⏭️ Skipping compression for format:', processedFile.type, processedFile.name);
+                return processedFile;
+              }
+              
+              // Compress images to reduce file size (JPEG, PNG mainly)
+              if (processedFile.type.startsWith('image/')) {
+                
+                // Create a canvas to compress the image
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                if (!ctx) {
+                  console.warn('Canvas context not available, using original file');
+                  return processedFile;
+                }
+                
+                const img = new Image();
+                
+                return new Promise<File>((resolve, reject) => {
+                  // Set timeout to prevent hanging
+                  const timeout = setTimeout(() => {
+                    console.warn(`Compression timeout for ${processedFile.name}, using original`);
+                    resolve(processedFile);
+                  }, 10000); // 10 second timeout
+                  
+                  img.onerror = () => {
+                    clearTimeout(timeout);
+                    console.warn(`Failed to load image ${processedFile.name}, using original`);
+                    resolve(processedFile);
+                  };
+                  
+                  img.onload = () => {
+                    clearTimeout(timeout);
+                    try {
+                      // Calculate new dimensions (max 1200px width/height)
+                      const maxSize = 1200;
+                      let { width, height } = img;
+                      
+                      if (width > height) {
+                        if (width > maxSize) {
+                          height = (height * maxSize) / width;
+                          width = maxSize;
+                        }
+                      } else {
+                        if (height > maxSize) {
+                          width = (width * maxSize) / height;
+                          height = maxSize;
+                        }
+                      }
+                      
+                      canvas.width = width;
+                      canvas.height = height;
+                      
+                      // Draw and compress
+                      ctx.drawImage(img, 0, 0, width, height);
+                      
+                      // Determine output format based on input
+                      let outputType = 'image/jpeg';
+                      let quality = 0.85; // Default quality
+                      
+                      // Preserve PNG transparency if original was PNG
+                      if (processedFile.type === 'image/png') {
+                        outputType = 'image/png';
+                        quality = 0.9;
+                      }
+                      
+                      canvas.toBlob((blob) => {
+                        if (blob && blob.size > 0) {
+                          // Only use compressed version if it's actually smaller
+                          if (blob.size < processedFile.size) {
+                            const compressedFile = new File([blob], processedFile.name, {
+                              type: outputType,
+                              lastModified: Date.now()
+                            });
+                            console.log(`✅ Compressed ${processedFile.name}: ${processedFile.size} → ${blob.size} bytes`);
+                            resolve(compressedFile);
+                          } else {
+                            console.log(`⏭️ Compression didn't reduce size for ${processedFile.name}, using original`);
+                            resolve(processedFile);
+                          }
+                        } else {
+                          console.warn(`⚠️ Compression failed for ${processedFile.name}, using original`);
+                          resolve(processedFile);
+                        }
+                      }, outputType, quality);
+                    } catch (error) {
+                      console.warn(`Error compressing ${processedFile.name}:`, error);
+                      resolve(processedFile);
+                    }
+                  };
+                  
+                  img.src = URL.createObjectURL(processedFile);
+                });
+              }
+              return processedFile;
+            } catch (error) {
+              console.warn(`Error processing file ${file.name}:`, error);
+              return file; // Return original file on error
+            }
+          })
+        );
+        
+        console.log('✅ File compression complete. Processed', convertedFiles.length, 'files');
+        
+        // Replace temp files with compressed versions
+        // IMPORTANT: Preserve data URLs from temp files, create new blob URLs for final files
+        const filesWithIds = await Promise.all(convertedFiles.map(async (file, idx) => {
+          // Find the corresponding temp file to preserve its data URL
+          // Match by name, or by base name if one was converted (e.g., IMG_5766.heic -> IMG_5766.jpg)
+          const tempFile = tempFilesWithIds.find(tf => {
+            if (tf.file.name === file.name) return true;
+            // Check if names match when ignoring extensions (for HEIC conversions)
+            const tfBase = tf.file.name.replace(/\.(jpg|jpeg|png|heic|heif)$/i, '');
+            const fileBase = file.name.replace(/\.(jpg|jpeg|png|heic|heif)$/i, '');
+            return tfBase === fileBase && tfBase.length > 0;
+          });
+          
+          const fileWithId: FileWithId = {
+            id: `${file.name}-${file.size}-${file.lastModified}-${Date.now()}-${idx}`,
+            file
+          };
+          
+          // Preserve data URL from temp file (works with any File object)
+          if (tempFile && tempFile.dataUrl) {
+            fileWithId.dataUrl = tempFile.dataUrl;
+            fileWithId._urlType = 'data';
+            console.log('♻️ Preserved data URL from temp file:', file.name);
           }
-          return file;
-        })
-      );
-      
-      // Append new files instead of replacing, with unique IDs
-      const filesWithIds = convertedFiles.map(file => ({
-        id: `${file.name}-${file.size}-${file.lastModified}-${Date.now()}`,
-        file
-      }));
-      setFiles(prev => [...prev, ...filesWithIds]);
+          
+          // Create new blob URL for the final file (tied to this File object)
+          try {
+            if (file && file.size > 0 && file.type.startsWith('image/')) {
+              fileWithId.url = URL.createObjectURL(file);
+              fileWithId._urlType = fileWithId._urlType || 'blob';
+              console.log('🆕 Created blob URL for final file:', file.name, 'Size:', file.size);
+            } else {
+              console.warn('⚠️ Invalid file, skipping blob URL:', file.name);
+            }
+          } catch (error) {
+            console.error('❌ Failed to create blob URL for final file:', file.name, error);
+            // Data URL is still available as fallback
+          }
+          
+          // If no data URL exists yet, create one as backup
+          if (!fileWithId.dataUrl) {
+            try {
+              fileWithId.dataUrl = await new Promise<string>((resolve, reject) => {
+                const reader = new FileReader();
+                const timeout = setTimeout(() => reject(new Error('Timeout')), 10000);
+                reader.onload = () => {
+                  clearTimeout(timeout);
+                  resolve(reader.result as string);
+                };
+                reader.onerror = () => {
+                  clearTimeout(timeout);
+                  reject(new Error('FileReader failed'));
+                };
+                reader.readAsDataURL(file);
+              });
+              console.log('✅ Created data URL backup for final file:', file.name);
+            } catch (dataError) {
+              console.error('❌ Failed to create data URL backup:', file.name, dataError);
+            }
+          }
+          
+          return fileWithId;
+        }));
+        
+        console.log('✅ Files processed, replacing with compressed versions:', filesWithIds.length, 'files');
+        console.log('📋 File names:', filesWithIds.map(f => f.file.name));
+        
+        setFiles(prev => {
+          // Remove temp files but DON'T revoke URLs - they're being reused!
+          const tempFiles = prev.filter(f => f.id.startsWith('temp-'));
+          const withoutTemp = prev.filter(f => !f.id.startsWith('temp-'));
+          const newFiles = [...withoutTemp, ...filesWithIds];
+          console.log('📊 Total files in state after compression:', newFiles.length);
+          
+          // DON'T revoke temp file URLs - they're being preserved in the new files
+          // Only revoke URLs that aren't being reused
+          const reusedUrls = new Set(filesWithIds.map(f => f.url).filter(Boolean));
+          setTimeout(() => {
+            tempFiles.forEach(f => {
+              // Only revoke if URL wasn't reused
+              if (f.url && !reusedUrls.has(f.url)) {
+                try {
+                  URL.revokeObjectURL(f.url);
+                  console.log('🧹 Revoked unused temp file URL:', f.file.name);
+                } catch (error) {
+                  // Ignore
+                }
+              } else if (f.url) {
+                console.log('♻️ URL reused, not revoking:', f.file.name);
+              }
+            });
+          }, 2000); // Longer delay to ensure everything is stable
+          
+          return newFiles;
+        });
+        
+        // Force re-render to ensure UI updates
+        setRenderKey(prev => prev + 1);
+      } catch (error) {
+        console.error('❌ Error during file compression:', error);
+        // Files are already in state, so UI should still show them
+      }
     }
   }, []);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
-      'image/*': ['.jpeg', '.jpg', '.png', '.webp', '.heic', '.heif']
+      'image/*': ['.jpeg', '.jpg', '.png', '.webp', '.gif', '.bmp', '.tiff', '.tif', '.heic', '.heif']
     },
     maxFiles: 20,
-    maxSize: 50 * 1024 * 1024, // 50MB limit - let compression handle the rest
+    maxSize: 10 * 1024 * 1024, // 10MB per file (reasonable limit)
     multiple: true,
     noClick: false,
-    noKeyboard: false
+    noKeyboard: false,
+    // Don't reject files - we'll handle validation ourselves for better error messages
+    validator: null
   });
 
   const removeFile = (index: number) => {
@@ -1099,6 +1613,28 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
       if (carDetails.finalDescription) {
         formData.append('custom_description', carDetails.finalDescription);
       }
+
+      // Save user presets (extract and save common phrases)
+      if (carDetails.aboutVehicle || carDetails.titleStatus) {
+        try {
+          const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+          await fetch(`${backendUrl}/api/v1/presets/extract-and-save`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+            body: JSON.stringify({
+              about_vehicle: carDetails.aboutVehicle || '',
+              title_status: carDetails.titleStatus || 'clean'
+            })
+          });
+          // Silently save - don't block on this
+        } catch (error) {
+          console.warn('Failed to save presets:', error);
+          // Don't block submission if preset saving fails
+        }
+      }
       console.log('⏱️  [FRONTEND] Starting request at:', new Date().toISOString());
       console.log('📡 [FRONTEND] Calling fetch to /api/v1/platform-posting/analyze-and-post...');
       console.log('📦 [FRONTEND] FormData contains:', {
@@ -1276,18 +1812,131 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
   const currentYear = new Date().getFullYear() + 1;
   const years = Array.from({ length: currentYear - 1959 }, (_, i) => (currentYear - i).toString());
 
-  // Memoize image URLs to prevent constant re-rendering
-  const imageUrls = useMemo(() => {
-    console.log('🎯 Creating new image URLs for', files.length, 'files:', files.map(f => f.file.name));
-    return files.map(fileWithId => URL.createObjectURL(fileWithId.file));
-  }, [files]); // Depend on the entire files array so reordering updates the URLs
-
-  // Cleanup URLs when component unmounts or files change
+  // Create and manage image URLs for all files
+  // Use a ref to track previous files to only cleanup removed files
+  const prevFilesRef = useRef<FileWithId[]>([]);
+  
   useEffect(() => {
+    console.log('🔄 [URLs] useEffect triggered, files count:', files.length);
+    
+    // Find files that were removed (cleanup their URLs)
+    // BUT: Don't cleanup if files array is being replaced (compression in progress)
+    // Only cleanup if files are actually being removed (count decreased)
+    const prevCount = prevFilesRef.current.length;
+    const currentCount = files.length;
+    
+    // Only cleanup if files were actually removed (not replaced)
+    if (prevCount > currentCount) {
+      const prevFileIds = new Set(prevFilesRef.current.map(f => f.id));
+      const currentFileIds = new Set(files.map(f => f.id));
+      const removedFileIds = [...prevFileIds].filter(id => !currentFileIds.has(id));
+      
+      if (removedFileIds.length > 0) {
+        console.log('🧹 [URLs] Cleaning up', removedFileIds.length, 'removed files');
+        prevFilesRef.current.forEach(fileWithId => {
+          if (removedFileIds.includes(fileWithId.id) && fileWithId.url) {
+            try {
+              URL.revokeObjectURL(fileWithId.url);
+              console.log('✅ [URLs] Revoked URL for removed file:', fileWithId.file?.name || fileWithId.id);
+            } catch (error) {
+              // Ignore errors
+            }
+          }
+        });
+      }
+    } else if (prevCount === currentCount && prevCount > 0) {
+      // Same count - might be replacement (compression), don't cleanup yet
+      console.log('🔄 [URLs] Files replaced (compression?), preserving URLs');
+    }
+    
+    // Create URLs for all files that don't have one
+    files.forEach((fileWithId, idx) => {
+      if (!fileWithId.url && fileWithId.file) {
+        // Validate file before creating URL
+        if (fileWithId.file.size === 0) {
+          console.warn('⚠️ [URLs] File has zero size:', fileWithId.file.name);
+          return;
+        }
+        if (!fileWithId.file.type.startsWith('image/')) {
+          console.warn('⚠️ [URLs] File is not an image:', fileWithId.file.name, fileWithId.file.type);
+          return;
+        }
+        
+        // Check if file is too large (might cause memory issues)
+        if (fileWithId.file.size > 50 * 1024 * 1024) { // 50MB
+          console.warn('⚠️ [URLs] File is very large, may cause issues:', fileWithId.file.name, fileWithId.file.size);
+          // Still try to create URL, but warn user
+        }
+        
+        try {
+          fileWithId.url = URL.createObjectURL(fileWithId.file);
+          console.log(`✅ [URLs] Created URL ${idx + 1}/${files.length} for:`, fileWithId.file.name, {
+            size: (fileWithId.file.size / 1024 / 1024).toFixed(2) + 'MB',
+            type: fileWithId.file.type
+          });
+        } catch (error) {
+          console.error('❌ [URLs] Failed to create URL for:', fileWithId.file.name, error);
+          // Try to provide helpful error message
+          if (error instanceof DOMException) {
+            console.error('   DOMException details:', error.message, error.name);
+          }
+        }
+      } else if (fileWithId.url) {
+        // URL already exists - don't test it, just use it
+        // Testing URLs causes them to be revoked prematurely
+        console.log(`✅ [URLs] URL already exists for:`, fileWithId.file.name);
+      }
+    });
+
+    // Update ref for next comparison
+    prevFilesRef.current = files;
+    
+    // Only cleanup on unmount
     return () => {
-      imageUrls.forEach(url => URL.revokeObjectURL(url));
+      // Only cleanup on component unmount, not on every files change
+      console.log('🧹 [URLs] Component unmounting, cleaning up all URLs');
     };
-  }, [files]); // Depend on files array to cleanup when files change
+  }, [files]); // Re-run when files array changes
+
+  // Helper to get image URL (prioritize data URL for reliability)
+  const getImageUrl = useCallback((fileWithId: FileWithId): string => {
+    if (!fileWithId.file) {
+      if (!fileWithId._errorLogged) {
+        console.error('❌ [getImageUrl] File object is missing for:', fileWithId.id);
+        fileWithId._errorLogged = true;
+      }
+      return '';
+    }
+    
+    // Validate file
+    if (fileWithId.file.size === 0) {
+      if (!fileWithId._errorLogged) {
+        console.error('❌ [getImageUrl] File has zero size:', fileWithId.file.name);
+        fileWithId._errorLogged = true;
+      }
+      return '';
+    }
+    
+    // PRIORITIZE data URL - most reliable for converted files
+    if (fileWithId.dataUrl) {
+      return fileWithId.dataUrl;
+    }
+    
+    // Fallback to blob URL if data URL doesn't exist
+    if (fileWithId.url && fileWithId._urlType === 'blob') {
+      return fileWithId.url;
+    }
+    
+    // Try to create data URL if neither exists (most reliable)
+    if (!fileWithId.dataUrl) {
+      // Note: This is async, so we'll trigger it but return empty for now
+      // The error handler will create it
+      console.warn('⚠️ [getImageUrl] No data URL available, will create on error:', fileWithId.file.name);
+    }
+    
+    // Return whatever we have (empty string will trigger error handler)
+    return fileWithId.dataUrl || fileWithId.url || '';
+  }, []);
 
   // Show success screen after posting
   if (postSuccess && postResult) {
@@ -1419,6 +2068,19 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                     <span className="text-xs text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/20 px-2 py-1 rounded-full">
                       {selectedFiles.length}/4 selected
                     </span>
+                    {files.length > 0 && (
+                      <button
+                        onClick={() => {
+                          console.log('🗑️ Clearing all files');
+                          setFiles([]);
+                          setSelectedFiles([]);
+                          setRenderKey(prev => prev + 1);
+                        }}
+                        className="text-xs text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 px-2 py-1 rounded border border-red-300 dark:border-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                      >
+                        Clear All ({files.length})
+                      </button>
+                    )}
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {files.map((fileWithId, index) => {
@@ -1522,16 +2184,249 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                           data-file-index={index}
                         >
                           {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={imageUrls[index]}
-                            alt={`Preview ${index + 1}`}
-                            draggable={false}
-                            className={`w-full h-20 object-cover rounded-lg transition-all ${
-                              isSelected ? 'ring-2 ring-blue-500 opacity-100' : 'opacity-70 hover:opacity-100'
-                            }`}
-                            onError={() => console.error('Image failed to load:', fileWithId.file.name)}
-                            onLoad={() => {}}
-                          />
+                          {fileWithId.file && fileWithId.file.size > 0 && !fileWithId._corrupted ? (
+                            <img
+                              key={`img-${fileWithId.id}-${renderKey}`}
+                              src={getImageUrl(fileWithId) || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2VlZSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiM5OTkiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5Mb2FkaW5nLi4uPC90ZXh0Pjwvc3ZnPg=='}
+                              alt={`Preview ${index + 1}`}
+                              draggable={false}
+                              className={`w-full h-20 object-cover rounded-lg transition-all ${
+                                isSelected ? 'ring-2 ring-blue-500 opacity-100' : 'opacity-70 hover:opacity-100'
+                              }`}
+                              onError={async (e) => {
+                                const imgElement = e.currentTarget;
+                                if (!imgElement || !fileWithId || !fileWithId.file) {
+                                  console.error('❌ Image error handler: Missing element or file data');
+                                  return;
+                                }
+                                
+                                const fileName = fileWithId.file?.name || 'unknown';
+                                
+                                // Only log once per file to avoid spam
+                                if (!fileWithId._errorLogged) {
+                                  console.error('❌ Image failed to load:', fileName, {
+                                    size: fileWithId.file?.size,
+                                    type: fileWithId.file?.type,
+                                    url: fileWithId.url?.substring(0, 50) + '...',
+                                    urlType: fileWithId._urlType,
+                                    hasDataUrl: !!fileWithId.dataUrl,
+                                    currentSrc: imgElement.src?.substring(0, 50) + '...'
+                                  });
+                                  fileWithId._errorLogged = true;
+                                }
+                                
+                                // Don't retry if we've already tried - prevents infinite loop
+                                if (fileWithId._retryCount && fileWithId._retryCount > 2) {
+                                  console.warn('⚠️ Max retries reached for:', fileName);
+                                  // Mark as corrupted and hide
+                                  fileWithId._corrupted = true;
+                                  imgElement.style.display = 'none';
+                                  setRenderKey(prev => prev + 1);
+                                  return;
+                                }
+                                
+                                // Check if this is a HEIC file that needs conversion
+                                const isHeic = fileName.toLowerCase().match(/\.(heic|heif)$/i) || 
+                                              fileWithId.file.type === 'image/heic' || 
+                                              fileWithId.file.type === 'image/heif';
+                                
+                                // If it's HEIC, try to convert it first
+                                if (isHeic && !fileWithId._heicConverted) {
+                                  console.log('🔄 Converting HEIC file in error handler for:', fileName);
+                                  try {
+                                    // Dynamic import to avoid SSR issues
+                                    const heic2any = (await import('heic2any')).default;
+                                    const convertedBlob = await heic2any({
+                                      blob: fileWithId.file,
+                                      toType: 'image/jpeg',
+                                      quality: 0.92
+                                    });
+                                    const blob = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
+                                    const jpegName = fileName.replace(/\.(heic|heif)$/i, '.jpg');
+                                    
+                                    // Create data URL from converted blob
+                                    const reader = new FileReader();
+                                    fileWithId.dataUrl = await new Promise<string>((resolve, reject) => {
+                                      const timeout = setTimeout(() => reject(new Error('Timeout')), 10000);
+                                      reader.onload = () => {
+                                        clearTimeout(timeout);
+                                        resolve(reader.result as string);
+                                      };
+                                      reader.onerror = () => {
+                                        clearTimeout(timeout);
+                                        reject(new Error('Read failed'));
+                                      };
+                                      reader.readAsDataURL(blob);
+                                    });
+                                    
+                                    // Update the file object
+                                    fileWithId.file = new File([blob], jpegName, {
+                                      type: 'image/jpeg',
+                                      lastModified: fileWithId.file.lastModified
+                                    });
+                                    fileWithId._urlType = 'data';
+                                    fileWithId._heicConverted = true;
+                                    fileWithId._retryCount = (fileWithId._retryCount || 0) + 1;
+                                    
+                                    // Update image src
+                                    if (imgElement && fileWithId.dataUrl) {
+                                      imgElement.src = fileWithId.dataUrl;
+                                      console.log('✅ Converted HEIC and switched to data URL for:', fileName);
+                                      setRenderKey(prev => prev + 1);
+                                      return;
+                                    }
+                                  } catch (heicError) {
+                                    console.error('❌ HEIC conversion failed in error handler:', fileName, heicError);
+                                  }
+                                }
+                                
+                                // ALWAYS try data URL as fallback - it works for ALL file types
+                                if (!fileWithId.dataUrl) {
+                                  console.log('🔄 Creating data URL fallback for:', fileName);
+                                  try {
+                                    fileWithId.dataUrl = await new Promise<string>((resolve, reject) => {
+                                      const reader = new FileReader();
+                                      const timeout = setTimeout(() => {
+                                        reject(new Error('FileReader timeout'));
+                                      }, 10000); // Increased timeout for large files
+                                      
+                                      reader.onload = () => {
+                                        clearTimeout(timeout);
+                                        const result = reader.result as string;
+                                        // Validate it's actually an image data URL
+                                        if (result && result.startsWith('data:image/')) {
+                                          resolve(result);
+                                        } else {
+                                          reject(new Error('Invalid image data'));
+                                        }
+                                      };
+                                      reader.onerror = (error) => {
+                                        clearTimeout(timeout);
+                                        reject(error);
+                                      };
+                                      
+                                      try {
+                                        reader.readAsDataURL(fileWithId.file);
+                                      } catch (readError) {
+                                        clearTimeout(timeout);
+                                        reject(readError);
+                                      }
+                                    });
+                                    
+                                    fileWithId._urlType = 'data';
+                                    fileWithId._retryCount = (fileWithId._retryCount || 0) + 1;
+                                    
+                                    // Update image src with data URL immediately
+                                    if (imgElement && imgElement.parentNode && fileWithId.dataUrl) {
+                                      imgElement.src = fileWithId.dataUrl;
+                                      console.log('✅ Switched to data URL for:', fileName);
+                                      // Force re-render
+                                      setRenderKey(prev => prev + 1);
+                                    }
+                                    return;
+                                  } catch (dataError: any) {
+                                    console.error('❌ Data URL creation failed for:', fileName, dataError?.message || dataError);
+                                    // If data URL fails, the file might be corrupted
+                                  }
+                                } else {
+                                  // Data URL already exists but image still failed - try to recreate it
+                                  console.warn('⚠️ Data URL exists but image failed - attempting to recreate:', fileName);
+                                  
+                                  // Validate the existing data URL
+                                  if (fileWithId.dataUrl && !fileWithId.dataUrl.startsWith('data:image/')) {
+                                    console.warn('⚠️ Invalid data URL format, recreating:', fileName);
+                                    fileWithId.dataUrl = undefined; // Clear invalid data URL
+                                  }
+                                  
+                                  // Try to recreate the data URL from the file
+                                  if (!fileWithId._recreatingDataUrl) {
+                                    fileWithId._recreatingDataUrl = true;
+                                    try {
+                                      const newDataUrl = await new Promise<string>((resolve, reject) => {
+                                        const reader = new FileReader();
+                                        const timeout = setTimeout(() => reject(new Error('Timeout')), 15000);
+                                        
+                                        reader.onload = () => {
+                                          clearTimeout(timeout);
+                                          const result = reader.result as string;
+                                          if (result && result.startsWith('data:image/')) {
+                                            resolve(result);
+                                          } else {
+                                            reject(new Error('Invalid image data'));
+                                          }
+                                        };
+                                        reader.onerror = () => {
+                                          clearTimeout(timeout);
+                                          reject(new Error('FileReader failed'));
+                                        };
+                                        reader.readAsDataURL(fileWithId.file);
+                                      });
+                                      
+                                      // Update with new data URL
+                                      fileWithId.dataUrl = newDataUrl;
+                                      fileWithId._urlType = 'data';
+                                      fileWithId._retryCount = (fileWithId._retryCount || 0) + 1;
+                                      
+                                      // Update image src
+                                      if (imgElement && fileWithId.dataUrl) {
+                                        imgElement.src = fileWithId.dataUrl;
+                                        console.log('✅ Recreated data URL for:', fileName);
+                                        setRenderKey(prev => prev + 1);
+                                        fileWithId._recreatingDataUrl = false;
+                                        return;
+                                      }
+                                    } catch (recreateError) {
+                                      console.error('❌ Failed to recreate data URL for:', fileName, recreateError);
+                                      fileWithId._recreatingDataUrl = false;
+                                      
+                                      // If recreation fails, the file is likely corrupted
+                                      // Mark as corrupted and hide
+                                      fileWithId._corrupted = true;
+                                      imgElement.style.display = 'none';
+                                      console.error('❌ File appears to be corrupted after multiple attempts:', fileName);
+                                      
+                                      // Force re-render to show placeholder
+                                      setRenderKey(prev => prev + 1);
+                                    }
+                                  }
+                                }
+                                
+                                // Cleanup blob URL if it exists and failed
+                                if (fileWithId.url && fileWithId._urlType === 'blob') {
+                                  try {
+                                    URL.revokeObjectURL(fileWithId.url);
+                                    delete fileWithId.url;
+                                  } catch (error) {
+                                    // Ignore
+                                  }
+                                }
+                              }}
+                              onLoad={() => {
+                                // Successfully loaded - clear error flag
+                                fileWithId._errorLogged = false;
+                                fileWithId._retryCount = 0;
+                              }}
+                            />
+                          ) : fileWithId._corrupted ? (
+                            <div className="w-full h-20 bg-red-100 dark:bg-red-900/20 rounded-lg flex flex-col items-center justify-center text-xs text-red-600 dark:text-red-400 border border-red-300 dark:border-red-700">
+                              <span className="text-lg mb-1">⚠️</span>
+                              <span>Corrupted</span>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setFiles(prev => prev.filter(f => f.id !== fileWithId.id));
+                                  setSelectedFiles(prev => prev.filter(f => f.id !== fileWithId.id));
+                                }}
+                                className="mt-1 text-xs underline hover:no-underline"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="w-full h-20 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center text-xs text-gray-500">
+                              Invalid file
+                            </div>
+                          )}
                           
                           {/* Selection Checkbox - appears on hover */}
                           <button
@@ -1874,9 +2769,12 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                   value={carDetails.city || ''}
                   onChange={(e) => setCarDetails(prev => ({ ...prev, city: e.target.value }))}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Enter city"
+                  placeholder="Enter city (auto-filled from profile)"
                   required
                 />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  💡 Set your default city in your profile settings
+                </p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -1885,11 +2783,19 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                 <input
                   type="text"
                   value={carDetails.zipCode || ''}
-                  onChange={(e) => setCarDetails(prev => ({ ...prev, zipCode: e.target.value }))}
+                  onChange={(e) => {
+                    // Only allow numbers, max 5 digits
+                    const value = e.target.value.replace(/[^0-9]/g, '').slice(0, 5);
+                    setCarDetails(prev => ({ ...prev, zipCode: value }));
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Enter zip code"
+                  placeholder="Enter zip code (auto-filled from profile)"
+                  maxLength={5}
                   required
                 />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  💡 Set your default zip code in your profile settings
+                </p>
               </div>
             </div>
 
@@ -1897,13 +2803,43 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 About the Vehicle
               </label>
+              
+              {/* User Presets - Quick Select Buttons */}
+              {userPresets.length > 0 && (
+                <div className="mb-2">
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">💡 Your saved phrases (click to add):</p>
+                  <div className="flex flex-wrap gap-2">
+                    {userPresets.map((preset, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => {
+                          const currentText = carDetails.aboutVehicle || '';
+                          const newText = currentText 
+                            ? `${currentText}, ${preset.preset_value}`
+                            : preset.preset_value;
+                          setCarDetails(prev => ({ ...prev, aboutVehicle: newText }));
+                        }}
+                        className="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
+                        title={`Used ${preset.usage_count} time${preset.usage_count > 1 ? 's' : ''}`}
+                      >
+                        {preset.preset_value} ({preset.usage_count})
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
               <textarea
                 value={carDetails.aboutVehicle}
                 onChange={(e) => setCarDetails(prev => ({ ...prev, aboutVehicle: e.target.value }))}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 rows={4}
-                placeholder={`Tell us about the vehicle's condition, features, history, or any important details...${carDetails.titleStatus === 'rebuilt' && titleRebuildExplanation ? `\n\nTitle Rebuild: ${titleRebuildExplanation}` : ''}`}
+                placeholder={`Tell us about the vehicle's condition, features, history, or any important details...${carDetails.titleStatus === 'rebuilt' && titleRebuildExplanation ? `\n\nTitle Rebuild: ${titleRebuildExplanation}` : ''}\n\n💡 Accorria learns from your input - common phrases will appear as quick-select buttons next time`}
               />
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                💡 Accorria learns from your input - common phrases will appear as quick-select buttons next time
+              </p>
             </div>
 
             {/* Price Warning Display (above pricing tiers) */}
@@ -2053,6 +2989,30 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                           </div>
                         </div>
                       </button>
+                      
+                      {/* Use My Original Price Button */}
+                      {carDetails.price && parseInt(carDetails.price) > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedPricingTier('original')}
+                          className={`p-4 rounded-lg border-2 transition-all min-h-[80px] active:scale-95 touch-manipulation ${
+                            selectedPricingTier === 'original' 
+                              ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20 shadow-lg' 
+                              : 'border-gray-200 dark:border-gray-600 hover:border-orange-300 active:border-orange-400 bg-white dark:bg-gray-800'
+                          }`}
+                        >
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <div className="font-bold text-orange-600 dark:text-orange-400">💰 Use My Price</div>
+                              <div className="text-sm text-gray-600 dark:text-gray-400">Keep your original price</div>
+                            </div>
+                            <div className="text-right">
+                              <div className="font-bold text-lg text-gray-900 dark:text-white">${parseInt(carDetails.price || '0').toLocaleString()}</div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400">Your price</div>
+                            </div>
+                          </div>
+                        </button>
+                      )}
                     </div>
                   );
                 })()}
