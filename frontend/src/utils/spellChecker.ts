@@ -14,7 +14,7 @@ const SPELLING_CORRECTIONS: Record<string, string> = {
   'teo sets': 'two sets', 'tow sets': 'two sets',
   // Automotive terms
   'replased': 'replaced', 'replaed': 'replaced', 'replced': 'replaced', 'replcaed': 'replaced',
-  'transmision': 'transmission', 'transmition': 'transmission',
+  'transmition': 'transmission',
   'condtion': 'condition', 'conditon': 'condition', 'conditio': 'condition',
   'maintainance': 'maintenance', 'maintanance': 'maintenance',
   'excellant': 'excellent', 'excelent': 'excellent',
