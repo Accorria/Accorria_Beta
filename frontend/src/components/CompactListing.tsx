@@ -15,7 +15,7 @@ interface Listing {
   status?: string;
   make?: string;
   model?: string;
-  year?: string;
+  year?: number | string; // Accept both number and string for compatibility
 }
 
 interface CompactListingProps {
@@ -34,7 +34,8 @@ export default function CompactListing({ listing }: CompactListingProps) {
   ) || '/placeholder-car.jpg';
 
   // Extract key info from title or use make/model/year
-  const displayTitle = listing.title || `${listing.year || ''} ${listing.make || ''} ${listing.model || ''}`.trim();
+  const yearString = listing.year ? String(listing.year) : '';
+  const displayTitle = listing.title || `${yearString} ${listing.make || ''} ${listing.model || ''}`.trim();
 
   return (
     <Link href={`/listings/${listing.id}`}>
