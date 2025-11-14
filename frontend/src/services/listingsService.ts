@@ -48,16 +48,29 @@ export class ListingsService {
   }
 
   private createMockListing(listingData: Omit<Listing, 'id' | 'user_id' | 'created_at' | 'updated_at'>): Listing {
-    // Optimize images: store only metadata (count, names) instead of full base64 data
+    // Preserve ALL image URLs (Supabase URLs, http/https URLs, and data URLs)
+    // We'll only optimize data URLs if localStorage becomes too large
     const imageData = listingData.images || [];
-    const optimizedImages = imageData.map((img, idx) => {
-      // If it's a base64 data URL, replace with metadata
-      if (typeof img === 'string' && img.startsWith('data:')) {
-        // Extract file type and size estimate
-        const sizeEstimate = Math.round(img.length * 0.75); // Base64 is ~33% larger
-        return `placeholder:image${idx + 1}:${sizeEstimate}`;
+    const preservedImages = imageData.map((img, idx) => {
+      // Always preserve valid URLs (Supabase, http, https, and data URLs)
+      if (typeof img === 'string') {
+        if (img.startsWith('http://') || img.startsWith('https://')) {
+          // Keep all HTTP/HTTPS URLs (including Supabase URLs)
+          return img;
+        }
+        if (img.startsWith('data:image/')) {
+          // Keep data URLs - they're needed for display
+          // We'll only optimize them if localStorage quota is exceeded
+          return img;
+        }
+        // If it's a file name (like "image.jpg"), log a warning
+        // File names won't display, but at least we know there should be images
+        if (img.includes('.jpg') || img.includes('.jpeg') || img.includes('.png') || img.includes('.webp')) {
+          console.warn(`⚠️ Image stored as filename instead of URL: ${img}. This image won't display.`);
+          return img;
+        }
       }
-      return img; // Already a URL or reference
+      return img; // Return as-is for any other format
     });
 
     const newListing: Listing = {
@@ -68,7 +81,7 @@ export class ListingsService {
       price: listingData.price,
       platforms: listingData.platforms || ['accorria'],
       status: listingData.status || 'active',
-      images: optimizedImages, // Store metadata only, not full base64
+      images: preservedImages, // Preserve all URLs (Supabase, http/https, and data URLs)
       make: listingData.make,
       model: listingData.model,
       year: listingData.year,
@@ -120,9 +133,17 @@ export class ListingsService {
       this.clearOldListings();
       try {
         // Store only the newest listing with minimal data
+        // If we still have storage issues, optimize data URLs to placeholders
+        const optimizedImages = imageData.map((img, idx) => {
+          if (typeof img === 'string' && img.startsWith('data:image/')) {
+            // Replace data URLs with placeholders only as last resort
+            return `placeholder:image${idx + 1}`;
+          }
+          return img;
+        });
         const minimalListing = {
           ...newListing,
-          images: [`placeholder:${imageData.length} images`], // Just store count
+          images: optimizedImages.length > 0 ? optimizedImages : [`placeholder:${imageData.length} images`],
           description: newListing.description.substring(0, 500) // Truncate description
         };
         localStorage.setItem('demoListings', JSON.stringify([minimalListing]));

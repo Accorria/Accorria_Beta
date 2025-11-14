@@ -1,10 +1,13 @@
 # 📊 Accorria Pricing Strategy (Updated – Sept 2025)
 
-This document outlines the subscription tiers, pricing logic, upsell strategy, and instrumentation for Accorria.
+> **⚠️ DEPRECATED:** This document contains old pricing information.  
+> **✅ See [OFFICIAL_PRICING.md](./OFFICIAL_PRICING.md) for current pricing structure.**
+
+This document is kept for historical reference only. The pricing structure has been updated.
 
 ---
 
-## 💰 Subscription Tiers
+## ⚠️ OLD PRICING (NO LONGER VALID)
 
 ### 🚀 Free Trial
 - **7 days OR 3 posts (whichever comes first)**
@@ -17,7 +20,7 @@ This document outlines the subscription tiers, pricing logic, upsell strategy, a
 
 ---
 
-### ⭐ Starter — $29/mo
+### ⭐ Starter — $29/mo (DEPRECATED)
 - 3 unique posts per month
 - Cross-post to **1 platform only**
 - Basic AI listing generation
@@ -26,7 +29,7 @@ This document outlines the subscription tiers, pricing logic, upsell strategy, a
 
 ---
 
-### 🌟 Solo Hustler — $79/mo (Most Popular)
+### 🌟 Solo Hustler — $79/mo (DEPRECATED)
 - **10 posts per month**  
 - Full cross-posting (FB, OfferUp, Craigslist)  
 - Messenger bot access (limited chats)  
@@ -39,7 +42,7 @@ This document outlines the subscription tiers, pricing logic, upsell strategy, a
 
 ---
 
-### 🏆 Dealer Pro — $249/mo
+### 🏆 Dealer Pro — $249/mo (DEPRECATED)
 - All Solo features  
 - **Unlimited posts**  
 - Multiple team seats (3 included, $15/additional seat)  
@@ -49,7 +52,16 @@ This document outlines the subscription tiers, pricing logic, upsell strategy, a
 - Priority support  
 
 💡 *Positioning:* Enterprise-level → dealerships, bulk sellers, serious hustlers.  
-💡 *Psychology:* $249 feels premium but fair compared to staffing costs + time saved.  
+💡 *Psychology:* $249 feels premium but fair compared to staffing costs + time saved.
+
+---
+
+## ✅ CURRENT PRICING
+
+**See [OFFICIAL_PRICING.md](./OFFICIAL_PRICING.md) for the real pricing structure:**
+- **Individuals:** $500
+- **Dealers:** $500 - $1,200/month
+- **Transaction Fees:** 1% - 1.5% per verified transaction  
 
 ---
 

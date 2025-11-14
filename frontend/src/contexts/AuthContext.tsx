@@ -43,8 +43,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Check for existing session on mount
   useEffect(() => {
     const getSession = async () => {
+      // Add timeout to prevent infinite loading
+      const timeoutId = setTimeout(() => {
+        console.warn('Session check timeout - setting loading to false');
+        setLoading(false);
+      }, 5000); // 5 second timeout
+
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
+        clearTimeout(timeoutId);
         
         // Handle refresh token errors gracefully
         if (error) {
@@ -67,6 +74,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setIsEmailVerified(session?.user?.email_confirmed_at ? true : false);
         setLoading(false);
       } catch (error) {
+        clearTimeout(timeoutId);
         console.error('Error getting session:', error);
         // Clear session on any error
         await supabase.auth.signOut();

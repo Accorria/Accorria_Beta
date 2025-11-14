@@ -57,12 +57,22 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
     return date.toLocaleDateString();
   };
 
+  // Filter out invalid image URLs
+  const validImages = listing.images.filter(image => 
+    image && (
+      image.startsWith('http://') || 
+      image.startsWith('https://') || 
+      image.startsWith('data:image/') ||
+      image.startsWith('/')
+    )
+  );
+
   const nextPhoto = () => {
-    setCurrentPhotoIndex((prev) => (prev + 1) % listing.images.length);
+    setCurrentPhotoIndex((prev) => (prev + 1) % validImages.length);
   };
 
   const prevPhoto = () => {
-    setCurrentPhotoIndex((prev) => (prev - 1 + listing.images.length) % listing.images.length);
+    setCurrentPhotoIndex((prev) => (prev - 1 + validImages.length) % validImages.length);
   };
 
   return (
@@ -77,28 +87,48 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
               setShowPhotoGallery(true);
             }}
           >
-          {listing.images.slice(0, 2).map((image, index) => (
-            <div key={index} className="relative">
-              <Image
-                src={image}
-                alt={`${listing.title} - Image ${index + 1}`}
-                className="w-full h-full object-cover rounded-lg"
-                width={200}
-                height={150}
-              />
-              {index === 1 && listing.images.length > 2 && (
-                <div className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center rounded-lg">
-                  <span className="text-white font-bold text-xs sm:text-sm">
-                    +{listing.images.length - 2}
-                  </span>
-                </div>
-              )}
-            </div>
-          ))}
+          {listing.images.slice(0, 2).map((image, index) => {
+            // Check if image is a valid URL or data URL
+            const isValidImage = image && (
+              image.startsWith('http://') || 
+              image.startsWith('https://') || 
+              image.startsWith('data:image/') ||
+              image.startsWith('/')
+            );
+            
+            // Fallback image if invalid
+            const imageSrc = isValidImage ? image : '/placeholder-car.jpg';
+            
+            return (
+              <div key={index} className="relative">
+                {isValidImage ? (
+                  <Image
+                    src={imageSrc}
+                    alt={`${listing.title} - Image ${index + 1}`}
+                    className="w-full h-full object-cover rounded-lg"
+                    width={200}
+                    height={150}
+                    unoptimized={image.startsWith('data:image/')}
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center">
+                    <span className="text-gray-400 text-xs">No Image</span>
+                  </div>
+                )}
+                {index === 1 && listing.images.length > 2 && (
+                  <div className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center rounded-lg">
+                    <span className="text-white font-bold text-xs sm:text-sm">
+                      +{listing.images.length - 2}
+                    </span>
+                  </div>
+                )}
+              </div>
+            );
+          })}
           </div>
         </Link>
         <div className="absolute bottom-1 right-1 sm:bottom-2 sm:right-2 bg-black bg-opacity-70 text-white text-xs px-1 py-0.5 sm:px-2 sm:py-1 rounded">
-          Click to view all {listing.images.length} photos
+          Click to view all {validImages.length} photos
         </div>
       </div>
 
@@ -304,20 +334,27 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
             
             {/* Photo Counter */}
             <div className="absolute top-4 left-4 text-white text-sm z-10">
-              {currentPhotoIndex + 1} of {listing.images.length}
+              {currentPhotoIndex + 1} of {validImages.length}
             </div>
             
             {/* Main Image */}
-            <Image
-              src={listing.images[currentPhotoIndex]}
-              alt={`${listing.title} - Photo ${currentPhotoIndex + 1}`}
-              className="max-w-full max-h-full object-contain"
-              width={800}
-              height={600}
-            />
+            {(() => {
+              const currentImage = validImages[currentPhotoIndex] || validImages[0] || '/placeholder-car.jpg';
+              
+              return (
+                <Image
+                  src={currentImage}
+                  alt={`${listing.title} - Photo ${currentPhotoIndex + 1}`}
+                  className="max-w-full max-h-full object-contain"
+                  width={800}
+                  height={600}
+                  unoptimized={currentImage.startsWith('data:image/')}
+                />
+              );
+            })()}
             
             {/* Navigation Buttons */}
-            {listing.images.length > 1 && (
+            {validImages.length > 1 && (
               <>
                 <button
                   onClick={prevPhoto}
@@ -336,7 +373,7 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
             
             {/* Thumbnail Strip */}
             <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2 z-10">
-              {listing.images.map((image, index) => (
+              {validImages.map((image, index) => (
                 <button
                   key={index}
                   onClick={() => setCurrentPhotoIndex(index)}
@@ -613,46 +650,109 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
                 Cancel
               </button>
               <button
-                onClick={() => {
+                onClick={async () => {
                   console.log('Delete button clicked for listing:', listing.id);
                   
-                  // Store deleted listing in analytics
-                  const deletedListing = {
-                    ...listing,
-                    deletedAt: new Date().toISOString(),
-                    action: 'deleted'
-                  };
-                  
                   try {
-                    const existingAnalytics = JSON.parse(localStorage.getItem('listingAnalytics') || '[]');
-                    existingAnalytics.push(deletedListing);
-                    
-                    // Keep only last 10 analytics entries to prevent quota issues
-                    const trimmedAnalytics = existingAnalytics.slice(-10);
-                    localStorage.setItem('listingAnalytics', JSON.stringify(trimmedAnalytics));
-                    console.log('Analytics updated:', trimmedAnalytics);
-                  } catch (error) {
-                    console.warn('Could not save analytics (quota exceeded):', error);
-                    // Clear all analytics data to free up space
-                    try {
-                      localStorage.removeItem('listingAnalytics');
-                      localStorage.removeItem('demoListings');
-                      localStorage.removeItem('testListings');
-                      console.log('Cleared localStorage to free up space');
-                    } catch (clearError) {
-                      console.error('Failed to clear localStorage:', clearError);
+                    // Delete images from Supabase Storage first
+                    if (listing.images && listing.images.length > 0) {
+                      try {
+                        const { supabase } = await import('@/utils/supabase');
+                        const imagesToDelete: string[] = [];
+                        
+                        for (const imageUrl of listing.images) {
+                          // Extract file path from Supabase Storage URL
+                          // Format: https://[project].supabase.co/storage/v1/object/public/car-images/listings/[filename]
+                          if (imageUrl.includes('/storage/v1/object/public/car-images/')) {
+                            const urlParts = imageUrl.split('/car-images/');
+                            if (urlParts.length > 1) {
+                              const filePath = urlParts[1];
+                              imagesToDelete.push(filePath);
+                              console.log('Preparing to delete image:', filePath);
+                            }
+                          } else if (imageUrl.startsWith('data:image/')) {
+                            // Skip data URLs (they're not in storage)
+                            console.log('Skipping data URL image');
+                          }
+                        }
+                        
+                        // Delete all images at once
+                        if (imagesToDelete.length > 0) {
+                          console.log('Deleting', imagesToDelete.length, 'images from Supabase Storage...');
+                          const { error: deleteError, data } = await supabase.storage
+                            .from('car-images')
+                            .remove(imagesToDelete);
+                          
+                          if (deleteError) {
+                            console.error('Error deleting images:', deleteError);
+                          } else {
+                            console.log('Successfully deleted', imagesToDelete.length, 'images from storage');
+                          }
+                        }
+                      } catch (storageError) {
+                        console.error('Error deleting images from Supabase Storage:', storageError);
+                        // Continue with listing deletion even if image deletion fails
+                      }
                     }
+                    
+                    // Store deleted listing in analytics
+                    const deletedListing = {
+                      ...listing,
+                      deletedAt: new Date().toISOString(),
+                      action: 'deleted'
+                    };
+                    
+                    try {
+                      const existingAnalytics = JSON.parse(localStorage.getItem('listingAnalytics') || '[]');
+                      existingAnalytics.push(deletedListing);
+                      
+                      // Keep only last 10 analytics entries to prevent quota issues
+                      const trimmedAnalytics = existingAnalytics.slice(-10);
+                      localStorage.setItem('listingAnalytics', JSON.stringify(trimmedAnalytics));
+                      console.log('Analytics updated:', trimmedAnalytics);
+                    } catch (error) {
+                      console.warn('Could not save analytics (quota exceeded):', error);
+                      // Clear all analytics data to free up space
+                      try {
+                        localStorage.removeItem('listingAnalytics');
+                        localStorage.removeItem('demoListings');
+                        localStorage.removeItem('testListings');
+                        console.log('Cleared localStorage to free up space');
+                      } catch (clearError) {
+                        console.error('Failed to clear localStorage:', clearError);
+                      }
+                    }
+                    
+                    // Remove the listing from active listings (check both storage keys)
+                    const testListings = JSON.parse(localStorage.getItem('testListings') || '[]');
+                    const demoListings = JSON.parse(localStorage.getItem('demoListings') || '[]');
+                    
+                    console.log('Existing listings before delete:', { testListings: testListings.length, demoListings: demoListings.length });
+                    
+                    const updatedTestListings = testListings.filter((l: Listing) => l.id !== listing.id);
+                    const updatedDemoListings = demoListings.filter((l: Listing) => l.id !== listing.id);
+                    
+                    localStorage.setItem('testListings', JSON.stringify(updatedTestListings));
+                    localStorage.setItem('demoListings', JSON.stringify(updatedDemoListings));
+                    
+                    console.log('Updated listings after delete:', { testListings: updatedTestListings.length, demoListings: updatedDemoListings.length });
+                    
+                    // Also try to delete from database via listingsService
+                    try {
+                      const { listingsService } = await import('@/services/listingsService');
+                      await listingsService.deleteListing(listing.id);
+                    } catch (dbError) {
+                      console.log('Database delete not needed or failed (listing was in localStorage):', dbError);
+                    }
+                    
+                    setShowDeleteConfirm(false);
+                    // Force a page reload to refresh the listings
+                    window.location.reload();
+                  } catch (error) {
+                    console.error('Error during deletion:', error);
+                    alert('Error deleting listing. Please try again.');
+                    setShowDeleteConfirm(false);
                   }
-                  
-                  // Remove the listing from active listings
-                  const existingListings = JSON.parse(localStorage.getItem('testListings') || '[]');
-                  console.log('Existing listings before delete:', existingListings);
-                  const updatedListings = existingListings.filter((l: Listing) => l.id !== listing.id);
-                  localStorage.setItem('testListings', JSON.stringify(updatedListings));
-                  console.log('Updated listings after delete:', updatedListings);
-                  
-                  setShowDeleteConfirm(false);
-                  window.location.reload();
                 }}
                 className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
               >

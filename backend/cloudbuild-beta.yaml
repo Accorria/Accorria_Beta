@@ -37,7 +37,7 @@ steps:
       - '--concurrency'
       - '80'
       - '--set-env-vars'
-      - 'CLOUDBUILD=true,PORT=8000,ALLOWED_ORIGINS=["http://localhost:3000","https://accorria.com","https://www.accorria.com","https://accorria.vercel.app"]'
+      - 'CLOUDBUILD=true,PORT=8000'
       - '--service-account'
       - '19949436301-compute@developer.gserviceaccount.com'
 

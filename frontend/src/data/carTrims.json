@@ -94,6 +94,13 @@
     "Frontier": ["S", "SV", "Pro-4X", "Pro-X", "SL"],
     "Armada": ["SV", "SL", "Platinum"]
   },
+  "Mini": {
+    "Cooper": ["Base", "S", "John Cooper Works", "JCW", "Convertible", "Clubman", "Countryman"],
+    "Countryman": ["Base", "S", "ALL4", "John Cooper Works", "JCW"],
+    "Clubman": ["Base", "S", "John Cooper Works", "JCW"],
+    "Convertible": ["Base", "S", "John Cooper Works", "JCW"],
+    "Electric": ["SE", "Signature"]
+  },
   "Hyundai": {
     "Elantra": ["SE", "SEL", "Limited", "N Line", "N"],
     "Sonata": ["SE", "SEL", "Limited", "N Line"],
@@ -147,6 +154,19 @@
     "CX-5": ["S", "Select", "Preferred", "Carbon Edition", "Premium", "Turbo", "Signature"],
     "Mazda3": ["2.5 S", "2.5 S Select", "2.5 S Preferred", "Carbon Edition", "2.5 Turbo", "2.5 Turbo Premium Plus"],
     "CX-9": ["Sport", "Touring", "Grand Touring", "Signature"]
+  },
+  "Infiniti": {
+    "Q30": ["Base", "Premium", "Luxury"],
+    "Q40": ["Base", "Premium"],
+    "Q50": ["Pure", "Luxe", "Sport", "Red Sport 400", "3.0t", "3.0t Sport", "3.0t Red Sport 400", "Hybrid", "Hybrid Sport"],
+    "Q60": ["Pure", "Luxe", "Sport", "Red Sport 400", "3.0t", "3.0t Sport", "3.0t Red Sport 400"],
+    "Q70": ["3.7", "3.7 Sport", "5.6", "5.6 Sport", "Hybrid", "Hybrid Sport"],
+    "QX30": ["Base", "Premium", "Luxury", "Sport"],
+    "QX50": ["Pure", "Luxe", "Essential", "Sensory", "Autograph"],
+    "QX55": ["Essential", "Sensory", "Autograph"],
+    "QX60": ["Pure", "Luxe", "Essential", "Sensory", "Autograph"],
+    "QX70": ["3.7", "3.7 Sport", "5.0", "5.0 Sport"],
+    "QX80": ["Base", "Luxury", "Premium Select", "Sensory", "Autograph"]
   }
 }
 

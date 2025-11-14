@@ -10,6 +10,7 @@ import { getBackendUrl, API_ENDPOINTS } from '@/config/api';
 import { ListingsService } from '@/services/listingsService';
 import FacebookOAuth2 from '@/components/FacebookOAuth2';
 import { authenticatedFetch } from '@/utils/api';
+import { correctSpelling } from '@/utils/spellChecker';
 const carData = carDataRaw as Record<string, string[]>;
 const carTrims = carTrimsRaw as Record<string, Record<string, string[]>>;
 
@@ -148,6 +149,7 @@ interface FileWithId {
   _heicConverted?: boolean; // Track if HEIC file was already converted
   _recreatingDataUrl?: boolean; // Track if we're recreating data URL
   _originalHeicFile?: File; // Store original HEIC file if converted
+  isVinImage?: boolean; // Mark image as VIN-only (excluded from Facebook posts)
 }
 
 export default function CreateListing({ onClose, onListingCreated }: CreateListingProps) {
@@ -1129,8 +1131,18 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
       });
     }
     
-    // Add standard features if no detected features
-    if (!analysisResult.data?.features_detected) {
+    // Add standard features ONLY if no detected features AND no VIN lookup was performed
+    // (VIN lookup would have added real features, so we don't want to add defaults in that case)
+    const hasDetectedFeatures = analysisResult.data?.features_detected?.car_features && 
+      (analysisResult.data.features_detected.car_features.technology?.length > 0 ||
+       analysisResult.data.features_detected.car_features.interior?.length > 0 ||
+       analysisResult.data.features_detected.car_features.exterior?.length > 0);
+    
+    const hasFeaturesFromAnalysis = analysisResult.detected?.features && 
+      analysisResult.detected.features.length > 0;
+    
+    // Only use default features if truly no features were detected (not from images, not from VIN)
+    if (!hasDetectedFeatures && !hasFeaturesFromAnalysis) {
       description += `• Touchscreen infotainment system\n`;
       description += `• Bluetooth + Backup camera\n`;
       description += `• Heated seats\n`;
@@ -1401,12 +1413,37 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
       // Use enhanced analysis endpoint for comprehensive image analysis
       const formData = new FormData();
       
-      // Add selected images for analysis
+      // Apply comprehensive spelling correction to aboutVehicle before sending
+      const correctedAboutVehicle = correctSpelling(carDetails.aboutVehicle || '');
+      
+      // Add ALL selected images for analysis (including VIN images - they're used for analysis but excluded from posting)
+      // VIN images should be analyzed to extract VIN and get vehicle features
       selectedFiles.forEach((fileWithId) => {
         formData.append('images', fileWithId.file);
+        console.log(`📤 [ANALYZE] Adding image for analysis: ${fileWithId.file.name}${fileWithId.isVinImage ? ' (VIN image - for analysis only)' : ''}`);
       });
       
-      // Add car details
+      // Also include VIN images that might not be in selectedFiles but are marked as VIN
+      // This ensures VIN images are always analyzed
+      files.forEach((fileWithId) => {
+        if (fileWithId.isVinImage && !selectedFiles.some(f => f.id === fileWithId.id)) {
+          formData.append('images', fileWithId.file);
+          console.log(`📤 [ANALYZE] Adding VIN image for analysis: ${fileWithId.file.name}`);
+        }
+      });
+      
+      // Extract VIN from aboutVehicle if present
+      const extractVIN = (text: string): string | null => {
+        if (!text) return null;
+        // VIN pattern: 17 alphanumeric characters (excluding I, O, Q)
+        const vinPattern = /\b([A-HJ-NPR-Z0-9]{17})\b/;
+        const match = text.toUpperCase().match(vinPattern);
+        return match ? match[1] : null;
+      };
+      
+      const extractedVIN = extractVIN(correctedAboutVehicle);
+      
+      // Add car details (with corrected spelling)
       formData.append('make', carDetails.make || '');
       formData.append('model', carDetails.model || '');
       formData.append('trim', carDetails.trim || '');
@@ -1415,7 +1452,11 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
       formData.append('price', carDetails.price || '');
       formData.append('lowestPrice', carDetails.lowestPrice || '');
       formData.append('titleStatus', carDetails.titleStatus || '');
-      formData.append('aboutVehicle', carDetails.aboutVehicle || '');
+      formData.append('aboutVehicle', correctedAboutVehicle);
+      if (extractedVIN) {
+        formData.append('vin', extractedVIN);
+        console.log('🔍 [ANALYZE] Extracted VIN from aboutVehicle:', extractedVIN);
+      }
       
       console.log('📤 [ANALYZE] Sending analysis request with:', {
         files: selectedFiles.length,
@@ -1482,6 +1523,28 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
           generatedDescription = analysisResult.post_text;
           console.log('✅ [ANALYZE] Using AI-generated post text from backend');
           console.log('📝 [ANALYZE] Post text preview:', generatedDescription.substring(0, 200));
+          console.log('🔍 [ANALYZE] Full post_text length:', generatedDescription.length);
+          console.log('🔍 [ANALYZE] Features in post_text?', generatedDescription.includes('Features & Equipment'));
+          console.log('🔍 [ANALYZE] Detected features from backend:', analysisResult.detected?.features);
+          
+          // DEBUG: Log Gemini Vision detection results
+          if (analysisResult.detected?.debug_gemini_detection) {
+            const debug = analysisResult.detected.debug_gemini_detection;
+            console.log('🔍 ===== GEMINI VISION DETECTION RESULTS (from backend) =====');
+            console.log('📋 Features detected by Gemini:', Object.keys(debug.features_detected || {}));
+            console.log('📋 Features present (✅) vs absent (❌):');
+            Object.entries(debug.features_detected || {}).forEach(([name, data]: [string, any]) => {
+              const icon = data.present ? '✅' : '❌';
+              console.log(`  ${icon} ${name}: present=${data.present}, confidence=${data.confidence?.toFixed(2) || 0}`);
+            });
+            console.log('📋 Badges seen:', debug.badges_seen);
+            console.log('📋 Exterior color:', debug.exterior_color);
+            console.log('📋 Interior color:', debug.interior_color);
+            console.log('📋 Drivetrain detected:', debug.drivetrain_detected);
+            console.log('📋 Features list (extracted):', debug.features_list);
+            console.log('📋 Features list count:', debug.features_list_count);
+            console.log('🔍 ===== END GEMINI VISION DETECTION RESULTS =====');
+          }
         } else if (analysisResult.description) {
           // Use the AI-generated description from backend
           generatedDescription = analysisResult.description;
@@ -1526,13 +1589,55 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
           .replace(/🛞/g, '•')
           .replace(/🌡️/g, '•')
           .replace(/🚗/g, '•');
+        
+        // Apply spelling correction for common misspellings
+        // Additional common automotive misspellings
+        let correctedDescription = cleanedDescription
+          .replace(/\breplased\b/gi, 'replaced') // Fix "replaced" misspellings
+          .replace(/\breplaed\b/gi, 'replaced')
+          .replace(/\breplced\b/gi, 'replaced')
+          .replace(/\breplcaed\b/gi, 'replaced')
+          .replace(/\btransmision\b/gi, 'transmission')
+          .replace(/\btransmision\b/gi, 'transmission')
+          .replace(/\bcondtion\b/gi, 'condition')
+          .replace(/\bconditon\b/gi, 'condition')
+          .replace(/\bmaintainance\b/gi, 'maintenance')
+          .replace(/\bmaintanance\b/gi, 'maintenance')
+          .replace(/\bexcellant\b/gi, 'excellent')
+          .replace(/\bexcelent\b/gi, 'excellent')
+          .replace(/\binterior\b/gi, 'interior')
+          .replace(/\binteriour\b/gi, 'interior')
+          .replace(/\bexterior\b/gi, 'exterior')
+          .replace(/\bexteriour\b/gi, 'exterior')
+          // Fix "keys" misspellings
+          .replace(/\bkyes\b/gi, 'keys')
+          .replace(/\bkeis\b/gi, 'keys')
+          .replace(/\bkees\b/gi, 'keys')
+          .replace(/\bkeyes\b/gi, 'keys')
+          .replace(/\bteo\b/gi, 'two')
+          .replace(/\btow\b/gi, 'two') // Only if context suggests it's a number
+          .replace(/\bsets of kyes\b/gi, 'sets of keys')
+          .replace(/\bsets of keis\b/gi, 'sets of keys')
+          .replace(/\bsets of kees\b/gi, 'sets of keys')
+          .replace(/\bteo sets\b/gi, 'two sets')
+          // Apply the same comprehensive spelling correction function
+          .replace(/\breplased\b/gi, 'replaced')
+          .replace(/\breplaed\b/gi, 'replaced')
+          .replace(/\breplced\b/gi, 'replaced')
+          .replace(/\btransmision\b/gi, 'transmission')
+          .replace(/\bcondtion\b/gi, 'condition')
+          .replace(/\bconditon\b/gi, 'condition')
+          .replace(/\bmaintainance\b/gi, 'maintenance')
+          .replace(/\bmaintanance\b/gi, 'maintenance')
+          .replace(/\bexcellant\b/gi, 'excellent')
+          .replace(/\bexcelent\b/gi, 'excellent');
 
-        setCarDetails(prev => ({ ...prev, finalDescription: cleanedDescription }));
+        setCarDetails(prev => ({ ...prev, finalDescription: correctedDescription }));
         setShowAnalysis(false); // Hide the analysis results section
         
         console.log('✅ [ANALYZE] Description set in carDetails.finalDescription');
-        console.log('📝 [ANALYZE] Final description length:', cleanedDescription.length, 'chars');
-        console.log('📝 [ANALYZE] Final description preview:', cleanedDescription.substring(0, 200));
+        console.log('📝 [ANALYZE] Final description length:', correctedDescription.length, 'chars');
+        console.log('📝 [ANALYZE] Final description preview:', correctedDescription.substring(0, 200));
       } else {
         console.error('❌ [ANALYZE] Analysis result.success is false');
         console.error('❌ [ANALYZE] Result:', result);
@@ -1678,24 +1783,28 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
         console.log('📝 [FRONTEND] Generated description length:', result.car_analysis?.description?.length || 0);
         
         // Upload images to Supabase Storage and get public URLs
-        const imageUrls: string[] = [];
-        console.log('📤 Starting image upload for', files.length, 'files');
+        // Filter out VIN images - they're used for analysis but not posted to Facebook
+        const filesToPost = files.filter(f => !f.isVinImage);
+        const vinImages = files.filter(f => f.isVinImage);
+        console.log(`📤 Starting image upload: ${filesToPost.length} files to post, ${vinImages.length} VIN images (excluded from posts)`);
         
-        if (files.length === 0) {
-          console.warn('⚠️ No files to upload!');
+        const imageUrls: string[] = [];
+        
+        if (filesToPost.length === 0) {
+          console.warn('⚠️ No files to upload (all may be marked as VIN images)!');
         }
         
         try {
           const { supabase } = await import('@/utils/supabase');
           const timestamp = Date.now();
 
-          for (let i = 0; i < files.length; i++) {
-            const file = files[i].file;
+          for (let i = 0; i < filesToPost.length; i++) {
+            const file = filesToPost[i].file;
             const fileExt = file.name.split('.').pop() || 'jpg';
             const fileName = `${timestamp}-${i}.${fileExt}`;
             const filePath = `listings/${fileName}`;
 
-            console.log(`📤 Uploading image ${i + 1}/${files.length}: ${file.name} -> ${filePath}`);
+            console.log(`📤 Uploading image ${i + 1}/${filesToPost.length}: ${file.name} -> ${filePath}`);
 
             // Upload to Supabase Storage
             const { data: uploadData, error: uploadError } = await supabase.storage
@@ -1728,9 +1837,9 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
           console.log(`✅ Image upload complete: ${imageUrls.length} URLs generated`);
         } catch (error) {
           console.error('❌ Failed to upload images to Supabase:', error);
-          // Fallback: create data URLs from files
+          // Fallback: create data URLs from files (excluding VIN images)
           console.log('🔄 Falling back to data URLs...');
-          for (const fileWithId of files) {
+          for (const fileWithId of filesToPost) {
             const reader = new FileReader();
             const dataUrl = await new Promise<string>((resolve) => {
               reader.onload = () => resolve(reader.result as string);
@@ -1746,6 +1855,22 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
           const { listingsService } = await import('@/services/listingsService');
           const service = listingsService;
           
+          // Ensure we have image URLs - if imageUrls is empty, create data URLs from files
+          let finalImageUrls = imageUrls;
+          if (finalImageUrls.length === 0 && files.length > 0) {
+            console.log('⚠️ No image URLs found, creating data URLs from files as fallback...');
+            finalImageUrls = [];
+            for (const fileWithId of files) {
+              const reader = new FileReader();
+              const dataUrl = await new Promise<string>((resolve) => {
+                reader.onload = () => resolve(reader.result as string);
+                reader.readAsDataURL(fileWithId.file);
+              });
+              finalImageUrls.push(dataUrl);
+            }
+            console.log(`✅ Generated ${finalImageUrls.length} data URLs as fallback`);
+          }
+          
           // Create listing data from the analysis result
           const listingData = {
             title: result.car_analysis?.title || `${result.car_analysis?.year || ''} ${result.car_analysis?.make || ''} ${result.car_analysis?.model || ''}`.trim(),
@@ -1753,7 +1878,7 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
             price: result.car_analysis?.price || parseFloat(carDetails.price) || 0,
             platforms: selectedPlatforms,
             status: 'active' as const,
-            images: imageUrls.length > 0 ? imageUrls : files.map(fileWithId => fileWithId.file.name), // Use uploaded URLs or fallback to file names
+            images: finalImageUrls, // Use uploaded URLs (Supabase or data URLs)
             make: result.car_analysis?.make || carDetails.make,
             model: result.car_analysis?.model || carDetails.model,
             year: result.car_analysis?.year || carDetails.year,
@@ -2456,6 +2581,32 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                               <span className="text-xs text-gray-400">+</span>
                             )}
                           </button>
+                          
+                          {/* VIN Toggle Button */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setFiles(prev => prev.map(f => 
+                                f.id === fileWithId.id ? { ...f, isVinImage: !f.isVinImage } : f
+                              ));
+                            }}
+                            className={`absolute -top-2 left-1 w-6 h-6 rounded-full text-xs flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 ${
+                              fileWithId.isVinImage 
+                                ? 'bg-blue-500 text-white hover:bg-blue-600' 
+                                : 'bg-gray-500 text-white hover:bg-gray-600'
+                            }`}
+                            title={fileWithId.isVinImage ? "VIN image - excluded from Facebook posts" : "Mark as VIN image (excluded from posts)"}
+                          >
+                            {fileWithId.isVinImage ? '🔢' : '📄'}
+                          </button>
+                          
+                          {/* VIN Badge */}
+                          {fileWithId.isVinImage && (
+                            <div className="absolute top-0 right-0 bg-blue-500 text-white text-xs px-1.5 py-0.5 rounded-bl-lg font-semibold">
+                              VIN
+                            </div>
+                          )}
                           
                           {/* Delete Button */}
                           <button

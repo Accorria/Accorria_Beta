@@ -147,11 +147,12 @@ def _normalize_key(payload: Dict[str, Any]) -> str:
     # Sort keys for consistent hashing
     # Exclude price and other fields that shouldn't affect cache hit
     normalized = {
-        "make": payload.get("make", "").lower().strip(),
-        "model": payload.get("model", "").lower().strip(),
+        "make": (payload.get("make") or "").lower().strip(),
+        "model": (payload.get("model") or "").lower().strip(),
         "year": payload.get("year"),
         "mileage": payload.get("mileage"),
-        "location": payload.get("location", "").lower().strip(),
+        "location": (payload.get("location") or "").lower().strip(),
+        "title_status": (payload.get("title_status") or payload.get("titleStatus") or "clean").lower().strip(),
         "analysis_type": payload.get("analysis_type", "comprehensive"),
     }
     

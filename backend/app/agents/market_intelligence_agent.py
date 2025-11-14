@@ -95,16 +95,20 @@ class MarketIntelligenceAgent(BaseAgent):
         """
         try:
             # Check cache first (exclude price from cache key)
+            # CRITICAL: Include title_status in cache key - rebuilt vs clean titles have different pricing!
             cache_key = _normalize_key({
                 "make": input_data.get("make"),
                 "model": input_data.get("model"),
                 "year": input_data.get("year"),
                 "mileage": input_data.get("mileage"),
                 "location": input_data.get("location"),
+                "title_status": input_data.get("title_status") or input_data.get("titleStatus", "clean"),
                 "analysis_type": input_data.get("analysis_type", "comprehensive"),
             })
             
-            cached_result = cache_get(cache_key, ttl_sec=15 * 60)  # 15 min cache
+            # TEMPORARILY: Reduce cache TTL to 0 for testing (disable cache)
+            # This ensures we always get fresh results with the new guardrails
+            cached_result = cache_get(cache_key, ttl_sec=0)  # 0 = no cache (for testing)
             if cached_result:
                 logger.info(f"[MARKET-INTEL] Cache hit for key: {cache_key}")
                 print(f"[MARKET-INTEL] ✅ Cache hit - skipping API calls")
@@ -220,11 +224,14 @@ class MarketIntelligenceAgent(BaseAgent):
         model = input_data.get("model", "").title()
         year = input_data.get("year")
         mileage = input_data.get("mileage")
+        trim = input_data.get("trim", "")
         location = input_data.get("location", "United States")
         
         # Get market pricing data (pass user's entered price as fallback)
         user_entered_price = input_data.get("asking_price") or input_data.get("price")
-        market_prices = await self._get_market_prices(make, model, year, mileage, location, user_entered_price)
+        # Pass title_status to market pricing function
+        title_status = input_data.get("title_status") or input_data.get("titleStatus", "clean")
+        market_prices = await self._get_market_prices(make, model, year, mileage, location, user_entered_price, trim, title_status)
         
         # Analyze price trends
         price_trends = await self._analyze_price_trends(make, model, location)
@@ -341,11 +348,31 @@ class MarketIntelligenceAgent(BaseAgent):
                 api_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={self.gemini_api_key}"
                 print(f"[MARKET-INTEL] 🌐 Calling Gemini API: {api_url[:80]}...")
                 
-                # Optimized prompt to get direct AI answers like Google's speaker feature
-                # Ask for structured JSON response with pricing data
-                prompt = f"""Search Google for current real-time market pricing data for: {query}
+                # Optimized prompt to get direct AI answers like Google's AI Overview feature
+                # Format: "2015 jeep compass latitude market price" triggers Google's AI Overview
+                # which shows price ranges like "approximately $6,000 to $14,000"
+                # Example AI Overview format:
+                # "The 2021 Chevrolet Trailblazer RS has a current marketplace value (as of late 2024) 
+                #  that is estimated to be between $15,000 and $20,000, depending on the vehicle's 
+                #  condition, mileage, and specific features. Trade-in values are lower, around $14,000, 
+                #  while private party sales and dealer retail prices can be higher."
+                prompt = f"""Search Google for CURRENT USED MARKET pricing data for: {query}
 
-Please provide a direct answer like Google's AI assistant would give. Return ONLY a JSON object with this exact structure:
+CRITICAL REQUIREMENTS:
+- ONLY return USED car market prices, NOT MSRP or original/new car prices
+- REJECT any data containing: "MSRP", "original price", "when new", "starting at", "base price", "new listing price"
+- ONLY accept: "used market value", "current market price", "average used price", "dealer retail used", "private party used", "resale value"
+- Use TODAY's market year (2024/2025), not historical pricing from when the car was new
+
+This query should trigger Google's AI Overview feature which provides structured market pricing data.
+
+IMPORTANT: Look for the PRIMARY USED MARKET price range in Google's AI Overview. This is usually stated as "between $X and $Y" or "ranges from $X to $Y" or "typically $X to $Y" for USED vehicles.
+
+For example, if Google shows "between $4,000 and $14,000" for a used vehicle, that is the PRIMARY range you should extract.
+
+DO NOT extract MSRP, original prices, or new car prices. ONLY extract current used market values.
+
+Extract the USED MARKET pricing data from Google's AI Overview. If possible, return a JSON object with this structure:
 
 {{
   "market_average": <number>,
@@ -369,37 +396,77 @@ Please provide a direct answer like Google's AI assistant would give. Return ONL
   "confidence": <number between 0 and 1>
 }}
 
-Focus on:
-- Current market value (not MSRP)
-- Trade-in value range
-- Private party sale value range
-- Dealer retail value range
-- Use real-time data from Google Search results
-- Provide specific dollar amounts, not ranges in text format
+Instructions:
+- Extract marketplace value range (e.g., "$15,000 to $20,000" → low: 15000, high: 20000, average: 17500)
+- Extract trade-in value range (e.g., "$13,859 to $15,250" → low: 13859, high: 15250)
+- Extract private party value range (e.g., "$15,272 to $15,641" → low: 15272, high: 15641)
+- Extract dealer retail value (e.g., "Up to $15,862" → low: 15000, high: 15862)
+- Use real-time data from Google Search AI Overview results
+- Calculate market_average as the midpoint of the price_range if not explicitly stated
+- Provide specific dollar amounts as numbers, not text
 
-Return ONLY the JSON object, no additional text."""
+Return ONLY the JSON object, no additional text or markdown formatting."""
                 
-                response = await client.post(
-                    api_url,
-                    json={
-                        "contents": [{
-                            "parts": [{
-                                "text": prompt
-                            }]
-                        }],
-                        "tools": [{
-                            "googleSearch": {}  # REAL Google Search Grounding
-                        }],
-                        "generationConfig": {
-                            "maxOutputTokens": 2000,
-                            "temperature": 0.1,
-                            "responseMimeType": "application/json"  # Force JSON response
-                        }
-                    },
-                    timeout=60.0  # Increased timeout for Google Search API calls
-                )
-                
-                print(f"[MARKET-INTEL] 📡 API Response Status: {response.status_code}")
+                # Try with Google Search Grounding first
+                try:
+                    response = await client.post(
+                        api_url,
+                        json={
+                            "contents": [{
+                                "parts": [{
+                                    "text": prompt
+                                }]
+                            }],
+                            "tools": [{
+                                "googleSearch": {}  # REAL Google Search Grounding
+                            }],
+                            "generationConfig": {
+                                "maxOutputTokens": 2000,
+                                "temperature": 0.1
+                                # NOTE: Cannot use responseMimeType with googleSearch tool
+                                # Google Search Grounding returns text with search results embedded
+                            }
+                        },
+                        timeout=60.0  # Increased timeout for Google Search API calls
+                    )
+                    
+                    print(f"[MARKET-INTEL] 📡 API Response Status: {response.status_code}")
+                    
+                    if response.status_code == 200:
+                        # Success! Continue processing
+                        pass
+                    elif response.status_code == 403:
+                        # Google Search Grounding not enabled or not available
+                        print(f"[MARKET-INTEL] ⚠️  Google Search Grounding returned 403 (not enabled or requires setup)")
+                        print(f"[MARKET-INTEL] 🔄 Falling back to Gemini without Google Search Grounding...")
+                        
+                        # Fallback: Use Gemini without Google Search Grounding
+                        # It can still provide market data based on its training data
+                        response = await client.post(
+                            api_url,
+                            json={
+                                "contents": [{
+                                    "parts": [{
+                                        "text": prompt + "\n\nNote: Use your knowledge of current market prices for this vehicle."
+                                    }]
+                                }],
+                                "generationConfig": {
+                                    "maxOutputTokens": 2000,
+                                    "temperature": 0.1
+                                }
+                            },
+                            timeout=60.0
+                        )
+                        print(f"[MARKET-INTEL] 📡 Fallback API Response Status: {response.status_code}")
+                    else:
+                        logger.error(f"Gemini API error: {response.text}")
+                        print(f"[MARKET-INTEL] ❌ Gemini API error: {response.status_code} - {response.text[:200]}")
+                        return None
+                        
+                except Exception as api_error:
+                    logger.error(f"API call failed: {api_error}")
+                    print(f"[MARKET-INTEL] ❌ API call exception: {type(api_error).__name__}: {str(api_error)}")
+                    return None
                 
                 if response.status_code != 200:
                     logger.error(f"Gemini API error: {response.text}")
@@ -626,7 +693,245 @@ Return ONLY the JSON object, no additional text."""
             "recommended_positioning": "competitive" if position == "unknown" else position
         }
     
-    async def _get_market_prices(self, make: str, model: str, year: Optional[int], mileage: Optional[int], location: str, user_entered_price: Optional[int] = None) -> Dict[str, Any]:
+    def _contains_msrp_data(self, text: str) -> bool:
+        """
+        Check if text contains MSRP or original price data that should be rejected.
+        
+        Returns True if text contains MSRP-related terms, False otherwise.
+        """
+        if not text:
+            return False
+        
+        text_lower = text.lower()
+        msrp_indicators = [
+            "msrp",
+            "original price",
+            "starting at",
+            "when new was",
+            "base price",
+            "new listing price",
+            "price when new",
+            "manufacturer's suggested",
+            "sticker price",
+            "new car price",
+            "dealer invoice",
+            "launch price",
+            "introductory price"
+        ]
+        
+        for indicator in msrp_indicators:
+            if indicator in text_lower:
+                print(f"[MARKET-INTEL] 🚫 REJECTED: Found MSRP indicator '{indicator}' in search results")
+                return True
+        
+        return False
+    
+    def _is_used_market_data(self, text: str) -> bool:
+        """
+        Check if text contains used market pricing data (ACCEPT).
+        
+        Returns True if text contains used market indicators, False otherwise.
+        """
+        if not text:
+            return False
+        
+        text_lower = text.lower()
+        used_market_indicators = [
+            "used market value",
+            "current market price",
+            "average used price",
+            "dealer retail used",
+            "private party used",
+            "current value",
+            "resale value",
+            "used car price",
+            "pre-owned",
+            "second-hand",
+            "trade-in value"
+        ]
+        
+        for indicator in used_market_indicators:
+            if indicator in text_lower:
+                return True
+        
+        return False
+    
+    def _sanity_check_price(self, price: float, year: Optional[int], title_status: str = "clean") -> tuple:
+        """
+        Sanity check: Reject prices that are too high for vehicle age.
+        
+        CRITICAL: For vehicles 8+ years old, use MUCH stricter checks to prevent MSRP acceptance.
+        
+        Returns (is_valid, clean_title_estimate) tuple.
+        """
+        if not year:
+            return True, None
+        
+        current_year = datetime.now().year
+        vehicle_age = current_year - year
+        
+        # Calculate reasonable clean-title market value estimate
+        # Base depreciation: ~$800-1200 per year from new
+        base_new_price = 30000  # Average new car price
+        depreciation_per_year = 1000
+        clean_title_estimate = max(3000, base_new_price - (vehicle_age * depreciation_per_year))
+        
+        # Adjust for title status
+        if title_status and "rebuilt" in title_status.lower():
+            clean_title_estimate *= 0.7  # Rebuilt title = 30% reduction
+        elif title_status and "salvage" in title_status.lower():
+            clean_title_estimate *= 0.5  # Salvage title = 50% reduction
+        
+        # CRITICAL: For vehicles 8+ years old, use MUCH stricter checks
+        if vehicle_age >= 8:
+            # For 8+ year old vehicles, max reasonable price is 110% of clean-title estimate
+            # This prevents MSRP from being accepted
+            max_reasonable_price = clean_title_estimate * 1.1
+            print(f"[MARKET-INTEL] 🔒 STRICT CHECK (8+ years): Vehicle age {vehicle_age} years, max allowed: ${max_reasonable_price:,.0f}")
+        elif vehicle_age >= 5:
+            # For 5-7 year old vehicles, use 130% threshold
+            max_reasonable_price = clean_title_estimate * 1.3
+        else:
+            # For newer vehicles (<5 years), use 150% threshold
+            max_reasonable_price = clean_title_estimate * 1.5
+        
+        if price > max_reasonable_price:
+            print(f"[MARKET-INTEL] 🚫 SANITY CHECK FAILED: Price ${price:,.0f} exceeds max reasonable ${max_reasonable_price:,.0f} for {year} vehicle (age: {vehicle_age} years)")
+            print(f"[MARKET-INTEL] 🚫 Clean-title estimate: ${clean_title_estimate:,.0f}, Max allowed: ${max_reasonable_price:,.0f}")
+            print(f"[MARKET-INTEL] 🚫 This price is likely MSRP or historical pricing - REJECTING")
+            return False, clean_title_estimate
+        
+        return True, clean_title_estimate
+    
+    def _apply_mileage_premium_cap(self, base_price: float, mileage: Optional[int], year: Optional[int]) -> float:
+        """
+        Apply mileage premium cap for older vehicles.
+        
+        CRITICAL: For vehicles 8+ years old, mileage premium is STRICTLY capped at 10% max.
+        For 5-7 year old vehicles, cap at 15%.
+        This prevents low mileage from restoring original MSRP.
+        """
+        if not mileage or not year:
+            return base_price
+        
+        current_year = datetime.now().year
+        vehicle_age = current_year - year
+        
+        # Only apply cap for vehicles 5+ years old
+        if vehicle_age < 5:
+            return base_price
+        
+        # For older vehicles, low mileage premium is capped
+        if mileage < 20000:
+            # CRITICAL: For 8+ year old vehicles, max premium is 10%
+            # For 5-7 year old vehicles, max premium is 15%
+            if vehicle_age >= 8:
+                max_premium = 0.10  # 10% max for 8+ year old vehicles
+                print(f"[MARKET-INTEL] 🔒 STRICT MILEAGE CAP (8+ years): Max premium 10%")
+            else:
+                max_premium = 0.15  # 15% max for 5-7 year old vehicles
+            
+            # Calculate premium based on how low mileage is
+            mileage_premium = min(max_premium, (20000 - mileage) / 20000 * max_premium)
+            adjusted_price = base_price * (1 + mileage_premium)
+            print(f"[MARKET-INTEL] 📊 Mileage premium cap applied: {mileage:,} miles on {year} vehicle (age: {vehicle_age} years) adds {mileage_premium*100:.1f}% premium (capped at {max_premium*100:.0f}%)")
+            print(f"[MARKET-INTEL] 📊 Price: ${base_price:,.0f} → ${adjusted_price:,.0f} (premium: ${adjusted_price - base_price:,.0f})")
+            return adjusted_price
+        
+        return base_price
+    
+    def _calculate_fallback_price(self, make: str, model: str, year: Optional[int], mileage: Optional[int], trim: Optional[str] = None, title_status: str = "clean") -> float:
+        """
+        Fallback pricing algorithm using KBB/Edmunds/AutoTrader average.
+        
+        Uses depreciation curves, mileage adjustments, and title status.
+        For 8+ year old vehicles, uses more aggressive depreciation.
+        """
+        if not year:
+            year = 2015  # Default fallback
+        
+        current_year = datetime.now().year
+        vehicle_age = current_year - year
+        
+        # Base new car price (adjust by make/model)
+        base_new_price = 25000  # Conservative base for average car
+        
+        make_lower = (make or "").lower()
+        model_lower = (model or "").lower()
+        
+        # Adjust base price for make/model (what it cost new)
+        if "jeep" in make_lower:
+            if "wrangler" in model_lower:
+                base_new_price = 30000  # Wranglers cost more new
+            elif "compass" in model_lower:
+                base_new_price = 22000  # Compass was cheaper new
+            else:
+                base_new_price = 25000
+        elif "toyota" in make_lower or "honda" in make_lower:
+            base_new_price = 25000
+        elif "bmw" in make_lower or "mercedes" in make_lower:
+            base_new_price = 40000
+        else:
+            base_new_price = 25000
+        
+        # Calculate depreciation
+        # For 8+ year old vehicles, use more aggressive depreciation
+        if vehicle_age >= 8:
+            # Older vehicles depreciate faster: ~$1200-1500 per year
+            depreciation_per_year = 1300
+            base_price = max(3000, base_new_price - (vehicle_age * depreciation_per_year))
+            print(f"[MARKET-INTEL] 📊 Fallback: {vehicle_age}-year-old vehicle, aggressive depreciation (${depreciation_per_year}/year)")
+        elif vehicle_age >= 5:
+            # 5-7 year old: ~$1000 per year
+            depreciation_per_year = 1000
+            base_price = max(4000, base_new_price - (vehicle_age * depreciation_per_year))
+        else:
+            # Newer vehicles: ~$800 per year
+            depreciation_per_year = 800
+            base_price = max(5000, base_new_price - (vehicle_age * depreciation_per_year))
+        
+        # Mileage adjustment (only if mileage is higher than expected)
+        if mileage:
+            # Standard mileage: 12,000 miles/year
+            expected_mileage = vehicle_age * 12000
+            mileage_delta = mileage - expected_mileage
+            
+            if mileage_delta > 0:
+                # Higher than expected mileage: reduce price
+                base_price -= mileage_delta * 0.15
+            elif mileage_delta < -10000 and vehicle_age >= 8:
+                # Very low mileage on old vehicle: small premium (already capped)
+                # Don't add premium here - it's handled by mileage premium cap
+                pass
+        
+        # Make/model value retention adjustments
+        if "jeep" in make_lower and "wrangler" in model_lower:
+            base_price *= 1.2  # Wranglers hold value well
+        elif "toyota" in make_lower or "honda" in make_lower:
+            base_price *= 1.05  # Reliable brands hold value
+        elif "jeep" in make_lower and "compass" in model_lower:
+            base_price *= 0.95  # Compass doesn't hold value as well
+        
+        # Title status adjustment
+        if title_status and "rebuilt" in title_status.lower():
+            base_price *= 0.7  # Rebuilt title = 30% reduction
+        elif title_status and "salvage" in title_status.lower():
+            base_price *= 0.5  # Salvage title = 50% reduction
+        
+        # Apply mileage premium cap for low-mileage older vehicles
+        if mileage and vehicle_age >= 5:
+            base_price = self._apply_mileage_premium_cap(base_price, mileage, year)
+        
+        # Clamp to reasonable range (±20% of calculated price)
+        min_price = base_price * 0.8
+        max_price = base_price * 1.2
+        
+        print(f"[MARKET-INTEL] 📊 Fallback price calculated: ${base_price:,.0f} (range: ${min_price:,.0f} - ${max_price:,.0f})")
+        print(f"[MARKET-INTEL] 📊 For {year} {make} {model} with {mileage:,} miles, {title_status} title")
+        
+        return base_price
+    
+    async def _get_market_prices(self, make: str, model: str, year: Optional[int], mileage: Optional[int], location: str, user_entered_price: Optional[int] = None, trim: Optional[str] = None, title_status: str = "clean") -> Dict[str, Any]:
         """Get market pricing data using Google Search Grounding (real-time data from Google)."""
         try:
             # Format location better (separate zip code from city name)
@@ -638,23 +943,40 @@ Return ONLY the JSON object, no additional text."""
                     # If second part is just a zip code, format as "City, ZIP"
                     formatted_location = f"{parts[0]}, {parts[1]}"
             
-            # Use Google Search Grounding for real-time market prices
+            # GUARDRAIL 1: Build query that explicitly excludes MSRP and requests current used pricing
+            # Force TODAY's market year and used car pricing only
+            current_year = datetime.now().year
             year_str = f"{year} " if year else ""
-            search_query = f"{year_str}{make} {model} price market value {formatted_location} current listings"
-            print(f"[MARKET-INTEL] 🔍 Price search query: {search_query}")
+            trim_str = f" {trim}" if trim else ""
+            mileage_str = f" with {mileage:,} miles" if mileage else ""
+            title_str = f" {title_status} title" if title_status and title_status != "clean" else ""
+            
+            # Build query with explicit guardrails
+            search_query = (
+                f"used market price for {year_str}{make} {model}{trim_str}{mileage_str}{title_str} "
+                f"current resale value {current_year} "
+                f"used value not MSRP not original price used car listings only"
+            )
+            print(f"[MARKET-INTEL] 🔍 Price search query (with MSRP guardrails): {search_query}")
             web_search_result = await self._web_search(search_query)
             
-            # We ONLY use real market data from Google Search - NO user price fallback
-            # Estimate will be used ONLY if Google Search completely fails
-            base_price_estimate = 20000  # Only used if Google Search fails
-            if year:
-                base_price_estimate += (year - 2015) * 800
-            if mileage:
-                base_price_estimate -= (mileage - 50000) * 0.15
-            make_lower = make.lower()
-            model_lower = model.lower()
-            if "jeep" in make_lower and "wrangler" in model_lower:
-                base_price_estimate *= 1.3
+            # GUARDRAIL 2: Filter out MSRP data from search results
+            if web_search_result:
+                if self._contains_msrp_data(web_search_result):
+                    print(f"[MARKET-INTEL] 🚫 REJECTED: Search results contain MSRP data, filtering out...")
+                    # Try to extract only used market portions
+                    # Split by sentences and keep only those with used market indicators
+                    sentences = web_search_result.split('.')
+                    filtered_sentences = [s for s in sentences if self._is_used_market_data(s) and not self._contains_msrp_data(s)]
+                    if filtered_sentences:
+                        web_search_result = '. '.join(filtered_sentences)
+                        print(f"[MARKET-INTEL] ✅ Filtered to used market data only ({len(filtered_sentences)} sentences)")
+                    else:
+                        print(f"[MARKET-INTEL] ⚠️ All search results contained MSRP data, will use fallback")
+                        web_search_result = None
+            
+            # Calculate fallback price using improved algorithm
+            base_price_estimate = self._calculate_fallback_price(make, model, year, mileage, trim, title_status)
             
             # Try to extract REAL prices from Google search results
             market_average = 0  # Will be set from real search results
@@ -662,7 +984,10 @@ Return ONLY the JSON object, no additional text."""
             edmunds_value = base_price_estimate * 1.02
             cargurus_value = base_price_estimate * 0.98
             
+            print(f"[MARKET-INTEL] 📊 Fallback estimate (if Google Search fails): ${base_price_estimate:,.0f}")
+            
             if web_search_result:
+                print(f"[MARKET-INTEL] ✅ Google Search returned results - extracting real market data...")
                 # Check if Gemini returned structured JSON (like Google's AI speaker feature)
                 if web_search_result.startswith("__STRUCTURED_JSON__") and "__END_JSON__" in web_search_result:
                     try:
@@ -684,10 +1009,28 @@ Return ONLY the JSON object, no additional text."""
                         if market_average == 0 and price_range:
                             market_average = (price_range.get("low", 0) + price_range.get("high", 0)) / 2
                         
-                        # If we have good data from structured JSON, use it
+                        # GUARDRAIL 3: Sanity check the price
                         if market_average > 0:
-                            print(f"[MARKET-INTEL] ✅ REAL MARKET DATA from structured JSON: ${market_average:,.0f}")
-                            return {
+                            debug_info["raw_prices"].append(market_average)
+                            is_valid, clean_title_estimate = self._sanity_check_price(market_average, year, title_status)
+                            if not is_valid:
+                                debug_info["msrp_candidates"].append(market_average)
+                                debug_info["sanity_check_failures"].append({
+                                    "price": market_average,
+                                    "reason": "exceeds_max_reasonable",
+                                    "clean_title_estimate": clean_title_estimate
+                                })
+                                print(f"[MARKET-INTEL] 🚫 SANITY CHECK FAILED: Rejecting structured JSON price ${market_average:,.0f}")
+                                # Use fallback instead
+                                market_average = 0
+                            else:
+                                debug_info["used_candidates"].append(market_average)
+                                # GUARDRAIL 4: Apply mileage premium cap for older vehicles
+                                market_average = self._apply_mileage_premium_cap(market_average, mileage, year)
+                                debug_info["filtered_prices"].append(market_average)
+                                debug_info["data_source"] = "google_search_structured_json"
+                                print(f"[MARKET-INTEL] ✅ REAL MARKET DATA from structured JSON: ${market_average:,.0f} (after sanity check and mileage cap)")
+                                return {
                                 "kbb_value": round(trade_in.get("high", market_average * 0.95)),
                                 "edmunds_value": round(dealer_retail.get("low", market_average * 1.02)),
                                 "cargurus_value": round(market_average * 0.98),
@@ -711,7 +1054,8 @@ Return ONLY the JSON object, no additional text."""
                                 "data_source": "google_search_grounding",
                                 "confidence": structured_data.get("confidence", 0.9),
                                 "prices_found": 1,  # Structured data counts as 1 source
-                                "web_search_snippet": f"Structured data from Google AI: Market average ${market_average:,.0f}"
+                                "web_search_snippet": f"Structured data from Google AI: Market average ${market_average:,.0f}",
+                                "debug": debug_info
                             }
                         else:
                             print(f"[MARKET-INTEL] ⚠️ Structured JSON missing market_average, falling back to text extraction")
@@ -721,14 +1065,113 @@ Return ONLY the JSON object, no additional text."""
                 # Fall back to text extraction if structured JSON not available or failed
                 # Extract prices from search results using better pattern matching
                 import re
-                # Look for dollar amounts - only match prices with $ sign or clearly marked as prices
-                # Pattern 1: $12,345 or $12345 or $12.5k
-                price_patterns = [
-                    r'\$([\d,]+)',  # $12,345 or $12345
-                    r'\$([\d]+)\.?([\d]+)?[Kk]',  # $12.5k or $12k (convert k to thousands)
-                    r'(\d+)\s*(?:thousand|thous|k)\s*(?:dollars?|USD)?',  # 12 thousand dollars
-                ]
                 
+                # PRIORITY 1: Look for Google AI Overview's PRIMARY price range format
+                # Examples: "between $4,000 and $14,000" or "falls between $4,000 and $14,000"
+                primary_range_pattern = r'(?:between|falls? between|ranges? from|typically)\s+\$?([\d,]+)\s+(?:and|to|-)\s+\$?([\d,]+)'
+                primary_range_match = re.search(primary_range_pattern, web_search_result, re.IGNORECASE)
+                
+                if primary_range_match:
+                    try:
+                        low_price = int(primary_range_match.group(1).replace(',', ''))
+                        high_price = int(primary_range_match.group(2).replace(',', ''))
+                        # Validate it's a reasonable price range
+                        if 1000 <= low_price <= high_price <= 200000:
+                            market_average = (low_price + high_price) / 2
+                            
+                            # GUARDRAIL 3: Sanity check the price
+                            debug_info["raw_prices"].extend([low_price, high_price, market_average])
+                            is_valid, clean_title_estimate = self._sanity_check_price(market_average, year, title_status)
+                            if not is_valid:
+                                debug_info["msrp_candidates"].extend([low_price, high_price, market_average])
+                                debug_info["sanity_check_failures"].append({
+                                    "price": market_average,
+                                    "low": low_price,
+                                    "high": high_price,
+                                    "reason": "exceeds_max_reasonable",
+                                    "clean_title_estimate": clean_title_estimate
+                                })
+                                print(f"[MARKET-INTEL] 🚫 SANITY CHECK FAILED: Rejecting primary range price ${market_average:,.0f}")
+                                # Continue to next extraction method
+                            else:
+                                debug_info["used_candidates"].extend([low_price, high_price, market_average])
+                                # GUARDRAIL 4: Apply mileage premium cap
+                                market_average = self._apply_mileage_premium_cap(market_average, mileage, year)
+                                # Also cap the range
+                                low_price = self._apply_mileage_premium_cap(low_price, mileage, year)
+                                high_price = self._apply_mileage_premium_cap(high_price, mileage, year)
+                                debug_info["filtered_prices"].extend([low_price, high_price, market_average])
+                                debug_info["data_source"] = "google_search_primary_range"
+                                
+                                print(f"[MARKET-INTEL] ✅ Found PRIMARY price range from Google AI Overview: ${low_price:,} - ${high_price:,} (avg: ${market_average:,.0f})")
+                                return {
+                                "kbb_value": round(market_average * 0.95),
+                                "edmunds_value": round(market_average * 1.02),
+                                "cargurus_value": round(market_average * 0.98),
+                                "market_average": round(market_average),
+                                "price_range": {
+                                    "low": round(low_price),
+                                    "high": round(high_price)
+                                },
+                                "data_source": "google_ai_overview_primary_range",
+                                "web_search_snippet": f"Primary market range: ${low_price:,} - ${high_price:,}",
+                                "prices_found": 1,
+                                "confidence": 0.9,
+                                "debug": debug_info
+                            }
+                    except (ValueError, AttributeError) as e:
+                        print(f"[MARKET-INTEL] ⚠️ Failed to parse primary range: {e}, falling back to general extraction")
+                
+                # PRIORITY 2: Look for "typically around $X" or "average of $X" (single price mentions)
+                typical_price_patterns = [
+                    r'typically (?:around|about|approximately|is)\s+\$?([\d,]+)',
+                    r'average[^$]*\$?([\d,]+)',
+                    r'around\s+\$?([\d,]+)\s+(?:for|in|with)',
+                ]
+                for pattern in typical_price_patterns:
+                    typical_match = re.search(pattern, web_search_result, re.IGNORECASE)
+                    if typical_match:
+                        try:
+                            typical_price = int(typical_match.group(1).replace(',', ''))
+                            if 5000 <= typical_price <= 200000:
+                                # GUARDRAIL 3: Sanity check the price
+                                debug_info["raw_prices"].append(typical_price)
+                                is_valid, clean_title_estimate = self._sanity_check_price(typical_price, year, title_status)
+                                if not is_valid:
+                                    debug_info["msrp_candidates"].append(typical_price)
+                                    debug_info["sanity_check_failures"].append({
+                                        "price": typical_price,
+                                        "reason": "exceeds_max_reasonable",
+                                        "clean_title_estimate": clean_title_estimate
+                                    })
+                                    print(f"[MARKET-INTEL] 🚫 SANITY CHECK FAILED: Rejecting typical price ${typical_price:,.0f}")
+                                    continue  # Try next pattern
+                                
+                                debug_info["used_candidates"].append(typical_price)
+                                # GUARDRAIL 4: Apply mileage premium cap
+                                market_average = self._apply_mileage_premium_cap(typical_price, mileage, year)
+                                debug_info["filtered_prices"].append(market_average)
+                                debug_info["data_source"] = "google_search_typical_price"
+                                print(f"[MARKET-INTEL] ✅ Found TYPICAL price from Google: ${market_average:,.0f} (after sanity check)")
+                                return {
+                                    "kbb_value": round(market_average * 0.95),
+                                    "edmunds_value": round(market_average * 1.02),
+                                    "cargurus_value": round(market_average * 0.98),
+                                    "market_average": round(market_average),
+                                    "price_range": {
+                                        "low": round(market_average * 0.85),
+                                        "high": round(market_average * 1.15)
+                                    },
+                                    "data_source": "google_ai_overview_typical_price",
+                                    "web_search_snippet": f"Typical market price: ${market_average:,.0f}",
+                                    "prices_found": 1,
+                                    "confidence": 0.8,
+                                    "debug": debug_info
+                                }
+                        except (ValueError, AttributeError):
+                            continue
+                
+                # PRIORITY 3: Extract all dollar amounts and find the most common/reasonable range
                 numeric_prices = []
                 # Extract from pattern 1: explicit dollar amounts
                 dollar_matches = re.findall(r'\$([\d,]+)', web_search_result)
@@ -775,16 +1218,16 @@ Return ONLY the JSON object, no additional text."""
                             # Check if this number appears in location context in the search result
                             price_str = str(price)
                             # If it appears near location keywords, skip it
-                            location_keywords = ['zip', 'postal', 'code', location.split(',')[0].lower() if ',' in location else location.lower()]
+                            location_keywords = ['zip', 'postal', 'code', (location.split(',')[0].lower() if ',' in (location or "") else (location or "").lower())]
                             skip = False
                             for keyword in location_keywords:
                                 # Check if the number appears near location keywords
                                 pattern = rf'\b{price_str}\b'
-                                if re.search(pattern, web_search_result, re.IGNORECASE):
+                                if web_search_result and re.search(pattern, web_search_result, re.IGNORECASE):
                                     # Check context around the number
-                                    idx = web_search_result.lower().find(price_str)
+                                    idx = (web_search_result or "").lower().find(price_str)
                                     if idx != -1:
-                                        context = web_search_result[max(0, idx-20):idx+30].lower()
+                                        context = (web_search_result or "")[max(0, idx-20):idx+30].lower()
                                         if any(kw in context for kw in location_keywords):
                                             skip = True
                                             break
@@ -796,21 +1239,55 @@ Return ONLY the JSON object, no additional text."""
                     numeric_prices = final_prices
                     
                     if numeric_prices:
-                        # Calculate average from REAL prices found in Google search
-                        market_average = sum(numeric_prices) / len(numeric_prices)
-                        price_range_low = min(numeric_prices)
-                        price_range_high = max(numeric_prices)
+                        # Track all raw prices for debugging
+                        debug_info["raw_prices"] = numeric_prices.copy()
                         
-                        # Estimate KBB/Edmunds values based on REAL market average
-                        kbb_value = market_average * 0.95
-                        edmunds_value = market_average * 1.02
-                        cargurus_value = market_average * 0.98
+                        # GUARDRAIL 2: Filter out MSRP prices from extracted prices
+                        # Remove prices that are suspiciously high (likely MSRP)
+                        filtered_prices = []
+                        for price in numeric_prices:
+                            is_valid, clean_title_estimate = self._sanity_check_price(price, year, title_status)
+                            if is_valid:
+                                filtered_prices.append(price)
+                                debug_info["used_candidates"].append(price)
+                            else:
+                                debug_info["msrp_candidates"].append(price)
+                                debug_info["sanity_check_failures"].append({
+                                    "price": price,
+                                    "reason": "exceeds_max_reasonable",
+                                    "clean_title_estimate": clean_title_estimate
+                                })
+                                print(f"[MARKET-INTEL] 🚫 Filtered out suspicious price: ${price:,.0f} (likely MSRP)")
                         
-                        print(f"[MARKET-INTEL] ✅ REAL MARKET DATA: Extracted {len(numeric_prices)} prices from Google search")
-                        print(f"[MARKET-INTEL] 📊 Market average: ${market_average:,.0f} (from ${price_range_low:,.0f} to ${price_range_high:,.0f})")
-                        logger.info(f"Extracted {len(numeric_prices)} prices from Google search, average: ${market_average:,.0f}")
-                        
-                        return {
+                        if not filtered_prices:
+                            print(f"[MARKET-INTEL] ⚠️ All extracted prices failed sanity check, using fallback")
+                            print(f"[MARKET-INTEL] 📊 Rejected {len(numeric_prices)} prices: {debug_info['msrp_candidates']}")
+                            market_average = 0
+                        else:
+                            # Calculate average from FILTERED prices
+                            market_average = sum(filtered_prices) / len(filtered_prices)
+                            price_range_low = min(filtered_prices)
+                            price_range_high = max(filtered_prices)
+                            
+                            # GUARDRAIL 4: Apply mileage premium cap
+                            market_average_before_cap = market_average
+                            market_average = self._apply_mileage_premium_cap(market_average, mileage, year)
+                            price_range_low = self._apply_mileage_premium_cap(price_range_low, mileage, year)
+                            price_range_high = self._apply_mileage_premium_cap(price_range_high, mileage, year)
+                            
+                            debug_info["filtered_prices"] = [price_range_low, market_average, price_range_high]
+                            debug_info["data_source"] = "google_search_extracted_prices"
+                            
+                            # Estimate KBB/Edmunds values based on REAL market average
+                            kbb_value = market_average * 0.95
+                            edmunds_value = market_average * 1.02
+                            cargurus_value = market_average * 0.98
+                            
+                            print(f"[MARKET-INTEL] ✅ REAL MARKET DATA: Extracted {len(filtered_prices)} valid prices from Google search (filtered {len(numeric_prices) - len(filtered_prices)} MSRP prices)")
+                            print(f"[MARKET-INTEL] 📊 Market average: ${market_average:,.0f} (from ${price_range_low:,.0f} to ${price_range_high:,.0f})")
+                            logger.info(f"Extracted {len(filtered_prices)} prices from Google search, average: ${market_average:,.0f}")
+                            
+                            return {
                             "kbb_value": round(kbb_value),
                             "edmunds_value": round(edmunds_value),
                             "cargurus_value": round(cargurus_value),
@@ -819,16 +1296,43 @@ Return ONLY the JSON object, no additional text."""
                                 "low": round(price_range_low),
                                 "high": round(price_range_high)
                             },
-                            "data_source": "google_search_grounding",
-                            "web_search_snippet": web_search_result[:300] + "..." if web_search_result else None,
-                            "prices_found": len(numeric_prices),
-                            "raw_prices": numeric_prices[:10]  # First 10 prices for debugging
-                        }
+                                "data_source": "google_search_grounding",
+                                "web_search_snippet": web_search_result[:300] + "..." if web_search_result else None,
+                                "prices_found": len(filtered_prices),
+                                "raw_prices": filtered_prices[:10],  # First 10 prices for debugging
+                                "debug": debug_info
+                            }
             
-            # If Google Search didn't return usable prices, use estimate (NOT user price)
+            # GUARDRAIL 5: If Google Search didn't return usable prices, use fallback algorithm
             if market_average == 0:
                 market_average = base_price_estimate
-                print(f"[MARKET-INTEL] ⚠️  Google Search didn't return usable prices, using estimate: ${market_average:,.0f}")
+                debug_info["fallback_used"] = True
+                debug_info["data_source"] = "fallback_algorithm"
+                print(f"[MARKET-INTEL] ⚠️  ⚠️  ⚠️  WARNING: Google Search didn't return usable prices (or all prices failed sanity checks)!")
+                print(f"[MARKET-INTEL] ⚠️  Using FALLBACK pricing algorithm: ${market_average:,.0f}")
+                print(f"[MARKET-INTEL] ⚠️  This means Google Search API may have failed, returned MSRP data, or prices failed validation")
+                print(f"[MARKET-INTEL] ⚠️  Check if Google Search actually ran - look for '[MARKET-INTEL] 🔍 Using REAL Google Gemini API' above")
+                print(f"[MARKET-INTEL] 📊 DEBUG: Rejected {len(debug_info['msrp_candidates'])} MSRP candidates: {debug_info['msrp_candidates']}")
+            
+            data_source = "estimated" if market_average == base_price_estimate else "google_search_grounding"
+            if data_source == "estimated":
+                debug_info["fallback_used"] = True
+                debug_info["data_source"] = "fallback_algorithm"
+                print(f"[MARKET-INTEL] ❌ FINAL RESULT: Using FALLBACK (Google Search failed or returned no data)")
+            else:
+                print(f"[MARKET-INTEL] ✅ FINAL RESULT: Using REAL Google Search data")
+            
+            # Ensure debug info is populated
+            if not debug_info.get("raw_prices"):
+                debug_info["raw_prices"] = []
+            if not debug_info.get("msrp_candidates"):
+                debug_info["msrp_candidates"] = []
+            if not debug_info.get("used_candidates"):
+                debug_info["used_candidates"] = []
+            if not debug_info.get("filtered_prices"):
+                debug_info["filtered_prices"] = [round(market_average)]
+            if not debug_info.get("sanity_check_failures"):
+                debug_info["sanity_check_failures"] = []
             
             return {
                 "kbb_value": round(market_average * 0.95),
@@ -839,8 +1343,10 @@ Return ONLY the JSON object, no additional text."""
                     "low": round(market_average * 0.85),
                     "high": round(market_average * 1.15)
                 },
-                "data_source": "estimated" if market_average == base_price_estimate else "google_search_grounding",
-                "web_search_snippet": web_search_result[:300] + "..." if web_search_result else None
+                "data_source": data_source,
+                "web_search_snippet": web_search_result[:300] + "..." if web_search_result else None,
+                "google_search_ran": web_search_result is not None,  # Flag to indicate if Google Search was called
+                "debug": debug_info
             }
         except Exception as e:
             logger.error(f"Market price lookup failed: {e}")

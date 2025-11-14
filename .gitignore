@@ -144,3 +144,7 @@ BETA_SIGNUP_ERROR_ANALYSIS.md
 *password*.txt
 *.password
 .audit_*_password.txt
+
+# Large binary files
+*.tar.gz
+google-cloud-cli-*.tar.gz

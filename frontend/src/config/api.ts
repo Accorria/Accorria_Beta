@@ -4,8 +4,10 @@
  */
 
 // Production backend URLs (multiple options for redundancy)
-const PRODUCTION_BACKEND_URL = 'https://accorria-backend-tv2qihivdq-uc.a.run.app';
-const PRODUCTION_BACKEND_URL_ALT = 'https://accorria-backend-19949436301.us-central1.run.app';
+// Accorria Beta backend (new service connected to Accorria_Beta repo)
+const PRODUCTION_BACKEND_URL = 'https://accorria-backend-beta-19949436301.us-central1.run.app';
+// Accorria Demo backend (old service connected to DEMO repo) - kept as fallback
+const PRODUCTION_BACKEND_URL_ALT = 'https://accorria-backend-tv2qihivdq-uc.a.run.app';
 
 // Development backend URL (if you want to use local backend during development)
 const DEVELOPMENT_BACKEND_URL = 'http://localhost:8000';

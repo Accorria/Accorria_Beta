@@ -7,6 +7,7 @@ import { ThemeProvider } from '@/contexts/ThemeContext';
 import { EmailVerification } from '@/components/EmailVerification';
 import CreateListing from '@/components/listings/CreateListing';
 import Header from '@/components/Header';
+import CompactListing from '@/components/CompactListing';
 import DealerMode from '@/components/DealerMode';
 import { listingsService, Listing } from '@/services/listingsService';
 
@@ -281,11 +282,11 @@ export default function DealerDashboard() {
         </div>
 
 
-        {/* Inventory Overview */}
+        {/* Inventory Overview - Compact Horizontal Layout */}
         {!isLoadingListings && listings.length > 0 && (
           <div className="px-4 mb-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Inventory Overview ({listings.length})</h2>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Your Listings ({listings.length})</h2>
               <Link
                 href="/listings"
                 className="text-sm text-blue-600 hover:text-blue-700 px-2 py-1 rounded border border-blue-200 hover:border-blue-300 transition-colors"
@@ -293,22 +294,9 @@ export default function DealerDashboard() {
                 View All
               </Link>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {listings.slice(0, 4).map((listing) => (
-                <div key={listing.id} className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-semibold text-gray-900 dark:text-white">{listing.title}</h3>
-                    <span className="text-sm text-green-600 dark:text-green-400 font-medium">${listing.price?.toLocaleString()}</span>
-                  </div>
-                  <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">{listing.description}</p>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-500 dark:text-gray-400">Status: {listing.status}</span>
-                    <div className="flex gap-2">
-                      <button className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 px-2 py-1 rounded">Edit</button>
-                      <button className="text-xs bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-400 px-2 py-1 rounded">Post</button>
-                    </div>
-                  </div>
-                </div>
+            <div className="space-y-2">
+              {listings.slice(0, 6).map((listing) => (
+                <CompactListing key={listing.id} listing={listing} />
               ))}
             </div>
           </div>

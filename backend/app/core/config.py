@@ -63,6 +63,8 @@ class Settings(BaseSettings):
         "127.0.0.1",
         "accorria-backend-tv2qihivdq-uc.a.run.app",
         "accorria-backend-19949436301.us-central1.run.app",
+        "accorria-backend-beta-tv2qihivdq-uc.a.run.app",
+        "accorria-backend-beta-19949436301.us-central1.run.app",
         "*.accorria.com"
     ]
     
