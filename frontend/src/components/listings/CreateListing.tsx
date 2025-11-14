@@ -54,6 +54,15 @@ interface AnalysisResult {
     model?: string;
     year?: number;
     drivetrain?: string;
+    debug_gemini_detection?: {
+      features_detected?: Record<string, { present: boolean; confidence?: number }>;
+      badges_seen?: string[];
+      exterior_color?: string;
+      interior_color?: string;
+      drivetrain_detected?: string;
+      features_list?: string[];
+      features_list_count?: number;
+    };
   };
   analysis_json?: Record<string, unknown>;
   listing_context?: Record<string, unknown>;
