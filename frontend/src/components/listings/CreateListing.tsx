@@ -165,6 +165,8 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
   const [files, setFiles] = useState<FileWithId[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<FileWithId[]>([]);
   const [renderKey, setRenderKey] = useState(0);
+  const [isDragging, setIsDragging] = useState(false); // Track if photo is being dragged
+  const dragStartScrollYRef = useRef(0); // Store scroll position when drag starts (use ref for immediate access)
 
   const [carDetails, setCarDetails] = useState<CarDetails>({
     make: '',
@@ -190,6 +192,19 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
   useEffect(() => {
     setAnalysisError(null);
   }, []);
+
+  // Cleanup: Unlock scroll if component unmounts while dragging
+  useEffect(() => {
+    return () => {
+      if (isDragging) {
+        document.body.style.overflow = '';
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.width = '';
+        window.scrollTo(0, dragStartScrollYRef.current);
+      }
+    };
+  }, [isDragging]);
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [descriptionSuggestions, setDescriptionSuggestions] = useState<string[]>([]);
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
@@ -201,6 +216,15 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
   const [postResult, setPostResult] = useState<{successCount: number, totalCount: number} | null>(null);
   const [userPresets, setUserPresets] = useState<Array<{preset_value: string, usage_count: number}>>([]);
   const [isLoadingPresets, setIsLoadingPresets] = useState(false);
+  
+  // Speech-to-Text state
+  const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+  const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
+  const [transcript, setTranscript] = useState<string>('');
+  const [fieldConflicts, setFieldConflicts] = useState<Array<{field: string, speechValue: string, currentValue: string}>>([]);
+  const [speechFeatures, setSpeechFeatures] = useState<string[]>([]); // Features extracted from speech
 
   // Load connection statuses for platforms
   useEffect(() => {
@@ -887,18 +911,9 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
     setIsPosting(true);
     
     try {
-      // Convert images to base64 for persistent storage
-      const imagePromises = files.map(fileWithId => {
-        return new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onload = () => {
-            resolve(reader.result as string);
-          };
-          reader.readAsDataURL(fileWithId.file);
-        });
-      });
-      
-      const imageUrls = await Promise.all(imagePromises);
+      // Upload photos to Supabase (filter out VIN images)
+      const filesToPost = files.filter(f => !f.isVinImage);
+      const imageUrls = await uploadPhotosToSupabase(filesToPost);
       
       // Calculate price based on selected tier
       const basePrice = parseInt(carDetails.price || '0');
@@ -920,7 +935,7 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
         mileage: carDetails.mileage,
         condition: 'good',
         location: 'Detroit, MI',
-        titleStatus: 'Clean',
+        titleStatus: carDetails.titleStatus || 'Clean',
         postedAt: new Date().toISOString()
       };
       
@@ -946,6 +961,43 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
     } catch (error) {
       console.error('Error creating listing:', error);
       alert('Failed to create listing. Please try again.');
+    } finally {
+      setIsPosting(false);
+    }
+  };
+
+  // Save listing as draft without posting
+  const handleSaveDraft = async () => {
+    if (files.length === 0) {
+      alert('Please upload at least one image');
+      return;
+    }
+
+    setIsPosting(true);
+    
+    try {
+      // Upload photos to Supabase (filter out VIN images)
+      const filesToPost = files.filter(f => !f.isVinImage);
+      const imageUrls = await uploadPhotosToSupabase(filesToPost);
+      
+      // Save listing without posting to any platforms
+      const saved = await saveListingToDatabase(imageUrls, analysisResult);
+      
+      if (saved) {
+        alert('✅ Listing saved as draft! You can post it to platforms later from your listings page.');
+        setPostResult({ successCount: 0, totalCount: 0 });
+        setPostSuccess(true);
+        
+        // Notify parent component that listing was created
+        if (onListingCreated) {
+          onListingCreated();
+        }
+      } else {
+        throw new Error('Failed to save listing');
+      }
+    } catch (error) {
+      console.error('Error saving draft:', error);
+      alert('Failed to save listing. Please try again.');
     } finally {
       setIsPosting(false);
     }
@@ -1064,20 +1116,60 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
     // Features section
     description += `🔧 Features & Equipment:\n`;
     
-    // Add user-provided features (moved from details to features)
-    if (carDetails.aboutVehicle && carDetails.aboutVehicle.trim()) {
+    // Add features from speech-to-text first (user explicitly mentioned these)
+    if (speechFeatures.length > 0) {
+      const featureMap: { [key: string]: string } = {
+        'backup_camera': 'Backup camera',
+        'bluetooth': 'Bluetooth & USB',
+        'apple_carplay': 'Apple CarPlay & Android Auto',
+        'android_auto': 'Android Auto',
+        'navigation': 'Navigation system',
+        'heated_seats': 'Heated seats',
+        'leather_seats': 'Leather seats',
+        'alloy_wheels': 'Alloy wheels',
+        'cruise_control': 'Cruise control',
+        'dual_zone_climate': 'Dual-zone climate control',
+        'sunroof': 'Sunroof',
+        'tinted_windows': 'Tinted windows',
+        'touchscreen': 'Touchscreen display',
+        'premium_audio': 'Premium audio system',
+        'keyless_entry': 'Keyless entry',
+        'push_button_start': 'Push-button start',
+        'lane_departure': 'Lane departure warning',
+        'blind_spot': 'Blind spot monitoring',
+        'adaptive_cruise': 'Adaptive cruise control',
+        'parking_sensors': 'Parking sensors',
+        'led_headlights': 'LED headlights',
+        'fog_lights': 'Fog lights',
+        'spoiler': 'Rear spoiler',
+        'chrome_trim': 'Chrome trim',
+        'premium_wheels': 'Premium wheels',
+        'awd': 'All-wheel drive (AWD)',
+        '4wd': 'Four-wheel drive (4WD)',
+        '4x4': 'Four-wheel drive (4x4)',
+        'roof_rack': 'Roof rails/rack'
+      };
+      
+      speechFeatures.forEach(feature => {
+        const readableFeature = featureMap[feature] || feature.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        description += `• ${readableFeature}\n`;
+      });
+    }
+    
+    // Add user-provided features from aboutVehicle (if not already added from speech)
+    if (carDetails.aboutVehicle && carDetails.aboutVehicle.trim() && speechFeatures.length === 0) {
       // Handle both comma-separated and line-break separated items
       const userFeatures = carDetails.aboutVehicle
         .split(/[,\n]/) // Split by comma OR newline
         .map(feature => feature.trim())
-        .filter(feature => feature.length > 0); // Remove empty items
+        .filter(feature => feature.length > 0 && !feature.toLowerCase().startsWith('voice:')); // Remove empty items and voice prefixes
       
       userFeatures.forEach(feature => {
         description += `• ${feature}\n`;
       });
     }
     
-    // Add detected features from analysis
+    // Add detected features from analysis (image analysis)
     if (analysisResult.data?.features_detected) {
       const features = analysisResult.data.features_detected;
       const featureList = [];
@@ -1301,6 +1393,352 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
     carDetails.aboutVehicle,
     titleRebuildExplanation
   ]);
+
+  // Speech-to-Text: Check microphone permissions
+  const checkMicrophonePermission = async (): Promise<boolean> => {
+    try {
+      // Check if MediaDevices API is available
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert('Microphone access is not supported in this browser. Please use a modern browser like Chrome, Firefox, or Safari.');
+        return false;
+      }
+
+      // Check current permission status
+      if (navigator.permissions && navigator.permissions.query) {
+        try {
+          const permissionStatus = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+          
+          if (permissionStatus.state === 'denied') {
+            alert(
+              'Microphone access is denied. Please enable it in your browser settings:\n\n' +
+              'Chrome/Edge: Click the lock icon in the address bar → Site settings → Microphone → Allow\n' +
+              'Firefox: Click the lock icon → Permissions → Microphone → Allow\n' +
+              'Safari: Safari → Settings → Websites → Microphone → Allow for localhost'
+            );
+            return false;
+          }
+        } catch (permError) {
+          // Permissions API might not be fully supported, continue anyway
+          console.log('Permission query not fully supported, attempting direct access');
+        }
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error checking microphone permission:', error);
+      return false;
+    }
+  };
+
+  // Speech-to-Text: Handle microphone click
+  const handleMicrophoneClick = async () => {
+    if (isRecording) {
+      // Stop recording
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+      }
+      setIsRecording(false);
+      return;
+    }
+
+    // Check permissions first
+    const hasPermission = await checkMicrophonePermission();
+    if (!hasPermission) {
+      return;
+    }
+
+    // Start recording
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        } 
+      });
+      
+      // Try to find a supported MIME type
+      let mimeType = 'audio/webm;codecs=opus';
+      if (!MediaRecorder.isTypeSupported(mimeType)) {
+        // Fallback to other supported types
+        if (MediaRecorder.isTypeSupported('audio/webm')) {
+          mimeType = 'audio/webm';
+        } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+          mimeType = 'audio/mp4';
+        } else {
+          mimeType = ''; // Use browser default
+        }
+      }
+      
+      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      
+      const chunks: Blob[] = [];
+      
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          chunks.push(event.data);
+        }
+      };
+      
+      recorder.onstop = async () => {
+        // Stop all tracks
+        stream.getTracks().forEach(track => track.stop());
+        
+        // Combine chunks
+        const audioBlob = new Blob(chunks, { type: mimeType || 'audio/webm' });
+        setAudioChunks(chunks);
+        
+        // Transcribe
+        await transcribeAudio(audioBlob);
+      };
+      
+      recorder.onerror = (event) => {
+        console.error('MediaRecorder error:', event);
+        alert('Recording error occurred. Please try again.');
+        setIsRecording(false);
+        stream.getTracks().forEach(track => track.stop());
+      };
+      
+      recorder.start();
+      setMediaRecorder(recorder);
+      setIsRecording(true);
+      setAudioChunks([]);
+    } catch (error: any) {
+      console.error('Error accessing microphone:', error);
+      
+      let errorMessage = 'Microphone access denied. ';
+      
+      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+        errorMessage += 'Please allow microphone access:\n\n';
+        
+        // Check if using Cursor browser
+        if (navigator.userAgent.includes('Cursor')) {
+          errorMessage += '⚠️ Cursor Browser Detected:\n';
+          errorMessage += 'Cursor\'s built-in browser may have limited microphone support.\n\n';
+          errorMessage += 'RECOMMENDED: Open this page in an external browser:\n';
+          errorMessage += '1. Copy the URL from Cursor\'s address bar\n';
+          errorMessage += '2. Open Chrome, Firefox, or Safari\n';
+          errorMessage += '3. Paste the URL and allow microphone access\n';
+          errorMessage += '4. Voice recording will work in the external browser\n\n';
+          errorMessage += 'OR try in Cursor:\n';
+          errorMessage += '1. Check Cursor Settings → Privacy → Microphone\n';
+          errorMessage += '2. Ensure microphone is enabled for localhost\n';
+          errorMessage += '3. Check macOS System Settings → Privacy → Microphone → Cursor\n\n';
+        } else if (navigator.userAgent.includes('Chrome') || navigator.userAgent.includes('Edge')) {
+          errorMessage += 'Chrome/Edge:\n';
+          errorMessage += '1. Click the lock icon (🔒) in the address bar\n';
+          errorMessage += '2. Click "Site settings"\n';
+          errorMessage += '3. Find "Microphone" and set it to "Allow"\n';
+          errorMessage += '4. Refresh the page\n\n';
+        } else if (navigator.userAgent.includes('Firefox')) {
+          errorMessage += 'Firefox:\n';
+          errorMessage += '1. Click the lock icon (🔒) in the address bar\n';
+          errorMessage += '2. Click "More Information"\n';
+          errorMessage += '3. Go to "Permissions" tab\n';
+          errorMessage += '4. Find "Use the Microphone" and set to "Allow"\n';
+          errorMessage += '5. Refresh the page\n\n';
+        } else if (navigator.userAgent.includes('Safari')) {
+          errorMessage += 'Safari:\n';
+          errorMessage += '1. Safari → Settings (Preferences)\n';
+          errorMessage += '2. Click "Websites" tab\n';
+          errorMessage += '3. Select "Microphone" in left sidebar\n';
+          errorMessage += '4. Find "localhost" and set to "Allow"\n';
+          errorMessage += '5. Refresh the page\n\n';
+        }
+        
+        errorMessage += 'Also check your system microphone permissions in System Settings.';
+      } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+        errorMessage = 'No microphone found. Please connect a microphone and try again.';
+      } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+        errorMessage = 'Microphone is being used by another application. Please close other apps using the microphone and try again.';
+      } else {
+        errorMessage += `\n\nError: ${error.message || error.name}`;
+      }
+      
+      alert(errorMessage);
+      setIsRecording(false);
+    }
+  };
+
+  // Speech-to-Text: Transcribe audio
+  const transcribeAudio = async (audioBlob: Blob) => {
+    setIsTranscribing(true);
+    setTranscript('');
+    
+    try {
+      const backendUrl = getBackendUrl();
+      const formData = new FormData();
+      formData.append('audio', audioBlob, 'recording.webm');
+      
+      const response = await authenticatedFetch(`${backendUrl}/api/v1/speech-to-text/transcribe`, {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Transcription failed: ${errorText}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.success && data.text) {
+        setTranscript(data.text);
+        // Parse the transcript and extract vehicle data
+        await parseAndSyncTranscript(data.text);
+      } else {
+        throw new Error('No transcript received');
+      }
+    } catch (error: any) {
+      console.error('Transcription error:', error);
+      alert(`Failed to transcribe audio: ${error.message}`);
+    } finally {
+      setIsTranscribing(false);
+    }
+  };
+
+  // Speech-to-Text: Parse transcript and extract structured data
+  const parseAndSyncTranscript = async (text: string) => {
+    try {
+      // Use OpenAI to extract structured data from transcript
+      const backendUrl = getBackendUrl();
+      const response = await authenticatedFetch(`${backendUrl}/api/v1/speech-to-text/parse`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: text,
+          currentFields: carDetails,
+        }),
+      });
+      
+      if (!response.ok) {
+        // If parsing endpoint doesn't exist, do basic parsing in frontend
+        console.warn('Parsing endpoint not available, using basic extraction');
+        extractFieldsFromText(text);
+        return;
+      }
+      
+      const parsedData = await response.json();
+      
+      // Store features from speech if extracted
+      if (parsedData.features && Array.isArray(parsedData.features)) {
+        setSpeechFeatures(parsedData.features);
+        console.log('🎤 Features extracted from speech:', parsedData.features);
+      }
+      
+      // Sync fields with priority: VIN > Whisper > Manual
+      syncFieldsFromSpeech(parsedData);
+    } catch (error: any) {
+      console.error('Parsing error:', error);
+      // Fallback to basic text extraction
+      extractFieldsFromText(text);
+    }
+  };
+
+  // Speech-to-Text: Basic field extraction (fallback)
+  const extractFieldsFromText = (text: string) => {
+    const lowerText = text.toLowerCase();
+    const extracted: Partial<CarDetails> = {};
+    
+    // Extract year (4-digit number)
+    const yearMatch = text.match(/\b(19|20)\d{2}\b/);
+    if (yearMatch) {
+      extracted.year = yearMatch[0];
+    }
+    
+    // Extract mileage (numbers with "mile" or "miles")
+    const mileageMatch = text.match(/(\d{1,3}(?:,\d{3})*)\s*(?:mile|miles|mi)/i);
+    if (mileageMatch) {
+      extracted.mileage = mileageMatch[1].replace(/,/g, '');
+    }
+    
+    // Extract title status
+    if (lowerText.includes('rebuilt') || lowerText.includes('rebuild')) {
+      extracted.titleStatus = 'rebuilt';
+    } else if (lowerText.includes('salvage')) {
+      extracted.titleStatus = 'salvage';
+    } else if (lowerText.includes('clean')) {
+      extracted.titleStatus = 'clean';
+    }
+    
+    // Add transcript to aboutVehicle
+    const currentAbout = carDetails.aboutVehicle || '';
+    const newAbout = currentAbout ? `${currentAbout}\n\n${text}` : text;
+    extracted.aboutVehicle = newAbout;
+    
+    // Sync with existing fields
+    syncFieldsFromSpeech(extracted);
+  };
+
+  // Speech-to-Text: Sync fields with priority logic
+  const syncFieldsFromSpeech = (speechData: Partial<CarDetails>) => {
+    const conflicts: Array<{field: string, speechValue: string, currentValue: string}> = [];
+    const updates: Partial<CarDetails> = {};
+    
+    // Priority: VIN > Whisper > Manual
+    // Note: VIN data comes from enhanced-analyze endpoint when Coordinate is clicked
+    // For now, we compare Whisper vs Manual input and show conflicts
+    
+    const fieldsToCheck: (keyof CarDetails)[] = ['year', 'make', 'model', 'trim', 'titleStatus'];
+    
+    fieldsToCheck.forEach(field => {
+      const speechValue = speechData[field];
+      const currentValue = carDetails[field];
+      
+      if (speechValue && speechValue.trim()) {
+        // If current value exists and differs, mark as conflict
+        if (currentValue && currentValue.trim() && speechValue !== currentValue) {
+          conflicts.push({
+            field,
+            speechValue: speechValue,
+            currentValue: currentValue,
+          });
+          // For now, prefer speech value (user can manually change if wrong)
+          // TODO: Show MismatchResolutionModal for user choice
+          updates[field] = speechValue;
+        } else if (!currentValue || !currentValue.trim()) {
+          // No current value, use speech value
+          updates[field] = speechValue;
+        }
+      }
+    });
+    
+    // Handle mileage separately (optional field, only if not already set)
+    if (speechData.mileage && (!carDetails.mileage || !carDetails.mileage.trim())) {
+      updates.mileage = speechData.mileage;
+    }
+    
+    // Handle aboutVehicle: Use speechData.aboutVehicle if provided, otherwise append transcript
+    if (speechData.aboutVehicle) {
+      // If GPT provided structured aboutVehicle, use it
+      const currentAbout = carDetails.aboutVehicle || '';
+      updates.aboutVehicle = currentAbout 
+        ? `${currentAbout}\n\nVoice: ${speechData.aboutVehicle}`
+        : `Voice: ${speechData.aboutVehicle}`;
+    } else if (transcript) {
+      // Fallback: append raw transcript
+      const currentAbout = carDetails.aboutVehicle || '';
+      updates.aboutVehicle = currentAbout 
+        ? `${currentAbout}\n\nVoice: ${transcript}`
+        : `Voice: ${transcript}`;
+    }
+    
+    // If conflicts exist, log them (modal can be added later)
+    if (conflicts.length > 0) {
+      setFieldConflicts(conflicts);
+      console.warn('Field conflicts detected (speech vs manual):', conflicts);
+      // Show a simple alert for now - can be replaced with modal
+      const conflictMsg = conflicts.map(c => `${c.field}: "${c.currentValue}" vs "${c.speechValue}"`).join(', ');
+      console.log(`⚠️ Conflicts: ${conflictMsg}. Using speech values. User can manually correct if needed.`);
+    }
+    
+    // Apply updates
+    if (Object.keys(updates).length > 0) {
+      setCarDetails(prev => ({ ...prev, ...updates }));
+    }
+  };
 
   const analyzeImages = async () => {
     const startTime = Date.now();
@@ -1695,6 +2133,128 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
     }
   };
 
+  // Helper function to upload photos to Supabase Storage
+  const uploadPhotosToSupabase = async (filesToUpload: FileWithId[]): Promise<string[]> => {
+    const imageUrls: string[] = [];
+    
+    if (filesToUpload.length === 0) {
+      console.warn('⚠️ No files to upload');
+      return imageUrls;
+    }
+    
+    try {
+      const { supabase } = await import('@/utils/supabase');
+      const timestamp = Date.now();
+
+      for (let i = 0; i < filesToUpload.length; i++) {
+        const file = filesToUpload[i].file;
+        const fileExt = file.name.split('.').pop() || 'jpg';
+        const fileName = `${timestamp}-${i}.${fileExt}`;
+        const filePath = `listings/${fileName}`;
+
+        console.log(`📤 Uploading image ${i + 1}/${filesToUpload.length}: ${file.name} -> ${filePath}`);
+
+        // Upload to Supabase Storage
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('car-images')
+          .upload(filePath, file, {
+            cacheControl: '3600',
+            upsert: false
+          });
+
+        if (uploadError) {
+          console.error(`❌ Failed to upload image ${i + 1}:`, uploadError);
+          // Fallback to data URL if upload fails
+          const reader = new FileReader();
+          const dataUrl = await new Promise<string>((resolve) => {
+            reader.onload = () => resolve(reader.result as string);
+            reader.readAsDataURL(file);
+          });
+          imageUrls.push(dataUrl);
+          console.log(`⚠️ Using data URL fallback for image ${i + 1}`);
+        } else {
+          // Get public URL
+          const { data: urlData } = supabase.storage
+            .from('car-images')
+            .getPublicUrl(filePath);
+          imageUrls.push(urlData.publicUrl);
+          console.log(`✅ Successfully uploaded image ${i + 1}: ${urlData.publicUrl}`);
+        }
+      }
+      
+      console.log(`✅ Image upload complete: ${imageUrls.length} URLs generated`);
+    } catch (error) {
+      console.error('❌ Failed to upload images to Supabase:', error);
+      // Fallback: create data URLs from files
+      console.log('🔄 Falling back to data URLs...');
+      for (const fileWithId of filesToUpload) {
+        const reader = new FileReader();
+        const dataUrl = await new Promise<string>((resolve) => {
+          reader.onload = () => resolve(reader.result as string);
+          reader.readAsDataURL(fileWithId.file);
+        });
+        imageUrls.push(dataUrl);
+      }
+      console.log(`⚠️ Generated ${imageUrls.length} data URLs as fallback`);
+    }
+    
+    return imageUrls;
+  };
+
+  // Helper function to save listing to database
+  const saveListingToDatabase = async (imageUrls: string[], analysisResult?: any) => {
+    try {
+      const { listingsService } = await import('@/services/listingsService');
+      const service = listingsService;
+      
+      // Ensure we have image URLs - if imageUrls is empty, create data URLs from files
+      let finalImageUrls = imageUrls;
+      if (finalImageUrls.length === 0 && files.length > 0) {
+        console.log('⚠️ No image URLs found, creating data URLs from files as fallback...');
+        finalImageUrls = [];
+        for (const fileWithId of files) {
+          const reader = new FileReader();
+          const dataUrl = await new Promise<string>((resolve) => {
+            reader.onload = () => resolve(reader.result as string);
+            reader.readAsDataURL(fileWithId.file);
+          });
+          finalImageUrls.push(dataUrl);
+        }
+        console.log(`✅ Generated ${finalImageUrls.length} data URLs as fallback`);
+      }
+      
+      // Create listing data
+      const listingData = {
+        title: analysisResult?.car_analysis?.title || `${analysisResult?.car_analysis?.year || carDetails.year || ''} ${analysisResult?.car_analysis?.make || carDetails.make || ''} ${analysisResult?.car_analysis?.model || carDetails.model || ''}`.trim() || 'Untitled Listing',
+        description: analysisResult?.car_analysis?.description || carDetails.finalDescription || carDetails.aboutVehicle || '',
+        price: analysisResult?.car_analysis?.price || parseFloat(carDetails.price) || 0,
+        platforms: selectedPlatforms,
+        status: 'active' as const,
+        images: finalImageUrls, // Use uploaded URLs (Supabase or data URLs)
+        make: analysisResult?.car_analysis?.make || carDetails.make,
+        model: analysisResult?.car_analysis?.model || carDetails.model,
+        year: analysisResult?.car_analysis?.year || carDetails.year,
+        mileage: analysisResult?.car_analysis?.mileage || carDetails.mileage,
+        condition: analysisResult?.car_analysis?.condition || 'Good',
+        location: analysisResult?.car_analysis?.location || `${carDetails.city || ''}, ${carDetails.zipCode || ''}`.trim() || 'Unknown',
+        postedAt: new Date().toISOString(),
+        titleStatus: carDetails.titleStatus || 'Clean',
+        messages: 0,
+        clicks: 0,
+        detectedFeatures: analysisResult?.car_analysis?.features || [],
+        aiAnalysis: analysisResult?.car_analysis || null,
+        finalDescription: analysisResult?.car_analysis?.description || carDetails.finalDescription || ''
+      };
+      
+      await service.createListing(listingData);
+      console.log('✅ Listing saved to database');
+      return true;
+    } catch (error) {
+      console.error('❌ Failed to save listing to database:', error);
+      return false;
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (files.length === 0) {
@@ -1785,140 +2345,47 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
         throw fetchError;
       }
 
+      let result: any = null;
+      let imageUrls: string[] = [];
+      
       if (response.ok) {
         console.log('✅ [FRONTEND] Response OK, parsing JSON...');
-        const result = await response.json();
+        result = await response.json();
         console.log('✅ [FRONTEND] Listing posted successfully:', result);
         console.log('📝 [FRONTEND] Generated description length:', result.car_analysis?.description?.length || 0);
-        
-        // Upload images to Supabase Storage and get public URLs
-        // Filter out VIN images - they're used for analysis but not posted to Facebook
-        const filesToPost = files.filter(f => !f.isVinImage);
-        const vinImages = files.filter(f => f.isVinImage);
-        console.log(`📤 Starting image upload: ${filesToPost.length} files to post, ${vinImages.length} VIN images (excluded from posts)`);
-        
-        const imageUrls: string[] = [];
-        
-        if (filesToPost.length === 0) {
-          console.warn('⚠️ No files to upload (all may be marked as VIN images)!');
-        }
-        
-        try {
-          const { supabase } = await import('@/utils/supabase');
-          const timestamp = Date.now();
-
-          for (let i = 0; i < filesToPost.length; i++) {
-            const file = filesToPost[i].file;
-            const fileExt = file.name.split('.').pop() || 'jpg';
-            const fileName = `${timestamp}-${i}.${fileExt}`;
-            const filePath = `listings/${fileName}`;
-
-            console.log(`📤 Uploading image ${i + 1}/${filesToPost.length}: ${file.name} -> ${filePath}`);
-
-            // Upload to Supabase Storage
-            const { data: uploadData, error: uploadError } = await supabase.storage
-              .from('car-images')
-              .upload(filePath, file, {
-                cacheControl: '3600',
-                upsert: false
-              });
-
-            if (uploadError) {
-              console.error(`❌ Failed to upload image ${i + 1}:`, uploadError);
-              // Fallback to data URL if upload fails
-              const reader = new FileReader();
-              const dataUrl = await new Promise<string>((resolve) => {
-                reader.onload = () => resolve(reader.result as string);
-                reader.readAsDataURL(file);
-              });
-              imageUrls.push(dataUrl);
-              console.log(`⚠️ Using data URL fallback for image ${i + 1}`);
-            } else {
-              // Get public URL
-              const { data: urlData } = supabase.storage
-                .from('car-images')
-                .getPublicUrl(filePath);
-              imageUrls.push(urlData.publicUrl);
-              console.log(`✅ Successfully uploaded image ${i + 1}: ${urlData.publicUrl}`);
-            }
-          }
-          
-          console.log(`✅ Image upload complete: ${imageUrls.length} URLs generated`);
-        } catch (error) {
-          console.error('❌ Failed to upload images to Supabase:', error);
-          // Fallback: create data URLs from files (excluding VIN images)
-          console.log('🔄 Falling back to data URLs...');
-          for (const fileWithId of filesToPost) {
-            const reader = new FileReader();
-            const dataUrl = await new Promise<string>((resolve) => {
-              reader.onload = () => resolve(reader.result as string);
-              reader.readAsDataURL(fileWithId.file);
-            });
-            imageUrls.push(dataUrl);
-          }
-          console.log(`⚠️ Generated ${imageUrls.length} data URLs as fallback`);
-        }
-        
-        // Save listing locally for demo users (in addition to backend save)
-        try {
-          const { listingsService } = await import('@/services/listingsService');
-          const service = listingsService;
-          
-          // Ensure we have image URLs - if imageUrls is empty, create data URLs from files
-          let finalImageUrls = imageUrls;
-          if (finalImageUrls.length === 0 && files.length > 0) {
-            console.log('⚠️ No image URLs found, creating data URLs from files as fallback...');
-            finalImageUrls = [];
-            for (const fileWithId of files) {
-              const reader = new FileReader();
-              const dataUrl = await new Promise<string>((resolve) => {
-                reader.onload = () => resolve(reader.result as string);
-                reader.readAsDataURL(fileWithId.file);
-              });
-              finalImageUrls.push(dataUrl);
-            }
-            console.log(`✅ Generated ${finalImageUrls.length} data URLs as fallback`);
-          }
-          
-          // Create listing data from the analysis result
-          const listingData = {
-            title: result.car_analysis?.title || `${result.car_analysis?.year || ''} ${result.car_analysis?.make || ''} ${result.car_analysis?.model || ''}`.trim(),
-            description: result.car_analysis?.description || carDetails.finalDescription || '',
-            price: result.car_analysis?.price || parseFloat(carDetails.price) || 0,
-            platforms: selectedPlatforms,
-            status: 'active' as const,
-            images: finalImageUrls, // Use uploaded URLs (Supabase or data URLs)
-            make: result.car_analysis?.make || carDetails.make,
-            model: result.car_analysis?.model || carDetails.model,
-            year: result.car_analysis?.year || carDetails.year,
-            mileage: result.car_analysis?.mileage || carDetails.mileage,
-            condition: result.car_analysis?.condition || 'Good',
-            location: result.car_analysis?.location || `${carDetails.city}, ${carDetails.zipCode}`,
-            postedAt: new Date().toISOString(),
-            titleStatus: 'Clean',
-            messages: 0,
-            clicks: 0,
-            detectedFeatures: result.car_analysis?.features || [],
-            aiAnalysis: result.car_analysis,
-            finalDescription: result.car_analysis?.description || carDetails.finalDescription
-          };
-          
-          await service.createListing(listingData);
-          console.log('✅ Listing saved locally for demo user');
-        } catch (error) {
-          console.error('Failed to save listing locally:', error);
-          // Don't fail the entire flow if local save fails
-        }
-        
-        // Show success state instead of closing immediately
+      } else {
+        const errorText = await response.text().catch(() => 'Could not read error');
+        console.error('❌ [FRONTEND] Response not OK:', response.status, errorText);
+        // Continue to save listing even if posting failed
+      }
+      
+      // ALWAYS upload and save photos, even if posting failed
+      // Filter out VIN images - they're used for analysis but not posted/saved
+      const filesToPost = files.filter(f => !f.isVinImage);
+      const vinImages = files.filter(f => f.isVinImage);
+      console.log(`📤 Starting image upload: ${filesToPost.length} files to save, ${vinImages.length} VIN images (excluded)`);
+      
+      // Upload photos to Supabase
+      imageUrls = await uploadPhotosToSupabase(filesToPost);
+      
+      // Save listing to database (always save, even if posting failed)
+      const saved = await saveListingToDatabase(imageUrls, result);
+      
+      if (saved) {
+        console.log('✅ Listing saved successfully');
+      }
+      
+      if (response.ok && result) {
+        // Show success state if posting was successful
         const successCount = result.successful_postings || 0;
         const totalCount = result.total_platforms || 0;
         setPostResult({ successCount, totalCount });
         setPostSuccess(true);
       } else {
-        const errorText = await response.text().catch(() => 'Could not read error');
-        console.error('❌ [FRONTEND] Response not OK:', response.status, errorText);
-        throw new Error(`Failed to post listing: ${response.status} ${errorText}`);
+        // Show message that listing was saved even if posting failed
+        alert('Listing saved to your dashboard. Some platforms may not have posted successfully. Check console for details.');
+        setPostResult({ successCount: 0, totalCount: selectedPlatforms.length });
+        setPostSuccess(true);
       }
     } catch (error: any) {
       const totalTime = Date.now() - (requestStartTime || Date.now());
@@ -2274,27 +2741,66 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                           }}
                           // Mobile touch events for drag and drop
                           onTouchStart={(e) => {
+                            const touch = e.touches[0];
                             e.currentTarget.dataset.touchStartTime = Date.now().toString();
-                            e.currentTarget.dataset.touchStartY = e.touches[0].clientY.toString();
-                            e.currentTarget.dataset.touchStartX = e.touches[0].clientX.toString();
+                            e.currentTarget.dataset.touchStartY = touch.clientY.toString();
+                            e.currentTarget.dataset.touchStartX = touch.clientX.toString();
                             e.currentTarget.dataset.draggedIndex = index.toString();
+                            
+                            // Store initial scroll position to lock it during drag (use ref for immediate access)
+                            dragStartScrollYRef.current = window.scrollY || document.documentElement.scrollTop;
                           }}
                           onTouchMove={(e) => {
-                            e.preventDefault();
                             const touch = e.touches[0];
                             const startY = parseFloat(e.currentTarget.dataset.touchStartY || '0');
                             const startX = parseFloat(e.currentTarget.dataset.touchStartX || '0');
                             const deltaY = Math.abs(touch.clientY - startY);
                             const deltaX = Math.abs(touch.clientX - startX);
+                            const totalMovement = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
                             
-                            // If moved more than 10px, start drag mode
-                            if (deltaY > 10 || deltaX > 10) {
+                            // Detect drag intent: if movement is significant (>15px), treat as drag
+                            // This works for both horizontal and vertical drags (reordering photos)
+                            const isDragIntent = totalMovement > 15;
+                            
+                            if (isDragIntent) {
+                              // Prevent default to stop page scrolling
+                              e.preventDefault();
+                              e.stopPropagation();
+                              
+                              // Lock scroll position immediately when drag is detected
+                              if (!isDragging) {
+                                setIsDragging(true);
+                                // Lock body scroll
+                                const scrollY = dragStartScrollYRef.current;
+                                document.body.style.overflow = 'hidden';
+                                document.body.style.position = 'fixed';
+                                document.body.style.top = `-${scrollY}px`;
+                                document.body.style.width = '100%';
+                              }
+                              
+                              // Visual feedback for dragging
                               e.currentTarget.classList.add('opacity-50', 'scale-105', 'z-10');
                               e.currentTarget.style.transform = `translate(${touch.clientX - startX}px, ${touch.clientY - startY}px)`;
+                            } else if (!isDragging) {
+                              // If not dragging yet (small movement), allow normal scroll
+                              // Don't prevent default - let page scroll normally
                             }
                           }}
                           onTouchEnd={(e) => {
                             const element = e.currentTarget;
+                            
+                            // Unlock scroll if we were dragging
+                            if (isDragging) {
+                              const scrollY = dragStartScrollYRef.current;
+                              document.body.style.overflow = '';
+                              document.body.style.position = '';
+                              document.body.style.top = '';
+                              document.body.style.width = '';
+                              window.scrollTo(0, scrollY);
+                              setIsDragging(false);
+                            }
+                            
+                            // Reset visual state
                             element.classList.remove('opacity-50', 'scale-105', 'z-10');
                             element.style.transform = '';
                             
@@ -2318,6 +2824,37 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                                 }
                               }
                             }
+                            
+                            // Clear touch start data
+                            delete e.currentTarget.dataset.touchStartTime;
+                            delete e.currentTarget.dataset.touchStartY;
+                            delete e.currentTarget.dataset.touchStartX;
+                            delete e.currentTarget.dataset.draggedIndex;
+                          }}
+                          onTouchCancel={(e) => {
+                            // Handle touch cancel (e.g., if user scrolls page instead)
+                            const element = e.currentTarget;
+                            
+                            // Unlock scroll if we were dragging
+                            if (isDragging) {
+                              const scrollY = dragStartScrollYRef.current;
+                              document.body.style.overflow = '';
+                              document.body.style.position = '';
+                              document.body.style.top = '';
+                              document.body.style.width = '';
+                              window.scrollTo(0, scrollY);
+                              setIsDragging(false);
+                            }
+                            
+                            // Reset visual state
+                            element.classList.remove('opacity-50', 'scale-105', 'z-10');
+                            element.style.transform = '';
+                            
+                            // Clear touch start data
+                            delete e.currentTarget.dataset.touchStartTime;
+                            delete e.currentTarget.dataset.touchStartY;
+                            delete e.currentTarget.dataset.touchStartX;
+                            delete e.currentTarget.dataset.draggedIndex;
                           }}
                           data-file-index={index}
                         >
@@ -2964,9 +3501,45 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                About the Vehicle
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  About the Vehicle
+                </label>
+                <div className="flex items-center gap-2">
+                  {/* Microphone Button */}
+                  <button
+                    type="button"
+                    onClick={handleMicrophoneClick}
+                    disabled={isTranscribing}
+                    className={`p-2 rounded-full transition-all ${
+                      isRecording
+                        ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse'
+                        : isTranscribing
+                        ? 'bg-gray-400 cursor-not-allowed text-white'
+                        : 'bg-blue-500 hover:bg-blue-600 text-white'
+                    }`}
+                    title={isRecording ? 'Stop recording' : isTranscribing ? 'Transcribing...' : 'Start voice recording'}
+                  >
+                  {isTranscribing ? (
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                  ) : isRecording ? (
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 012 0v4a1 1 0 11-2 0V7zM12 9a1 1 0 10-2 0v3a1 1 0 102 0V9z" clipRule="evenodd" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clipRule="evenodd" />
+                    </svg>
+                  )}
+                  </button>
+                  {/* Browser compatibility note */}
+                  {typeof window !== 'undefined' && (window.navigator.userAgent.includes('Cursor') || !navigator.mediaDevices?.getUserMedia) && (
+                    <span className="text-xs text-gray-500 dark:text-gray-400" title="Voice recording works best in Chrome, Firefox, or Safari. Open this page in an external browser if microphone access is denied.">
+                      ⚠️
+                    </span>
+                  )}
+                </div>
+              </div>
               
               {/* User Presets - Quick Select Buttons */}
               {userPresets.length > 0 && (
@@ -3226,19 +3799,29 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                 />
                 
                 {/* Unified Post Button */}
-                <div className="mt-4">
+                <div className="mt-4 space-y-2">
                   <button
                     type="button"
                     onClick={handleTestPost}
-                    className="w-full px-6 py-3 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 transition-all duration-200 flex items-center justify-center space-x-2"
+                    disabled={isPosting}
+                    className="w-full px-6 py-3 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 transition-all duration-200 flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <span>🚀</span>
-                    <span>Post Listing</span>
+                    <span>{isPosting ? 'Posting...' : 'Post Listing'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveDraft}
+                    disabled={isPosting}
+                    className="w-full px-6 py-3 bg-gray-500 text-white rounded-lg font-medium hover:bg-gray-600 transition-all duration-200 flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <span>💾</span>
+                    <span>{isPosting ? 'Saving...' : 'Save as Draft'}</span>
                   </button>
                   <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-2">
                     {selectedPlatforms.length > 0 
                       ? `Will post to ${selectedPlatforms.length} platform${selectedPlatforms.length > 1 ? 's' : ''} and save to dashboard`
-                      : 'Will save to dashboard (select platforms above to post externally)'
+                      : 'Save as draft to post later, or select platforms above to post now'
                     }
                   </p>
                 </div>
@@ -3424,21 +4007,39 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
             )}
 
             {/* Submit Button */}
-            <div className="flex space-x-3">
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={isPosting || files.length === 0}
-                className="flex-1 px-4 py-3 bg-blue-500 text-white rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-600 transition-colors"
-              >
-                {isPosting ? `Posting to ${selectedPlatforms.length} Platform${selectedPlatforms.length > 1 ? 's' : ''}...` : `Post to ${selectedPlatforms.length} Platform${selectedPlatforms.length > 1 ? 's' : ''}`}
-              </button>
+            <div className="space-y-2">
+              <div className="flex space-x-3">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  Cancel
+                </button>
+                {selectedPlatforms.length > 0 ? (
+                  <button
+                    type="submit"
+                    disabled={isPosting || files.length === 0}
+                    className="flex-1 px-4 py-3 bg-blue-500 text-white rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-600 transition-colors"
+                  >
+                    {isPosting ? `Posting to ${selectedPlatforms.length} Platform${selectedPlatforms.length > 1 ? 's' : ''}...` : `Post to ${selectedPlatforms.length} Platform${selectedPlatforms.length > 1 ? 's' : ''}`}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleSaveDraft}
+                    disabled={isPosting || files.length === 0}
+                    className="flex-1 px-4 py-3 bg-gray-500 text-white rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-600 transition-colors"
+                  >
+                    {isPosting ? 'Saving...' : 'Save as Draft'}
+                  </button>
+                )}
+              </div>
+              {selectedPlatforms.length === 0 && (
+                <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+                  💡 Select platforms above to post, or save as draft to post later
+                </p>
+              )}
             </div>
           </form>
           
