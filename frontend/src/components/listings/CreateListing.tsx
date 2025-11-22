@@ -197,11 +197,17 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
   useEffect(() => {
     return () => {
       if (isDragging) {
+        const scrollY = dragStartScrollYRef.current;
+        // Restore all scroll-related styles
         document.body.style.overflow = '';
         document.body.style.position = '';
         document.body.style.top = '';
         document.body.style.width = '';
-        window.scrollTo(0, dragStartScrollYRef.current);
+        document.documentElement.style.overflow = '';
+        document.documentElement.style.position = '';
+        document.documentElement.style.top = '';
+        // Restore scroll position
+        window.scrollTo(0, scrollY);
       }
     };
   }, [isDragging]);
@@ -2696,7 +2702,7 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                           key={`${fileWithId.id}-${index}`}
                           className="relative group cursor-move select-none"
                           draggable
-                          style={{ userSelect: 'none' }}
+                          style={{ userSelect: 'none', touchAction: 'none' }}
                           onMouseDown={(e) => {
                             // Start tracking for drag vs click
                             e.currentTarget.dataset.mouseDownTime = Date.now().toString();
@@ -2749,6 +2755,10 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                             
                             // Store initial scroll position to lock it during drag (use ref for immediate access)
                             dragStartScrollYRef.current = window.scrollY || document.documentElement.scrollTop;
+                            
+                            // Prevent any potential scrolling immediately when touch starts on draggable element
+                            // This helps prevent the page from scrolling when user starts dragging
+                            e.stopPropagation();
                           }}
                           onTouchMove={(e) => {
                             const touch = e.touches[0];
@@ -2758,32 +2768,44 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                             const deltaX = Math.abs(touch.clientX - startX);
                             const totalMovement = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
                             
-                            // Detect drag intent: if movement is significant (>15px), treat as drag
-                            // This works for both horizontal and vertical drags (reordering photos)
-                            const isDragIntent = totalMovement > 15;
+                            // Detect drag intent: if movement is significant (>10px), treat as drag
+                            // Lowered threshold to detect drag earlier and prevent scrolling sooner
+                            const isDragIntent = totalMovement > 10;
                             
                             if (isDragIntent) {
-                              // Prevent default to stop page scrolling
+                              // ALWAYS prevent default and stop propagation when drag is detected
+                              // This prevents ALL scrolling, including momentum scrolling
                               e.preventDefault();
                               e.stopPropagation();
                               
                               // Lock scroll position immediately when drag is detected
                               if (!isDragging) {
                                 setIsDragging(true);
-                                // Lock body scroll
+                                // Lock body scroll immediately
                                 const scrollY = dragStartScrollYRef.current;
                                 document.body.style.overflow = 'hidden';
                                 document.body.style.position = 'fixed';
                                 document.body.style.top = `-${scrollY}px`;
                                 document.body.style.width = '100%';
+                                // Also prevent scrolling on the document element
+                                document.documentElement.style.overflow = 'hidden';
+                                document.documentElement.style.position = 'fixed';
+                                document.documentElement.style.top = `-${scrollY}px`;
                               }
                               
                               // Visual feedback for dragging
                               e.currentTarget.classList.add('opacity-50', 'scale-105', 'z-10');
                               e.currentTarget.style.transform = `translate(${touch.clientX - startX}px, ${touch.clientY - startY}px)`;
-                            } else if (!isDragging) {
-                              // If not dragging yet (small movement), allow normal scroll
-                              // Don't prevent default - let page scroll normally
+                            } else {
+                              // For small movements, still prevent default to avoid accidental scrolling
+                              // Only allow scrolling if user explicitly scrolls (not dragging)
+                              // But we need to be careful - if user is just tapping, don't prevent
+                              const timeSinceStart = Date.now() - parseFloat(e.currentTarget.dataset.touchStartTime || '0');
+                              if (timeSinceStart > 100) {
+                                // If touch has been held for >100ms, it's likely a drag attempt
+                                e.preventDefault();
+                                e.stopPropagation();
+                              }
                             }
                           }}
                           onTouchEnd={(e) => {
@@ -2792,13 +2814,24 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                             // Unlock scroll if we were dragging
                             if (isDragging) {
                               const scrollY = dragStartScrollYRef.current;
+                              // Restore all scroll-related styles
                               document.body.style.overflow = '';
                               document.body.style.position = '';
                               document.body.style.top = '';
                               document.body.style.width = '';
+                              document.documentElement.style.overflow = '';
+                              document.documentElement.style.position = '';
+                              document.documentElement.style.top = '';
+                              // Restore scroll position
                               window.scrollTo(0, scrollY);
+                              // Use requestAnimationFrame to ensure scroll is restored after styles are reset
+                              requestAnimationFrame(() => {
+                                window.scrollTo(0, scrollY);
+                              });
                               setIsDragging(false);
                             }
+                            
+                            e.stopPropagation();
                             
                             // Reset visual state
                             element.classList.remove('opacity-50', 'scale-105', 'z-10');
@@ -2838,13 +2871,23 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                             // Unlock scroll if we were dragging
                             if (isDragging) {
                               const scrollY = dragStartScrollYRef.current;
+                              // Restore all scroll-related styles
                               document.body.style.overflow = '';
                               document.body.style.position = '';
                               document.body.style.top = '';
                               document.body.style.width = '';
+                              document.documentElement.style.overflow = '';
+                              document.documentElement.style.position = '';
+                              document.documentElement.style.top = '';
+                              // Restore scroll position
                               window.scrollTo(0, scrollY);
+                              requestAnimationFrame(() => {
+                                window.scrollTo(0, scrollY);
+                              });
                               setIsDragging(false);
                             }
+                            
+                            e.stopPropagation();
                             
                             // Reset visual state
                             element.classList.remove('opacity-50', 'scale-105', 'z-10');
