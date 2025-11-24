@@ -76,7 +76,7 @@ class UserPlatformConnection(Base):
     @classmethod
     def create_facebook_connection(
         cls,
-        user_id: str,
+        user_id,  # Can be UUID or string
         platform_user_id: str,
         platform_username: str,
         access_token: str,
@@ -86,6 +86,15 @@ class UserPlatformConnection(Base):
         pages: list = None
     ):
         """Create a new Facebook platform connection"""
+        import uuid as uuid_lib
+        
+        # Convert user_id to UUID if it's a string
+        if isinstance(user_id, str):
+            try:
+                user_id = uuid_lib.UUID(user_id)
+            except ValueError:
+                raise ValueError(f"Invalid user_id format: {user_id}")
+        
         platform_data = {}
         
         if user_info:

@@ -65,12 +65,6 @@ class FacebookConnectionStatus(BaseModel):
 class FacebookDisconnectRequest(BaseModel):
     platform: str = "facebook"
 
-# Database model for user_platform_connections (simplified)
-class UserPlatformConnection:
-    def __init__(self, **kwargs):
-        for key, value in kwargs.items():
-            setattr(self, key, value)
-
 @router.get("/facebook/connect")
 async def initiate_facebook_connection(
     current_user_id: str = Depends(get_current_user_id)
@@ -132,6 +126,18 @@ async def facebook_oauth_callback(
             expires_at = result["expires_at"]
             user_info = result["user_info"]
             pages = result["pages"]
+            
+            # Convert user_id to UUID if it's a string
+            import uuid as uuid_lib
+            if isinstance(user_id, str):
+                try:
+                    user_id = uuid_lib.UUID(user_id)
+                except ValueError:
+                    logger.error(f"Invalid user_id format: {user_id}")
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Invalid user ID format"
+                    )
             
             # Store connection in database
             # Check if connection already exists

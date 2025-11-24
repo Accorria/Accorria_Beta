@@ -91,13 +91,41 @@ export default function PlatformConnections() {
       setLoading(true);
       setError(null);
       
+      // Add timeout to prevent infinite loading
+      const timeoutId = setTimeout(() => {
+        console.warn('Connection loading timeout - setting loading to false');
+        setLoading(false);
+      }, 10000); // 10 second timeout
+      
       try {
         const connectionPromises = PLATFORMS.map(async (platform) => {
           try {
             // For Facebook, use the existing endpoint
             if (platform.id === 'facebook_marketplace') {
               const backendUrl = getBackendUrl();
-              const response = await authenticatedFetch(`${backendUrl}/api/v1/facebook/connection-status`);
+              
+              // Add timeout to the fetch request
+              const controller = new AbortController();
+              const timeout = setTimeout(() => controller.abort(), 8000); // 8 second timeout
+              
+              let response;
+              try {
+                response = await authenticatedFetch(`${backendUrl}/api/v1/facebook/connection-status`, {
+                  signal: controller.signal
+                });
+                clearTimeout(timeout);
+              } catch (fetchErr: any) {
+                clearTimeout(timeout);
+                if (fetchErr.name === 'AbortError') {
+                  console.warn('Facebook connection status request timed out');
+                  return {
+                    platform: platform.id,
+                    connected: false,
+                    error: 'Request timed out'
+                  };
+                }
+                throw fetchErr;
+              }
               
               // Check if response is OK and content type is JSON
               const contentType = response.headers.get('content-type');
@@ -156,9 +184,11 @@ export default function PlatformConnections() {
         });
 
         setConnections(connectionMap);
+        clearTimeout(timeoutId);
       } catch (err) {
         console.error('Error loading connections:', err);
         setError('Failed to load platform connections');
+        clearTimeout(timeoutId);
       } finally {
         setLoading(false);
       }
