@@ -48,9 +48,9 @@ create_from_template() {
     cat > .env.local << 'EOF'
 # Supabase Configuration
 # Based on your backup files - update with full values if truncated
-NEXT_PUBLIC_SUPABASE_URL=https://jchmewblysdlzibaaikl.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key-here
+SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key-here
 
 # Site Configuration
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
@@ -60,11 +60,11 @@ NEXT_PUBLIC_SITE_URL=http://localhost:3000
 NEXT_PUBLIC_API_URL=http://localhost:8000
 
 # Facebook OAuth2 for NextAuth
-AUTH_FACEBOOK_ID=837388105462776
-AUTH_FACEBOOK_SECRET=b0aeb7472adb030100e02e
+AUTH_FACEBOOK_ID=your-facebook-app-id-here
+AUTH_FACEBOOK_SECRET=your-facebook-app-secret-here
 
 # OpenAI API Key for Accorria Chatbot
-OPENAI_API_KEY=sk-proj-8t0oAt5FSV4s2g
+OPENAI_API_KEY=your-openai-api-key-here
 EOF
     echo "✅ Created .env.local from template"
     echo "⚠️  IMPORTANT: Please update the Supabase keys with your full values!"

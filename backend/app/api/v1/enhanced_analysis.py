@@ -12,6 +12,12 @@ import json
 from datetime import datetime
 
 from app.services.smart_image_analysis import SmartImageAnalysis
+from app.utils.pricing_rules import (
+    calculate_mileage_penalty_percent,
+    detect_trim_tier,
+    get_reliability_tier,
+    normalize_title_status,
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -49,6 +55,8 @@ async def enhanced_analyze_car(
         print(f"[ENHANCED-ANALYZE] VIN: {vin or 'None'}")
         print(f"[ENHANCED-ANALYZE] =============================")
         
+        original_trim_input = trim
+
         # Apply spelling correction to aboutVehicle BEFORE processing
         import re
         spelling_fixes_input = {
@@ -189,7 +197,7 @@ CRITICAL: Look for these SPECIFIC visual details in ALL photos - YOU MUST CHECK 
 
 **IMPORTANT: For each feature, if you can see it in ANY photo, mark it as present=True with appropriate confidence (0.7+ for clearly visible, 0.5-0.7 for partially visible). Do NOT mark features as absent if you simply cannot see them - only mark present=False if you can clearly see the area where the feature would be and it's not there.**
 
-IMPORTANT: If you see a photo of the VIN number, you MUST extract it and note that VIN lookup should be performed to get accurate vehicle specifications and features.
+CRITICAL VIN DETECTION: The FIRST images in this set may contain the VIN number. You MUST carefully examine the first 1-3 images for any VIN numbers visible on the dashboard, door jamb, windshield, or title documents. VIN numbers are 17 characters (alphanumeric, excluding I, O, Q). If you see a VIN, extract it EXACTLY and set vin_visible confidence to 0.9 or higher. This is critical for accurate vehicle specifications.
 
 Return ONLY this JSON structure:
 {{
@@ -477,15 +485,35 @@ Return ONLY this JSON structure:
             "features_list": [],
             "condition_blurbs": [],
             "condition": "good",  # Default condition, can be enhanced from AI analysis
-            "style": "emoji_bullets_v1"
+            "style": "emoji_bullets_v1",
+            "alerts": [],
         }
+        trim_tier, trim_matches = detect_trim_tier(final_trim)
+        listing_context["trim_tier"] = trim_tier
+        listing_context["trim_keywords"] = trim_matches
+        listing_context["reliability_tier"] = get_reliability_tier(final_make)
+        normalized_title_status = normalize_title_status(titleStatus or listing_context.get("title_status"))
+        listing_context["title_status"] = normalized_title_status
+        listing_context["title"] = normalized_title_status.title()
         
-        # Extract features with confidence >= 0.5 (lowered threshold for better detection)
-        # IMPORTANT: Check ALL features from ALL images - don't miss anything!
-        print(f"[ENHANCED-ANALYZE] 🔍 Checking features from analysis_json: {list(analysis_json.get('features', {}).keys())}")
+        # VISION-BASED FEATURE DETECTION: Extract features that Gemini ACTUALLY SEES in photos
+        # Only include features with high confidence (0.7+) - what's actually visible, not inferred
+        # HALLUCINATION PREVENTION: Check for duplicates and consolidate similar features
+        
+        # First, check for interior material to avoid duplicate "Leather Seats" + "Black Leather"
+        interior_material_detected = None
+        if "specific_details" in analysis_json:
+            details = analysis_json["specific_details"]
+            if details.get("interior_material", {}).get("confidence", 0) >= 0.7:
+                interior_material_detected = details["interior_material"]["value"]
+        
+        print(f"[ENHANCED-ANALYZE] 🔍 Checking features from Gemini Vision analysis: {list(analysis_json.get('features', {}).keys())}")
         for feature, data in analysis_json.get("features", {}).items():
-            print(f"[ENHANCED-ANALYZE] 🔍 Feature '{feature}': present={data.get('present', False)}, confidence={data.get('confidence', 0):.2f}")
-            if data.get("present", False) and data.get("confidence", 0) >= 0.5:
+            confidence = data.get("confidence", 0)
+            present = data.get("present", False)
+            print(f"[ENHANCED-ANALYZE] 🔍 Feature '{feature}': present={present}, confidence={confidence:.2f}")
+            # Only add features with high confidence (0.7+) - actually visible in photos
+            if present and confidence >= 0.7:
                 feature_name = feature.replace("_", " ").title()
                 if feature == "apple_carplay_android_auto":
                     feature_name = "Apple CarPlay/Android Auto"
@@ -500,6 +528,11 @@ Return ONLY this JSON structure:
                 elif feature == "sunroof":
                     feature_name = "Sunroof/Moonroof"
                 elif feature == "leather_seats":
+                    # HALLUCINATION PREVENTION: Skip "Leather Seats" if interior_material already contains "leather"
+                    # e.g., if we have "Black Leather", don't also add "Leather Seats"
+                    if interior_material_detected and "leather" in interior_material_detected.lower():
+                        print(f"[ENHANCED-ANALYZE] ⚠️ Skipping duplicate 'Leather Seats' - already have '{interior_material_detected}'")
+                        continue
                     feature_name = "Leather Seats"
                 elif feature == "heated_seats":
                     feature_name = "Heated Seats"
@@ -519,56 +552,99 @@ Return ONLY this JSON structure:
                     feature_name = "Push-Button Start"
                 elif feature == "alloy_wheels":
                     feature_name = "Alloy Wheels"
-                listing_context["features_list"].append(feature_name)
-                print(f"[ENHANCED-ANALYZE] ✅ Detected feature: {feature_name} (confidence: {data['confidence']:.2f})")
+                
+                # HALLUCINATION PREVENTION: Check for duplicates (case-insensitive, partial matches)
+                is_duplicate = False
+                feature_lower = feature_name.lower()
+                for existing_feature in listing_context["features_list"]:
+                    existing_lower = existing_feature.lower()
+                    # Exact match
+                    if feature_lower == existing_lower:
+                        is_duplicate = True
+                        print(f"[ENHANCED-ANALYZE] ⚠️ Skipping duplicate feature: '{feature_name}' (already exists as '{existing_feature}')")
+                        break
+                    # Partial match prevention (e.g., "Leather Seats" vs "Black Leather")
+                    if "leather" in feature_lower and "leather" in existing_lower:
+                        if feature_lower in existing_lower or existing_lower in feature_lower:
+                            is_duplicate = True
+                            print(f"[ENHANCED-ANALYZE] ⚠️ Skipping duplicate leather feature: '{feature_name}' (similar to '{existing_feature}')")
+                            break
+                
+                if not is_duplicate:
+                    listing_context["features_list"].append(feature_name)
+                    print(f"[ENHANCED-ANALYZE] ✅ Added photo-detected feature: {feature_name} (confidence: {confidence:.2f})")
         
-        print(f"[ENHANCED-ANALYZE] 📋 Total features detected so far: {len(listing_context['features_list'])} - {listing_context['features_list']}")
-        
-        # Extract specific visual details
+        # Extract specific visual details from photos (high confidence only)
         if "specific_details" in analysis_json:
             details = analysis_json["specific_details"]
             
-            # Add wheel description if available
-            if details.get("wheel_description", {}).get("confidence", 0) >= 0.6:
+            # Add wheel description if clearly visible
+            if details.get("wheel_description", {}).get("confidence", 0) >= 0.7:
                 wheel_desc = details["wheel_description"]["value"]
-                if wheel_desc and wheel_desc not in listing_context["features_list"]:
-                    listing_context["features_list"].append(wheel_desc)
+                if wheel_desc:
+                    # Check for duplicates
+                    is_duplicate = any(wheel_desc.lower() in f.lower() or f.lower() in wheel_desc.lower() for f in listing_context["features_list"])
+                    if not is_duplicate:
+                        listing_context["features_list"].append(wheel_desc)
+                        print(f"[ENHANCED-ANALYZE] ✅ Added wheel description from photo: {wheel_desc}")
+                    else:
+                        print(f"[ENHANCED-ANALYZE] ⚠️ Skipping duplicate wheel description: {wheel_desc}")
             
-            # Add window tint description if available
-            if details.get("window_tint_description", {}).get("confidence", 0) >= 0.6:
+            # Add window tint description if clearly visible
+            if details.get("window_tint_description", {}).get("confidence", 0) >= 0.7:
                 tint_desc = details["window_tint_description"]["value"]
-                if tint_desc and tint_desc not in listing_context["features_list"]:
-                    listing_context["features_list"].append(tint_desc)
+                if tint_desc:
+                    # Check for duplicates
+                    is_duplicate = any("tint" in f.lower() and "tint" in tint_desc.lower() for f in listing_context["features_list"])
+                    if not is_duplicate:
+                        listing_context["features_list"].append(tint_desc)
+                        print(f"[ENHANCED-ANALYZE] ✅ Added tint description from photo: {tint_desc}")
+                    else:
+                        print(f"[ENHANCED-ANALYZE] ⚠️ Skipping duplicate tint description: {tint_desc}")
             
-            # Add interior material if available
-            if details.get("interior_material", {}).get("confidence", 0) >= 0.6:
+            # Add interior material if clearly visible (e.g., "Black Leather", "Tan Cloth")
+            if details.get("interior_material", {}).get("confidence", 0) >= 0.7:
                 interior_desc = details["interior_material"]["value"]
-                if interior_desc and interior_desc not in listing_context["features_list"]:
-                    listing_context["features_list"].append(interior_desc)
-                    print(f"[ENHANCED-ANALYZE] ✅ Detected interior material: {interior_desc}")
-            
-            # Check for radio/infotainment system in center console
-            # This is often visible in interior shots
-            if details.get("interior_material", {}).get("confidence", 0) >= 0.5:
-                # If we detected interior details, likely have interior shots - check for radio
-                if "Touchscreen" not in listing_context["features_list"] and "Touchscreen Display" not in listing_context["features_list"]:
-                    # Infer touchscreen/radio from interior shots
-                    if "Radio" not in str(listing_context["features_list"]) and "Infotainment" not in str(listing_context["features_list"]):
-                        listing_context["features_list"].append("Infotainment System")
-                        print(f"[ENHANCED-ANALYZE] ✅ Inferred Infotainment System from interior images")
+                if interior_desc:
+                    # HALLUCINATION PREVENTION: Check for duplicates with "Leather Seats" or similar
+                    is_duplicate = False
+                    interior_lower = interior_desc.lower()
+                    for existing_feature in listing_context["features_list"]:
+                        existing_lower = existing_feature.lower()
+                        # If interior_material contains "leather" and we already have "Leather Seats", skip
+                        if "leather" in interior_lower and "leather" in existing_lower:
+                            if "seats" in existing_lower or "seats" in interior_lower:
+                                is_duplicate = True
+                                print(f"[ENHANCED-ANALYZE] ⚠️ Skipping duplicate interior material: '{interior_desc}' (similar to '{existing_feature}')")
+                                break
+                        # Exact or partial match
+                        if interior_lower == existing_lower or (interior_lower in existing_lower or existing_lower in interior_lower):
+                            is_duplicate = True
+                            print(f"[ENHANCED-ANALYZE] ⚠️ Skipping duplicate interior material: '{interior_desc}' (already exists)")
+                            break
+                    
+                    if not is_duplicate:
+                        listing_context["features_list"].append(interior_desc)
+                        print(f"[ENHANCED-ANALYZE] ✅ Added interior material from photo: {interior_desc}")
+        
+        print(f"[ENHANCED-ANALYZE] 📋 Photo-detected features so far: {len(listing_context['features_list'])} - {listing_context['features_list']}")
         
         # VIN LOOKUP: Extract and decode VIN to get real vehicle specifications
         from app.services.vin_decoder import VINDecoder
         vin_decoder = VINDecoder()
         
         vin_to_decode = None
+        vin_source = None
+        vin_status = {"state": "pending", "message": ""}
         if vin:
             vin_to_decode = vin.strip()
+            vin_source = "user_input"
         elif aboutVehicle:
             # Try to extract VIN from aboutVehicle text
             extracted_vin = vin_decoder.extract_vin_from_text(aboutVehicle)
             if extracted_vin:
                 vin_to_decode = extracted_vin
+                vin_source = "text"
                 print(f"[ENHANCED-ANALYZE] 🔍 Extracted VIN from aboutVehicle: {vin_to_decode}")
         
         # Also check if VIN is visible in images
@@ -576,6 +652,7 @@ Return ONLY this JSON structure:
             vin_value = analysis_json["vehicle"]["vin_visible"]["value"]
             if vin_value:
                 vin_to_decode = vin_value  # Use VIN from image if found
+                vin_source = "photo"
                 listing_context["condition_blurbs"].append(f"VIN visible: {vin_value}")
         
         # Decode VIN to get real vehicle specifications and features
@@ -593,6 +670,7 @@ Return ONLY this JSON structure:
                         if vin_data.get("make"):
                             listing_context["make"] = vin_data["make"]
                             print(f"[ENHANCED-ANALYZE] 📝 Updated make from VIN: {vin_data['make']}")
+                            listing_context["reliability_tier"] = get_reliability_tier(listing_context["make"])
                     
                     if not listing_context.get("model") or listing_context.get("model") == "Unknown":
                         if vin_data.get("model"):
@@ -607,54 +685,165 @@ Return ONLY this JSON structure:
                     if not listing_context.get("trim") and vin_data.get("trim"):
                         listing_context["trim"] = vin_data["trim"]
                         print(f"[ENHANCED-ANALYZE] 📝 Updated trim from VIN: {vin_data['trim']}")
+                        trim_tier, trim_matches = detect_trim_tier(listing_context["trim"])
+                        listing_context["trim_tier"] = trim_tier
+                        listing_context["trim_keywords"] = trim_matches
                     
                     if not listing_context.get("drivetrain") and vin_data.get("drivetrain"):
                         listing_context["drivetrain"] = vin_data["drivetrain"]
                         print(f"[ENHANCED-ANALYZE] 📝 Updated drivetrain from VIN: {vin_data['drivetrain']}")
                     
-                    # Get features from VIN (inferred based on vehicle specs)
-                    vin_features = await vin_decoder.get_vehicle_features_from_vin(vin_to_decode)
-                    print(f"[ENHANCED-ANALYZE] 🔧 VIN features inferred: {vin_features}")
+                    # CRITICAL: Add ALL NHTSA VIN attributes to features_list for description
+                    # These are pure NHTSA data - must be included in the listing description
+                    vin_attributes_added = []
+                    if vin_data.get("drivetrain") and vin_data["drivetrain"] != "Not Applicable":
+                        drivetrain_feature = vin_data["drivetrain"]
+                        if drivetrain_feature not in listing_context["features_list"]:
+                            listing_context["features_list"].append(drivetrain_feature)
+                            vin_attributes_added.append(drivetrain_feature)
                     
-                    # Merge VIN features with detected features (prioritize detected, add VIN features if not detected)
-                    for vin_feature in vin_features:
-                        if vin_feature not in listing_context["features_list"]:
-                            listing_context["features_list"].append(vin_feature)
-                            print(f"[ENHANCED-ANALYZE] ➕ Added VIN feature: {vin_feature}")
+                    if vin_data.get("transmission") and vin_data["transmission"] != "Not Applicable":
+                        transmission_feature = f"{vin_data['transmission']} Transmission"
+                        if transmission_feature not in listing_context["features_list"]:
+                            listing_context["features_list"].append(transmission_feature)
+                            vin_attributes_added.append(transmission_feature)
+                    
+                    if vin_data.get("engine_config") and vin_data["engine_config"] != "Not Applicable":
+                        engine_feature = vin_data["engine_config"]
+                        if vin_data.get("cylinders"):
+                            engine_feature += f" {vin_data['cylinders']} Cylinder"
+                        if vin_data.get("displacement"):
+                            engine_feature += f" {vin_data['displacement']}L"
+                        if engine_feature not in listing_context["features_list"]:
+                            listing_context["features_list"].append(engine_feature)
+                            vin_attributes_added.append(engine_feature)
+                    
+                    if vin_data.get("fuel_type") and vin_data["fuel_type"] != "Not Applicable":
+                        fuel_feature = vin_data["fuel_type"]
+                        if fuel_feature not in listing_context["features_list"]:
+                            listing_context["features_list"].append(fuel_feature)
+                            vin_attributes_added.append(fuel_feature)
+                    
+                    if vin_data.get("body_style") and vin_data["body_style"] != "Not Applicable":
+                        body_feature = vin_data["body_style"]
+                        if body_feature not in listing_context["features_list"]:
+                            listing_context["features_list"].append(body_feature)
+                            vin_attributes_added.append(body_feature)
+                    
+                    if vin_attributes_added:
+                        print(f"[ENHANCED-ANALYZE] ✅ Added {len(vin_attributes_added)} NHTSA VIN attributes to features: {vin_attributes_added}")
+                        # Store VIN attributes separately for description generation
+                        listing_context["vin_attributes"] = vin_attributes_added
+                    
+                    # PURE NHTSA VIN DATA ONLY - no feature inference or enrichment
+                    # Only use actual NHTSA attributes (make, model, year, trim, drivetrain, etc.)
+                    # DO NOT add inferred features like "remote start", "navigation", etc.
+                    vin_status = {
+                        "state": "decoded",
+                        "vin": vin_to_decode,
+                        "source": vin_source or "detected",
+                        "message": "VIN decoded via NHTSA (pure data only)",
+                        "attributes": vin_attributes_added if vin_attributes_added else []
+                    }
+                    
+                    # NO OpenAI equipment extraction - only use NHTSA data
+                    # NO feature inference - only use what user types in "About The Vehicle"
                 
             except Exception as e:
                 logger.warning(f"VIN decode failed: {e}")
                 print(f"[ENHANCED-ANALYZE] ⚠️  VIN decode failed: {e}")
+                vin_status = {
+                    "state": "error",
+                    "vin": vin_to_decode,
+                    "source": vin_source or "unknown",
+                    "message": f"VIN decode failed: {e}",
+                }
+        else:
+            vin_visible_conf = analysis_json.get("vehicle", {}).get("vin_visible", {}).get("confidence", 0)
+            reason = "VIN photo not detected" if vin_visible_conf < 0.4 else "VIN not provided"
+            vin_status = {
+                "state": "missing",
+                "message": f"{reason}. Upload a VIN photo to unlock equipment decode.",
+            }
+            print(f"[ENHANCED-ANALYZE] ⚠️ {vin_status['message']}")
+            listing_context.setdefault("alerts", []).append(vin_status["message"])
         
-        # Extract exterior and interior colors - IMPORTANT: Include in features if detected
-        if analysis_json.get("vehicle", {}).get("exterior_color", {}).get("confidence", 0) >= 0.6:
+        listing_context["vin_status"] = vin_status
+        
+        # Re-run market search if trim was updated after initial parallel call
+        final_trim_value = listing_context.get("trim")
+        trim_changed = ((original_trim_input or "").strip().lower() != (final_trim_value or "").strip().lower())
+        if trim_changed:
+            print(f"[ENHANCED-ANALYZE] 🔁 Trim updated from '{original_trim_input}' to '{final_trim_value}' after VIN/photo analysis - refreshing market search")
+            try:
+                from app.agents.market_intelligence_agent import MarketIntelligenceAgent
+                refresh_agent = MarketIntelligenceAgent()
+                refreshed_result = await refresh_agent.process({
+                    "make": listing_context["make"],
+                    "model": listing_context["model"],
+                    "year": listing_context["year"],
+                    "mileage": listing_context["mileage"],
+                    "trim": final_trim_value,
+                    "location": listing_context.get("location", "Detroit, MI"),
+                    "analysis_type": "pricing_analysis",
+                    "asking_price": listing_context.get("asking_price"),
+                    "price": listing_context.get("asking_price"),
+                    "title_status": normalized_title_status,
+                    "titleStatus": normalized_title_status,
+                })
+                if refreshed_result and refreshed_result.success and refreshed_result.data:
+                    market_result = refreshed_result
+                    print(f"[ENHANCED-ANALYZE] ✅ Market search refreshed with detected trim {final_trim_value}")
+            except Exception as refresh_error:
+                logger.warning(f"Trim refresh market search failed: {refresh_error}")
+        
+        # Extract exterior and interior colors - add to features if clearly visible
+        if analysis_json.get("vehicle", {}).get("exterior_color", {}).get("confidence", 0) >= 0.7:
             color = analysis_json["vehicle"]["exterior_color"].get("value")
             if color and isinstance(color, str):
                 listing_context["condition_blurbs"].append(f"Exterior color: {color}")
-                # Also add as a feature if it's a notable color
+                # Add notable colors as features
                 if color.lower() not in ['white', 'black', 'silver', 'gray', 'grey']:
-                    if f"{color} exterior" not in listing_context["features_list"]:
-                        listing_context["features_list"].append(f"{color.title()} Exterior")
+                    color_feature = f"{color.title()} Exterior"
+                    if color_feature not in listing_context["features_list"]:
+                        listing_context["features_list"].append(color_feature)
                 print(f"[ENHANCED-ANALYZE] ✅ Detected exterior color: {color}")
         
-        if analysis_json.get("vehicle", {}).get("interior_color", {}).get("confidence", 0) >= 0.6:
+        if analysis_json.get("vehicle", {}).get("interior_color", {}).get("confidence", 0) >= 0.7:
             color = analysis_json["vehicle"]["interior_color"].get("value")
             if color and isinstance(color, str):
                 listing_context["condition_blurbs"].append(f"Interior color: {color}")
-                # Also add interior color/material as a feature
+                # Combine with interior material if available (but check for duplicates first)
                 details = analysis_json.get("specific_details", {})
                 interior_material = details.get("interior_material", {}).get("value", "") if details else ""
                 if interior_material and isinstance(interior_material, str):
-                    if f"{color} {interior_material}" not in listing_context["features_list"]:
-                        listing_context["features_list"].append(f"{color.title()} {interior_material.title()}")
+                    color_material_feature = f"{color.title()} {interior_material.title()}"
+                    # HALLUCINATION PREVENTION: Check if this would be a duplicate
+                    is_duplicate = False
+                    color_material_lower = color_material_feature.lower()
+                    for existing_feature in listing_context["features_list"]:
+                        existing_lower = existing_feature.lower()
+                        # If interior_material already exists as a feature, skip the combination
+                        if interior_material.lower() in existing_lower or existing_lower in interior_material.lower():
+                            is_duplicate = True
+                            print(f"[ENHANCED-ANALYZE] ⚠️ Skipping duplicate color+material: '{color_material_feature}' (interior material already exists as '{existing_feature}')")
+                            break
+                        # Exact or partial match
+                        if color_material_lower == existing_lower or (color_material_lower in existing_lower or existing_lower in color_material_lower):
+                            is_duplicate = True
+                            print(f"[ENHANCED-ANALYZE] ⚠️ Skipping duplicate color+material: '{color_material_feature}' (already exists)")
+                            break
+                    
+                    if not is_duplicate:
+                        listing_context["features_list"].append(color_material_feature)
+                        print(f"[ENHANCED-ANALYZE] ✅ Added interior color+material: {color_material_feature}")
                 print(f"[ENHANCED-ANALYZE] ✅ Detected interior color: {color}")
         
-        # Additional feature detection from badges and vehicle info
+        # Extract badges and visible features from photos (high confidence only)
         if "badges_seen" in analysis_json:
-            print(f"[ENHANCED-ANALYZE] 🔍 Checking badges_seen: {analysis_json['badges_seen']}")
             for badge in analysis_json["badges_seen"]:
                 if not badge or not isinstance(badge, str):
-                    continue  # Skip None or non-string badges
+                    continue
                 badge_upper = badge.upper()
                 if badge_upper in ["AWD", "4WD", "4X4"] and "All-Wheel Drive" not in listing_context["features_list"]:
                     listing_context["features_list"].append("All-Wheel Drive")
@@ -662,53 +851,66 @@ Return ONLY this JSON structure:
                 elif badge_upper in ["SPORT", "SPORT PACKAGE"] and "Sport Package" not in listing_context["features_list"]:
                     listing_context["features_list"].append("Sport Package")
                     print(f"[ENHANCED-ANALYZE] ✅ Detected Sport Package from badge: {badge}")
-                # Add engine size badges (e.g., "3.7", "5.7", "V8")
-                elif any(char.isdigit() for char in badge) and "Engine" not in str(listing_context["features_list"]):
-                    if badge not in listing_context["features_list"]:
-                        listing_context["features_list"].append(f"{badge} Engine")
-                        print(f"[ENHANCED-ANALYZE] ✅ Detected engine badge: {badge}")
         
-        # CRITICAL: Also check for roof rails, tinted windows, and alloy wheels from specific_details
+        # Extract roof rails, alloy wheels, tinted windows from specific_details (high confidence only)
         if "specific_details" in analysis_json:
             details = analysis_json["specific_details"]
-            print(f"[ENHANCED-ANALYZE] 🔍 Checking specific_details: {list(details.keys())}")
-            
-            # Check for roof rails
-            if details.get("roof_rails", {}).get("confidence", 0) >= 0.5 or details.get("roof_rack", {}).get("confidence", 0) >= 0.5:
+            if details.get("roof_rails", {}).get("confidence", 0) >= 0.7 or details.get("roof_rack", {}).get("confidence", 0) >= 0.7:
                 if "Roof Rails" not in listing_context["features_list"]:
                     listing_context["features_list"].append("Roof Rails")
-                    print(f"[ENHANCED-ANALYZE] ✅ Detected Roof Rails from specific_details")
+                    print(f"[ENHANCED-ANALYZE] ✅ Detected Roof Rails from photo")
+        
+        # FINAL DEDUPLICATION PASS: Remove any remaining duplicates and hallucinations
+        # This catches any duplicates that might have been missed
+        deduplicated_features = []
+        seen_features_lower = set()
+        
+        for feature in listing_context["features_list"]:
+            if not feature or not isinstance(feature, str):
+                continue
             
-            # Check for alloy wheels (if not already detected)
-            wheel_desc = details.get("wheel_description", {}).get("value", "").lower() if details.get("wheel_description") else ""
-            if wheel_desc and ("alloy" in wheel_desc or "aluminum" in wheel_desc):
-                if "Alloy Wheels" not in listing_context["features_list"]:
-                    listing_context["features_list"].append("Alloy Wheels")
-                    print(f"[ENHANCED-ANALYZE] ✅ Detected Alloy Wheels from wheel_description: {wheel_desc}")
+            feature_lower = feature.lower().strip()
             
-            # Check for tinted windows
-            tint_desc = details.get("window_tint_description", {}).get("value", "").lower() if details.get("window_tint_description") else ""
-            if tint_desc and ("tint" in tint_desc or "tinted" in tint_desc):
-                if "Tinted Windows" not in listing_context["features_list"]:
-                    listing_context["features_list"].append("Tinted Windows")
-                    print(f"[ENHANCED-ANALYZE] ✅ Detected Tinted Windows from window_tint_description: {tint_desc}")
+            # Skip empty features
+            if not feature_lower:
+                continue
+            
+            # Check for exact duplicates
+            if feature_lower in seen_features_lower:
+                print(f"[ENHANCED-ANALYZE] ⚠️ Removing duplicate feature: '{feature}'")
+                continue
+            
+            # Check for similar/partial duplicates (e.g., "Leather Seats" vs "Black Leather")
+            is_duplicate = False
+            for seen_feature in seen_features_lower:
+                # If both contain "leather", check if one is a subset of the other
+                if "leather" in feature_lower and "leather" in seen_feature:
+                    if feature_lower in seen_feature or seen_feature in feature_lower:
+                        is_duplicate = True
+                        print(f"[ENHANCED-ANALYZE] ⚠️ Removing similar duplicate: '{feature}' (similar to existing feature)")
+                        break
+                # Check for other common duplicates (e.g., "AWD" vs "All-Wheel Drive")
+                if ("awd" in feature_lower or "all-wheel" in feature_lower) and ("awd" in seen_feature or "all-wheel" in seen_feature):
+                    is_duplicate = True
+                    print(f"[ENHANCED-ANALYZE] ⚠️ Removing duplicate drivetrain: '{feature}' (similar to existing feature)")
+                    break
+            
+            if not is_duplicate:
+                deduplicated_features.append(feature)
+                seen_features_lower.add(feature_lower)
+        
+        # Update features list with deduplicated version
+        original_count = len(listing_context["features_list"])
+        listing_context["features_list"] = deduplicated_features
+        removed_count = original_count - len(deduplicated_features)
+        
+        if removed_count > 0:
+            print(f"[ENHANCED-ANALYZE] 🧹 Deduplication removed {removed_count} duplicate features")
         
         print(f"[ENHANCED-ANALYZE] 📋 FINAL features list before listing generation: {len(listing_context['features_list'])} features - {listing_context['features_list']}")
         
-        # Check for navigation if touchscreen is detected
-        if "Touchscreen" in listing_context["features_list"] or "Touchscreen Display" in listing_context["features_list"]:
-            if "Navigation System" not in listing_context["features_list"]:
-                # If we have a touchscreen, likely has navigation
-                listing_context["features_list"].append("Navigation System")
-                print(f"[ENHANCED-ANALYZE] ✅ Inferred Navigation System from touchscreen")
-        
-        # Check for drivetrain from detected vehicle info
-        drivetrain_value = listing_context.get("drivetrain")
-        if drivetrain_value and isinstance(drivetrain_value, str) and "All-Wheel Drive" not in listing_context["features_list"]:
-            drivetrain = drivetrain_value.upper()
-            if "AWD" in drivetrain or "4WD" in drivetrain or "4X4" in drivetrain:
-                listing_context["features_list"].append("All-Wheel Drive")
-                print(f"[ENHANCED-ANALYZE] ✅ Added AWD from drivetrain: {drivetrain_value}")
+        # REMOVED: Feature inference from touchscreen, drivetrain, etc.
+        # Only use features from NHTSA VIN data or user-typed "About The Vehicle"
         
         # Extract condition notes
         for note_data in analysis_json["condition"]["exterior_notes"]:
@@ -797,28 +999,26 @@ Return ONLY this JSON structure:
                         adjustment_factors = []
                         
                         # Title status adjustment
-                        title_status_lower = (titleStatus or "clean").lower()
-                        if title_status_lower == "rebuilt":
-                            adjusted_market_average *= 0.7  # 30% reduction for rebuilt title
-                            adjustment_factors.append("rebuilt title (-30%)")
-                        elif title_status_lower == "salvage":
+                        if normalized_title_status == "rebuilt":
+                            adjusted_market_average *= 0.575  # Detroit: Rebuilt title = -38% to -47% reduction (avg -42.5%)
+                            adjustment_factors.append("rebuilt title (-38% to -47%)")
+                        elif normalized_title_status == "salvage":
                             adjusted_market_average *= 0.5  # 50% reduction for salvage
                             adjustment_factors.append("salvage title (-50%)")
-                        elif title_status_lower not in ["clean", ""]:
+                        elif normalized_title_status not in ["clean", ""]:
                             adjusted_market_average *= 0.7  # Default 30% for other non-clean titles
-                            adjustment_factors.append(f"{title_status_lower} title (-30%)")
+                            adjustment_factors.append(f"{normalized_title_status} title (-30%)")
                         
                         # High mileage adjustment (over 100K miles)
-                        mileage_int = int(mileage.replace(",", "")) if mileage and mileage.replace(",", "").isdigit() else 0
-                        if mileage_int > 100000:
-                            # Additional 5-10% reduction for high mileage
-                            mileage_adjustment = 1.0 - ((mileage_int - 100000) / 100000 * 0.1)
-                            mileage_adjustment = max(0.85, mileage_adjustment)  # Cap at 15% reduction
-                            adjusted_market_average *= mileage_adjustment
-                            adjustment_factors.append(f"high mileage ({mileage_int:,} miles, -{int((1-mileage_adjustment)*100)}%)")
+                        mileage_value = listing_context.get("mileage")
+                        reliability_tier = listing_context.get("reliability_tier") or get_reliability_tier(listing_context.get("make"))
+                        mileage_percent, mileage_label = calculate_mileage_penalty_percent(mileage_value, reliability_tier)
+                        if mileage_percent:
+                            adjusted_market_average *= (1 + mileage_percent)
+                            adjustment_factors.append(f"{mileage_label} ({mileage_percent*100:.0f}%)")
                         
                         # Damage/accident history adjustment (if mentioned in aboutVehicle)
-                        if aboutVehicle and any(word in aboutVehicle.lower() for word in ["damage", "accident", "repaired", "bumper", "collision"]):
+                        if aboutVehicle and isinstance(aboutVehicle, str) and any(word in aboutVehicle.lower() for word in ["damage", "accident", "repaired", "bumper", "collision"]):
                             adjusted_market_average *= 0.95  # 5% reduction for damage history
                             adjustment_factors.append("previous damage history (-5%)")
                         
@@ -902,9 +1102,11 @@ Return ONLY this JSON structure:
             # Continue with fallback pricing if market intelligence fails
         
         # Build pricing tiers from real data or fallback to estimated
+        pricing_breakdown = None
         if pricing_strategy_data and "pricing_strategy" in pricing_strategy_data:
             # Use real pricing from Pricing Strategy Agent
             pricing_tiers = pricing_strategy_data["pricing_strategy"]
+            pricing_breakdown = pricing_tiers.get("pricing_breakdown", None)
             pricing = {
                 "quick_sale": {
                     "price": int(pricing_tiers.get("quick_sale", {}).get("price", 0)),
@@ -920,7 +1122,8 @@ Return ONLY this JSON structure:
                     "price": int(pricing_tiers.get("top_dollar", {}).get("price", 0)),
                     "description": pricing_tiers.get("top_dollar", {}).get("rationale", "Premium price - 15% above market"),
                     "estimated_days_to_sell": 60
-                }
+                },
+                "breakdown": pricing_breakdown  # Add detailed breakdown
             }
             print(f"[ENHANCED-ANALYZE] ✅ Using REAL pricing tiers from market data")
         else:
@@ -1056,6 +1259,16 @@ CRITICAL INSTRUCTIONS:
 
 CRITICAL: You MUST include ALL detected features in the listing. The features list is:
 {listing_context.get("features_list", [])}
+
+CRITICAL: If a VIN was decoded, you MUST include ALL NHTSA VIN attributes in the description:
+{listing_context.get("vin_attributes", [])}
+
+These VIN attributes are FACTUAL data from the NHTSA database and MUST be mentioned:
+- Drivetrain (AWD, FWD, RWD, 4WD)
+- Transmission type
+- Engine configuration (V6, V8, I4, etc.) with cylinders and displacement
+- Fuel type
+- Body style
 
 If the features list is empty or minimal, you MUST still describe what you can see in the vehicle data:
 - If drivetrain is AWD/4WD, mention it
@@ -1260,6 +1473,7 @@ Format the response as a complete, ready-to-post listing for {platform} that pro
                 }
             },
             "pricing": pricing,
+            "vin_status": vin_status,
             "price_warnings": price_warnings,
             "market_intelligence": market_intelligence_data.get("pricing_analysis", {}) if market_intelligence_data else None,
             "flip_score": 78,

@@ -121,8 +121,10 @@ class IntakeAgent(BaseAgent):
         processed = {}
         
         # Process make and model
-        make = input_data.get("make", "").strip().lower()
-        model = input_data.get("model", "").strip().lower()
+        make_raw = input_data.get("make")
+        make = (str(make_raw).strip() if make_raw and isinstance(make_raw, str) else "").lower()
+        model_raw = input_data.get("model")
+        model = (str(model_raw).strip() if model_raw and isinstance(model_raw, str) else "").lower()
         
         # Normalize make
         make_mapping = {
@@ -181,11 +183,13 @@ class IntakeAgent(BaseAgent):
                 processed["price"] = None
         
         # Process condition
-        condition = input_data.get("condition", "").strip().lower()
+        condition_raw = input_data.get("condition")
+        condition = (str(condition_raw).strip() if condition_raw and isinstance(condition_raw, str) else "").lower()
         processed["condition"] = condition if condition in self.conditions else "good"
         
         # Process title status
-        title_status = input_data.get("title_status", "").strip().lower()
+        title_status_raw = input_data.get("title_status")
+        title_status = (str(title_status_raw).strip() if title_status_raw and isinstance(title_status_raw, str) else "").lower()
         processed["title_status"] = title_status if title_status in self.title_statuses else "clean"
         
         # Process location

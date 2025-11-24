@@ -35,6 +35,13 @@ interface CarDetails {
 
 }
 
+interface FeatureAdjustmentDetail {
+  label?: string;
+  keyword?: string;
+  percent: number;
+  amount: number;
+}
+
 interface AnalysisResult {
   success: boolean;
   post_text?: string;
@@ -123,6 +130,41 @@ interface AnalysisResult {
     quick_sale?: { price: number };
     premium?: { price: number };
     market_price?: { price: number };
+    breakdown?: {
+      base_market_value: number;
+      title_status_adjustment: number;
+      title_status_percent: number;
+      condition_adjustment: number;
+      condition_percent: number;
+      trim_adjustment: number;
+      trim_percent: number;
+      mileage_adjustment: number;
+      mileage_percent: number;
+      feature_adjustment: number;
+      feature_percent: number;
+      local_market_adjustment: number;
+      local_market_percent: number;
+      final_adjusted_price: number;
+      trim_tier?: string;
+      trim_tier_label?: string;
+      trim_keywords?: string[];
+      mileage_range_label?: string;
+      reliability_tier?: string;
+      feature_details?: FeatureAdjustmentDetail[];
+      feature_cap_applied?: boolean;
+      market_data_source?: string;
+      market_search_query?: string;
+      market_location?: string;
+      title_status_label?: string;
+    };
+  };
+  vin_status?: {
+    state: string;
+    vin?: string;
+    source?: string;
+    message?: string;
+    equipment?: string[];
+    equipment_error?: string;
   };
   price_warnings?: {
     type: 'high' | 'low' | 'good';
@@ -187,6 +229,9 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [priceWarning, setPriceWarning] = useState<{ type: 'high' | 'low' | 'good' | null; message: string; marketAvg: number | null }>({ type: null, message: '', marketAvg: null });
   const [priceWarningDismissed, setPriceWarningDismissed] = useState(false); // Track if user dismissed the warning
+  const [showPricingBreakdown, setShowPricingBreakdown] = useState(false); // Track if pricing breakdown is expanded
+  const pricingBreakdown = analysisResult?.pricing?.breakdown;
+  const vinStatus = analysisResult?.vin_status;
   
   // Clear any existing error on component mount
   useEffect(() => {
@@ -211,6 +256,17 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
       }
     };
   }, [isDragging]);
+
+  // Keep selectedFiles in sync with files - remove selections for files that no longer exist
+  useEffect(() => {
+    setSelectedFiles(prev => {
+      const validSelected = prev.filter(selected => files.some(f => f.id === selected.id));
+      if (validSelected.length !== prev.length) {
+        console.log(`🧹 Cleaned up ${prev.length - validSelected.length} invalid file selections`);
+      }
+      return validSelected;
+    });
+  }, [files]);
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [descriptionSuggestions, setDescriptionSuggestions] = useState<string[]>([]);
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
@@ -218,6 +274,10 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
   const [isPosting, setIsPosting] = useState(false);
   const [selectedPricingTier, setSelectedPricingTier] = useState<'quick' | 'market' | 'premium' | 'original' | null>(null);
   const [titleRebuildExplanation, setTitleRebuildExplanation] = useState('');
+  const [savedRebuildReasons, setSavedRebuildReasons] = useState<string[]>([]);
+  const [citySuggestions, setCitySuggestions] = useState<string[]>([]);
+  const [zipSuggestions, setZipSuggestions] = useState<string[]>([]);
+  const rebuildReasonSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [postSuccess, setPostSuccess] = useState(false);
   const [postResult, setPostResult] = useState<{successCount: number, totalCount: number} | null>(null);
   const [userPresets, setUserPresets] = useState<Array<{preset_value: string, usage_count: number}>>([]);
@@ -308,36 +368,62 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
     loadConnections();
   }, []);
 
-  // Load user presets (saved phrases) - OPTIONAL FEATURE
-  // DISABLED: Endpoint doesn't exist yet, causing 404 errors
-  // Uncomment when /api/v1/presets endpoint is implemented
+  // Load saved rebuild title reasons when "rebuilt" is selected
   useEffect(() => {
-    // Temporarily disabled to prevent 404 errors
-    setIsLoadingPresets(false);
-    setUserPresets([]);
-    
-    /* 
-    const loadUserPresets = async () => {
-      try {
-        setIsLoadingPresets(true);
-        const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-        const response = await fetch(`${backendUrl}/api/v1/presets?preset_type=description_phrase&limit=10`, {
-          credentials: 'include'
-        });
-        
-        if (response.ok) {
-          const presets = await response.json();
-          setUserPresets(presets || []);
+    const loadRebuildReasons = async () => {
+      if (carDetails.titleStatus === 'rebuilt') {
+        try {
+          const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+          const response = await fetch(`${backendUrl}/api/v1/presets?preset_type=rebuilt_title_reason&limit=10`, {
+            credentials: 'include'
+          });
+          
+          if (response.ok) {
+            const presets = await response.json();
+            const reasons = presets.map((p: any) => p.preset_value).filter(Boolean);
+            setSavedRebuildReasons(reasons);
+          }
+        } catch (error) {
+          // Silently fail - presets are optional
+          console.log('Could not load rebuild reasons:', error);
         }
-      } catch (error) {
-        // Silently fail - presets are optional
-      } finally {
-        setIsLoadingPresets(false);
+      } else {
+        setSavedRebuildReasons([]);
       }
     };
-    loadUserPresets();
-    */
-  }, []);
+    
+    loadRebuildReasons();
+  }, [carDetails.titleStatus]);
+
+  // Save rebuild reason when user enters one
+  const saveRebuildReason = async (reason: string) => {
+    if (!reason.trim() || carDetails.titleStatus !== 'rebuilt') return;
+    
+    try {
+      const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      await fetch(`${backendUrl}/api/v1/presets`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          preset_type: 'rebuilt_title_reason',
+          preset_value: reason.trim()
+        })
+      });
+      
+      // Reload reasons to update the list
+      const response = await fetch(`${backendUrl}/api/v1/presets?preset_type=rebuilt_title_reason&limit=10`, {
+        credentials: 'include'
+      });
+      if (response.ok) {
+        const presets = await response.json();
+        const reasons = presets.map((p: any) => p.preset_value).filter(Boolean);
+        setSavedRebuildReasons(reasons);
+      }
+    } catch (error) {
+      console.log('Could not save rebuild reason:', error);
+    }
+  };
 
   // Load user profile (city, zip code) from Supabase
   useEffect(() => {
@@ -898,15 +984,25 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
   const toggleFileSelection = (fileWithId: FileWithId) => {
     console.log('Toggle file selection called for:', fileWithId.file.name);
     setSelectedFiles(prev => {
-      if (prev.some(f => f.id === fileWithId.id)) {
+      // First, clean up any selected files that no longer exist in the files array
+      const validSelected = prev.filter(selected => files.some(f => f.id === selected.id));
+      
+      if (validSelected.some(f => f.id === fileWithId.id)) {
         console.log('Removing file from selection:', fileWithId.file.name);
-        return prev.filter(f => f.id !== fileWithId.id);
-      } else if (prev.length < 4) {
-        console.log('Adding file to selection:', fileWithId.file.name);
-        return [...prev, fileWithId];
+        return validSelected.filter(f => f.id !== fileWithId.id);
+      } else if (validSelected.length < 5) {
+        // Verify the file exists in the files array before selecting
+        const fileExists = files.some(f => f.id === fileWithId.id);
+        if (fileExists) {
+          console.log('Adding file to selection:', fileWithId.file.name);
+          return [...validSelected, fileWithId];
+        } else {
+          console.warn('⚠️ Cannot select file - not found in files array:', fileWithId.file.name);
+          return validSelected;
+        }
       }
-      console.log('Max selection reached (4 files)');
-      return prev;
+      console.log('Max selection reached (5 files)');
+      return validSelected;
     });
   };
 
@@ -1238,6 +1334,33 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
       });
     }
     
+    // Add VIN-detected features to description
+    const vinFeatures = analysisResult.detected?.debug_gemini_detection?.features_list || 
+                        analysisResult.vin_status?.equipment || 
+                        analysisResult.listing_context?.features_list;
+    
+    if (vinFeatures && Array.isArray(vinFeatures) && vinFeatures.length > 0) {
+      // Filter out features that might already be in the description
+      const existingFeatures = description.toLowerCase();
+      vinFeatures.forEach(feature => {
+        if (feature && typeof feature === 'string') {
+          // Check if this feature is already mentioned
+          const featureLower = feature.toLowerCase();
+          const alreadyMentioned = existingFeatures.includes(featureLower) || 
+                                   existingFeatures.includes(featureLower.replace(/\s+/g, ' '));
+          
+          if (!alreadyMentioned) {
+            // Format the feature nicely
+            const formattedFeature = feature
+              .replace(/_/g, ' ')
+              .replace(/\b\w/g, l => l.toUpperCase())
+              .trim();
+            description += `• ${formattedFeature}\n`;
+          }
+        }
+      });
+    }
+    
     // Add standard features ONLY if no detected features AND no VIN lookup was performed
     // (VIN lookup would have added real features, so we don't want to add defaults in that case)
     const hasDetectedFeatures = analysisResult.data?.features_detected?.car_features && 
@@ -1248,15 +1371,10 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
     const hasFeaturesFromAnalysis = analysisResult.detected?.features && 
       analysisResult.detected.features.length > 0;
     
-    // Only use default features if truly no features were detected (not from images, not from VIN)
-    if (!hasDetectedFeatures && !hasFeaturesFromAnalysis) {
-      description += `• Touchscreen infotainment system\n`;
-      description += `• Bluetooth + Backup camera\n`;
-      description += `• Heated seats\n`;
-      description += `• Alloy wheels\n`;
-      description += `• Dual-zone climate control\n`;
-      description += `• Power seats + remote start\n`;
-    }
+    const hasVINFeatures = vinFeatures && Array.isArray(vinFeatures) && vinFeatures.length > 0;
+    
+    // DO NOT add default features - only include what's actually detected or mentioned by the user
+    // This prevents adding features that don't exist on the vehicle
     
     // Add title-specific context to the description - use actual car details
     let titleContext = '';
@@ -1416,10 +1534,13 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
           
           if (permissionStatus.state === 'denied') {
             alert(
-              'Microphone access is denied. Please enable it in your browser settings:\n\n' +
-              'Chrome/Edge: Click the lock icon in the address bar → Site settings → Microphone → Allow\n' +
-              'Firefox: Click the lock icon → Permissions → Microphone → Allow\n' +
-              'Safari: Safari → Settings → Websites → Microphone → Allow for localhost'
+              'Microphone access is required for voice input.\n\n' +
+              'Why we need permission: Unlike simple websites, Accorria uses advanced speech-to-text technology to convert your voice into text for faster listing creation. This requires microphone access to record your voice.\n\n' +
+              'To enable:\n' +
+              '• Chrome/Edge: Click the lock icon in the address bar → Site settings → Microphone → Allow\n' +
+              '• Firefox: Click the lock icon → Permissions → Microphone → Allow\n' +
+              '• Safari: Safari → Settings → Websites → Microphone → Allow for accorria.com\n\n' +
+              'Your privacy: We only record when you click the microphone button, and audio is processed securely.'
             );
             return false;
           }
@@ -1871,9 +1992,22 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
       
       // Add ALL selected images for analysis (including VIN images - they're used for analysis but excluded from posting)
       // VIN images should be analyzed to extract VIN and get vehicle features
-      selectedFiles.forEach((fileWithId) => {
+      // Prioritize VIN images by sending them first
+      const vinImages = selectedFiles.filter(f => f.isVinImage);
+      const nonVinImages = selectedFiles.filter(f => !f.isVinImage);
+      
+      // Send VIN images first so backend can prioritize them
+      vinImages.forEach((fileWithId) => {
         formData.append('images', fileWithId.file);
-        console.log(`📤 [ANALYZE] Adding image for analysis: ${fileWithId.file.name}${fileWithId.isVinImage ? ' (VIN image - for analysis only)' : ''}`);
+        formData.append('vin_images', 'true'); // Flag to indicate this is a VIN image
+        console.log(`📤 [ANALYZE] Adding VIN image for analysis (PRIORITIZED): ${fileWithId.file.name}`);
+      });
+      
+      // Then send non-VIN images
+      nonVinImages.forEach((fileWithId) => {
+        formData.append('images', fileWithId.file);
+        formData.append('vin_images', 'false');
+        console.log(`📤 [ANALYZE] Adding image for analysis: ${fileWithId.file.name}`);
       });
       
       // Also include VIN images that might not be in selectedFiles but are marked as VIN
@@ -1881,7 +2015,8 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
       files.forEach((fileWithId) => {
         if (fileWithId.isVinImage && !selectedFiles.some(f => f.id === fileWithId.id)) {
           formData.append('images', fileWithId.file);
-          console.log(`📤 [ANALYZE] Adding VIN image for analysis: ${fileWithId.file.name}`);
+          formData.append('vin_images', 'true');
+          console.log(`📤 [ANALYZE] Adding VIN image for analysis (PRIORITIZED): ${fileWithId.file.name}`);
         }
       });
       
@@ -2409,14 +2544,14 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
   };
 
 
-  const makes = Object.keys(carData);
-  const models = carDetails.make && carDetails.make !== 'Other' ? carData[carDetails.make] : [];
+  const makes = Object.keys(carData).sort();
+  const models = carDetails.make && carDetails.make !== 'Other' ? (carData[carDetails.make] || []).sort() : [];
   const trims = useMemo(() => {
     if (carDetails.make && carDetails.make !== 'Other' && 
         carDetails.model && carDetails.model !== 'Other' && 
         carTrims[carDetails.make] && 
         carTrims[carDetails.make][carDetails.model]) {
-      return carTrims[carDetails.make][carDetails.model];
+      return [...carTrims[carDetails.make][carDetails.model]].sort();
     }
     return [];
   }, [carDetails.make, carDetails.model]);
@@ -2670,14 +2805,14 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                   <div className="flex items-center justify-between mb-2">
                     <div>
                       <p className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
-                        🎯 Select 4 Key Photos for AI Analysis
+                        🎯 Select 5 Key Photos for AI Analysis
                       </p>
                       <p className="text-xs text-gray-600 dark:text-gray-400">
                         Hover to see selection checkbox • Drag to reorder
                       </p>
                     </div>
                     <span className="text-xs text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/20 px-2 py-1 rounded-full">
-                      {selectedFiles.length}/4 selected
+                      {selectedFiles.length}/5 selected
                     </span>
                     {files.length > 0 && (
                       <button
@@ -2739,6 +2874,14 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                               const [draggedFile] = newFiles.splice(draggedIndex, 1);
                               newFiles.splice(dropIndex, 0, draggedFile);
                               setFiles(newFiles);
+                              // Update selectedFiles to maintain selection state after reorder
+                              setSelectedFiles(prev => {
+                                // Map old selected files to new file positions by ID
+                                return prev.map(selectedFile => {
+                                  const newFile = newFiles.find(f => f.id === selectedFile.id);
+                                  return newFile || selectedFile;
+                                }).filter(Boolean);
+                              });
                               setRenderKey(prev => prev + 1); // Force re-render
                               console.log('🎯 FILES REORDERED:', newFiles.map(f => f.file.name));
                             } else {
@@ -2852,6 +2995,14 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                                   const [draggedFile] = newFiles.splice(draggedIndex, 1);
                                   newFiles.splice(dropIndex, 0, draggedFile);
                                   setFiles(newFiles);
+                                  // Update selectedFiles to maintain selection state after reorder
+                                  setSelectedFiles(prev => {
+                                    // Map old selected files to new file positions by ID
+                                    return prev.map(selectedFile => {
+                                      const newFile = newFiles.find(f => f.id === selectedFile.id);
+                                      return newFile || selectedFile;
+                                    }).filter(Boolean);
+                                  });
                                   setRenderKey(prev => prev + 1); // Force re-render
                                   console.log('Mobile drag: Files reordered:', newFiles.map(f => f.file.name));
                                 }
@@ -3180,14 +3331,14 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                                 f.id === fileWithId.id ? { ...f, isVinImage: !f.isVinImage } : f
                               ));
                             }}
-                            className={`absolute -top-2 left-1 w-6 h-6 rounded-full text-xs flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 ${
+                            className={`absolute -top-2 left-1 w-7 h-7 rounded-full text-sm flex items-center justify-center transition-all ${
                               fileWithId.isVinImage 
-                                ? 'bg-blue-500 text-white hover:bg-blue-600' 
-                                : 'bg-gray-500 text-white hover:bg-gray-600'
+                                ? 'bg-blue-500 text-white hover:bg-blue-600 opacity-100 shadow-lg' 
+                                : 'bg-gray-500 text-white hover:bg-gray-600 opacity-80 group-hover:opacity-100'
                             }`}
-                            title={fileWithId.isVinImage ? "VIN image - excluded from Facebook posts" : "Mark as VIN image (excluded from posts)"}
+                            title={fileWithId.isVinImage ? "VIN image - Accorria will prioritize this for VIN detection" : "Mark as VIN image - Click to help Accorria detect VIN"}
                           >
-                            {fileWithId.isVinImage ? '🔢' : '📄'}
+                            {fileWithId.isVinImage ? '🔢' : '🔍'}
                           </button>
                           
                           {/* VIN Badge */}
@@ -3412,46 +3563,6 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                 placeholder="Enter asking price"
                 required
               />
-              {/* Price Warning Display */}
-              {priceWarning.type && priceWarning.marketAvg && !priceWarningDismissed && (
-                <div className={`mt-2 p-3 rounded-lg ${
-                  priceWarning.type === 'high' ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800' :
-                  priceWarning.type === 'low' ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800' :
-                  'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800'
-                }`}>
-                  <div className="flex items-start">
-                    <span className={`text-lg mr-2 ${
-                      priceWarning.type === 'high' ? 'text-red-600 dark:text-red-400' :
-                      priceWarning.type === 'low' ? 'text-green-600 dark:text-green-400' :
-                      'text-blue-600 dark:text-blue-400'
-                    }`}>
-                      {priceWarning.type === 'high' ? '⚠️' : priceWarning.type === 'low' ? '✅' : 'ℹ️'}
-                    </span>
-                    <div className="flex-1">
-                      <p className={`text-sm font-medium ${
-                        priceWarning.type === 'high' ? 'text-red-700 dark:text-red-300' :
-                        priceWarning.type === 'low' ? 'text-green-700 dark:text-green-300' :
-                        'text-blue-700 dark:text-blue-300'
-                      }`}>
-                        {priceWarning.message}
-                      </p>
-                      {priceWarning.type === 'high' && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const recommendedPrice = Math.round(priceWarning.marketAvg! * 1.1);
-                            setCarDetails(prev => ({ ...prev, price: recommendedPrice.toString() }));
-                            setPriceWarning({ type: null, message: '', marketAvg: null });
-                          }}
-                          className="mt-2 text-xs text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 underline"
-                        >
-                          Click to set price to ${Math.round(priceWarning.marketAvg! * 1.1).toLocaleString()}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
               <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mt-2">
                 Lowest I&apos;ll Take
               </label>
@@ -3492,35 +3603,113 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Why was the title rebuilt?
                 </label>
+                {/* Saved rebuild reasons - quick select buttons */}
+                {savedRebuildReasons.length > 0 && (
+                  <div className="mb-2 flex flex-wrap gap-2">
+                    {savedRebuildReasons.map((reason, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => {
+                          setTitleRebuildExplanation(reason);
+                          saveRebuildReason(reason); // Increment usage count
+                        }}
+                        className="px-3 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
+                      >
+                        {reason}
+                      </button>
+                    ))}
+                  </div>
+                )}
                 <textarea
                   value={titleRebuildExplanation}
-                  onChange={(e) => setTitleRebuildExplanation(e.target.value)}
-                  placeholder="e.g., Minor accident damage that has been professionally repaired"
+                  onChange={(e) => {
+                    setTitleRebuildExplanation(e.target.value);
+                    // Clear existing timeout
+                    if (rebuildReasonSaveTimeoutRef.current) {
+                      clearTimeout(rebuildReasonSaveTimeoutRef.current);
+                    }
+                    // Auto-save when user finishes typing (debounced)
+                    if (e.target.value.trim()) {
+                      rebuildReasonSaveTimeoutRef.current = setTimeout(() => {
+                        saveRebuildReason(e.target.value);
+                      }, 2000); // Save 2 seconds after user stops typing
+                    }
+                  }}
+                  onBlur={() => {
+                    // Clear timeout and save immediately when user leaves the field
+                    if (rebuildReasonSaveTimeoutRef.current) {
+                      clearTimeout(rebuildReasonSaveTimeoutRef.current);
+                    }
+                    if (titleRebuildExplanation.trim()) {
+                      saveRebuildReason(titleRebuildExplanation);
+                    }
+                  }}
+                  placeholder="e.g., Replace front bumper cover, Minor accident damage that has been professionally repaired"
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                   rows={2}
                 />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  💡 Your saved reasons will appear above for quick selection
+                </p>
               </div>
             )}
 
             {/* Location Fields */}
             <div className="grid grid-cols-2 gap-4">
-              <div>
+              <div className="relative">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   City
                 </label>
                 <input
                   type="text"
                   value={carDetails.city || ''}
-                  onChange={(e) => setCarDetails(prev => ({ ...prev, city: e.target.value }))}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setCarDetails(prev => ({ ...prev, city: value }));
+                    // Simple autocomplete - show nearby cities based on user's profile
+                    // In a real implementation, you'd use a geocoding API
+                    if (value.length > 2) {
+                      // For now, just clear suggestions - can be enhanced with actual API
+                      setCitySuggestions([]);
+                    } else {
+                      setCitySuggestions([]);
+                    }
+                  }}
+                  onFocus={() => {
+                    // Load nearby cities when user focuses (if we have their zip code)
+                    if (carDetails.zipCode) {
+                      // Could fetch nearby cities based on zip code
+                      // For now, just show profile city if available
+                    }
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Enter city (auto-filled from profile)"
                   required
+                  list="city-suggestions"
                 />
+                {citySuggestions.length > 0 && (
+                  <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-40 overflow-y-auto">
+                    {citySuggestions.map((city, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => {
+                          setCarDetails(prev => ({ ...prev, city }));
+                          setCitySuggestions([]);
+                        }}
+                        className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white"
+                      >
+                        {city}
+                      </button>
+                    ))}
+                  </div>
+                )}
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                   💡 Set your default city in your profile settings
                 </p>
               </div>
-              <div>
+              <div className="relative">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Zip Code
                 </label>
@@ -3531,12 +3720,44 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                     // Only allow numbers, max 5 digits
                     const value = e.target.value.replace(/[^0-9]/g, '').slice(0, 5);
                     setCarDetails(prev => ({ ...prev, zipCode: value }));
+                    // Show nearby zip codes as user types (if we have their city)
+                    if (value.length >= 3 && carDetails.city) {
+                      // In a real implementation, you'd fetch nearby zip codes from an API
+                      // For now, just clear suggestions - can be enhanced
+                      setZipSuggestions([]);
+                    } else {
+                      setZipSuggestions([]);
+                    }
+                  }}
+                  onFocus={() => {
+                    // Load nearby zip codes when user focuses (if we have their city)
+                    if (carDetails.city) {
+                      // Could fetch nearby zip codes based on city
+                      // For now, just show profile zip if available
+                    }
                   }}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Enter zip code (auto-filled from profile)"
                   maxLength={5}
                   required
                 />
+                {zipSuggestions.length > 0 && (
+                  <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-40 overflow-y-auto">
+                    {zipSuggestions.map((zip, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => {
+                          setCarDetails(prev => ({ ...prev, zipCode: zip }));
+                          setZipSuggestions([]);
+                        }}
+                        className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white"
+                      >
+                        {zip}
+                      </button>
+                    ))}
+                  </div>
+                )}
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                   💡 Set your default zip code in your profile settings
                 </p>
@@ -3622,58 +3843,75 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
               </p>
             </div>
 
-            {/* Price Warning Display (above pricing tiers) */}
-            {priceWarning.type && priceWarning.marketAvg && !priceWarningDismissed && (
-              <div className={`mb-4 p-4 rounded-lg ${
-                priceWarning.type === 'high' ? 'bg-red-50 dark:bg-red-900/20 border-2 border-red-200 dark:border-red-800' :
-                priceWarning.type === 'low' ? 'bg-green-50 dark:bg-green-900/20 border-2 border-green-200 dark:border-green-800' :
-                'bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-800'
-              }`}>
+            {/* VIN status banner */}
+            {vinStatus && vinStatus.state !== 'decoded' && (
+              <div className="mb-4 p-4 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
                 <div className="flex items-start">
-                  <span className={`text-2xl mr-3 ${
-                    priceWarning.type === 'high' ? 'text-red-600 dark:text-red-400' :
-                    priceWarning.type === 'low' ? 'text-green-600 dark:text-green-400' :
-                    'text-blue-600 dark:text-blue-400'
-                  }`}>
-                    {priceWarning.type === 'high' ? '⚠️' : priceWarning.type === 'low' ? '✅' : 'ℹ️'}
-                  </span>
-                  <div className="flex-1">
-                    <div className={`text-sm font-medium ${
-                      priceWarning.type === 'high' ? 'text-red-700 dark:text-red-300' :
-                      priceWarning.type === 'low' ? 'text-green-700 dark:text-green-300' :
-                      'text-blue-700 dark:text-blue-300'
-                    }`}>
-                      {priceWarning.message}
-                    </div>
-                    {priceWarning.type === 'high' && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const recommendedPrice = Math.round(priceWarning.marketAvg! * 1.1);
-                          setCarDetails(prev => ({ ...prev, price: recommendedPrice.toString() }));
-                          setPriceWarning({ type: null, message: '', marketAvg: null });
-                          setPriceWarningDismissed(true); // Mark as dismissed so it doesn't reappear
-                        }}
-                        className="mt-3 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
-                      >
-                        Click to set price to ${Math.round(priceWarning.marketAvg! * 1.1).toLocaleString()}
-                      </button>
+                  <span className="text-2xl mr-3">🔎</span>
+                  <div>
+                    <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">
+                      {vinStatus.message || 'VIN data missing. Upload a VIN photo to unlock full equipment decoding.'}
+                    </p>
+                    {vinStatus.source && (
+                      <p className="text-xs text-amber-600 dark:text-amber-200 mt-1">
+                        Source: {vinStatus.source}
+                      </p>
                     )}
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Pricing Tier Selection */}
+            {/* BLOCK B - VIN Decode */}
+            {vinStatus && vinStatus.state === 'decoded' && (
+              <div className="mb-4 p-4 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
+                <div className="flex items-center">
+                  <span className="text-2xl mr-3">✅</span>
+                  <p className="text-sm font-semibold text-green-700 dark:text-green-300">
+                    VIN: {vinStatus.vin || 'Decoded'}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* BLOCK A - Pricing Summary (Unified) */}
             {analysisResult && (
-              <div className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 rounded-xl p-4 border border-green-200 dark:border-green-700">
+              <div className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 rounded-xl p-4 border border-green-200 dark:border-green-700 mb-4">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center mb-3">
-                  <span className="mr-2">🎯</span>
-                  Choose Your Pricing Strategy
+                  <span className="mr-2">💰</span>
+                  Great pricing!
                   {analysisResult.market_intelligence?.pricing_analysis && (
                     <span className="ml-2 text-xs text-green-600 dark:text-green-400">✓ Market Data</span>
                   )}
                 </h3>
+                
+                {/* Price Warning Message - Integrated */}
+                {priceWarning.type && priceWarning.marketAvg && !priceWarningDismissed && (
+                  <div className={`mb-4 p-3 rounded-lg text-sm ${
+                    priceWarning.type === 'high' ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800' :
+                    priceWarning.type === 'low' ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800' :
+                    'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800'
+                  }`}>
+                    <div className="flex items-start">
+                      <span className={`text-xl mr-2 ${
+                        priceWarning.type === 'high' ? 'text-red-600 dark:text-red-400' :
+                        priceWarning.type === 'low' ? 'text-green-600 dark:text-green-400' :
+                        'text-blue-600 dark:text-blue-400'
+                      }`}>
+                        {priceWarning.type === 'high' ? '⚠️' : priceWarning.type === 'low' ? '✅' : 'ℹ️'}
+                      </span>
+                      <div className="flex-1">
+                        <div className={`font-medium ${
+                          priceWarning.type === 'high' ? 'text-red-700 dark:text-red-300' :
+                          priceWarning.type === 'low' ? 'text-green-700 dark:text-green-300' :
+                          'text-blue-700 dark:text-blue-300'
+                        }`}>
+                          {priceWarning.message}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 {(() => {
                   // Use pricing tiers from backend if available, otherwise calculate from market data or user's price
                   let quickPrice = 0;
@@ -3796,6 +4034,116 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                     </div>
                   );
                 })()}
+                
+                {/* Pricing Breakdown - Collapsible */}
+                {pricingBreakdown && (
+                  <div className="mt-4 pt-4 border-t border-green-200 dark:border-green-700">
+                    <button
+                      type="button"
+                      onClick={() => setShowPricingBreakdown(!showPricingBreakdown)}
+                      className="w-full text-left flex items-center justify-between mb-3 hover:opacity-80 transition-opacity"
+                    >
+                      <h4 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center">
+                        <span className="mr-2">📊</span>
+                        Pricing Breakdown
+                      </h4>
+                      <span className="text-gray-500 dark:text-gray-400 text-xs">
+                        {showPricingBreakdown ? '▼ Hide' : '▶ Show'}
+                      </span>
+                    </button>
+                    {showPricingBreakdown && (
+                      <div className="space-y-2 text-xs bg-white/50 dark:bg-gray-800/50 rounded-lg p-3">
+                      <div className="flex justify-between items-center py-1 border-b border-gray-100 dark:border-gray-700">
+                        <span className="text-gray-600 dark:text-gray-400">Base Market Value:</span>
+                        <span className="font-semibold text-gray-900 dark:text-white">
+                          ${pricingBreakdown.base_market_value.toLocaleString()}
+                        </span>
+                      </div>
+                      
+                      {pricingBreakdown.title_status_adjustment !== 0 && (
+                        <div className="flex justify-between items-center py-1 border-b border-gray-100 dark:border-gray-700">
+                          <span className="text-gray-600 dark:text-gray-400">
+                            {pricingBreakdown.title_status_label || 'Title'}:
+                          </span>
+                          <span className={`font-semibold ${pricingBreakdown.title_status_adjustment < 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+                            {pricingBreakdown.title_status_adjustment > 0 ? '+' : ''}
+                            ${pricingBreakdown.title_status_adjustment.toLocaleString()} 
+                            ({pricingBreakdown.title_status_percent > 0 ? '+' : ''}
+                            {pricingBreakdown.title_status_percent}%)
+                          </span>
+                        </div>
+                      )}
+                      
+                      {pricingBreakdown.trim_adjustment !== 0 && (
+                        <div className="flex justify-between items-center py-1 border-b border-gray-100 dark:border-gray-700">
+                          <span className="text-gray-600 dark:text-gray-400">
+                            Trim:
+                            {pricingBreakdown.trim_tier_label && (
+                              <span className="block text-xs text-gray-500 dark:text-gray-400">{pricingBreakdown.trim_tier_label}</span>
+                            )}
+                          </span>
+                          <span className="font-semibold text-green-600 dark:text-green-400">
+                            +${pricingBreakdown.trim_adjustment.toLocaleString()} 
+                            (+{pricingBreakdown.trim_percent}%)
+                          </span>
+                        </div>
+                      )}
+                      
+                      {pricingBreakdown.mileage_adjustment !== 0 && (
+                        <div className="flex justify-between items-center py-1 border-b border-gray-100 dark:border-gray-700">
+                          <span className="text-gray-600 dark:text-gray-400">
+                            Mileage:
+                            {pricingBreakdown.mileage_range_label && (
+                              <span className="block text-xs text-gray-500 dark:text-gray-400">{pricingBreakdown.mileage_range_label}</span>
+                            )}
+                          </span>
+                          <span className={`font-semibold ${pricingBreakdown.mileage_adjustment < 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+                            {pricingBreakdown.mileage_adjustment > 0 ? '+' : ''}
+                            ${pricingBreakdown.mileage_adjustment.toLocaleString()} 
+                            ({pricingBreakdown.mileage_percent > 0 ? '+' : ''}
+                            {pricingBreakdown.mileage_percent}%)
+                          </span>
+                        </div>
+                      )}
+                      
+                      {pricingBreakdown.feature_adjustment !== 0 && (
+                        <div className="flex justify-between items-center py-1 border-b border-gray-100 dark:border-gray-700">
+                          <span className="text-gray-600 dark:text-gray-400">
+                            Features:
+                            {pricingBreakdown.feature_details && pricingBreakdown.feature_details.length > 0 && (
+                              <ul className="mt-1 text-xs text-gray-500 dark:text-gray-400 list-disc list-inside space-y-0.5">
+                                {pricingBreakdown.feature_details.slice(0, 3).map((detail, idx) => (
+                                  <li key={`${detail.label ?? detail.keyword ?? 'feature'}-${idx}`}>
+                                    {detail.label || detail.keyword}: +{detail.percent}%
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </span>
+                          <span className="font-semibold text-green-600 dark:text-green-400">
+                            +${pricingBreakdown.feature_adjustment.toLocaleString()} 
+                            (+{pricingBreakdown.feature_percent}%)
+                          </span>
+                        </div>
+                      )}
+                      
+                      <div className="flex justify-between items-center py-2 pt-3 border-t-2 border-gray-300 dark:border-gray-600">
+                        <span className="font-semibold text-gray-900 dark:text-white">Suggested Price:</span>
+                        <span className="font-bold text-sm text-green-600 dark:text-green-400">
+                          ${pricingBreakdown.final_adjusted_price.toLocaleString()}
+                        </span>
+                      </div>
+                      
+                      {pricingBreakdown.market_data_source && (
+                        <div className="pt-1 text-xs text-gray-500 dark:text-gray-400">
+                          {pricingBreakdown.market_data_source === 'google_search_grounding' ? '✓ Live Market Data' : 'Estimated'}
+                          {pricingBreakdown.market_location && ` · ${pricingBreakdown.market_location}`}
+                        </div>
+                      )}
+                      </div>
+                    )}
+                  </div>
+                )}
                 
                 {/* Edit Button */}
                 <div className="mt-4 flex justify-center">

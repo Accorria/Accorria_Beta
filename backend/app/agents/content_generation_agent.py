@@ -293,8 +293,9 @@ class ContentGenerationAgent(BaseAgent):
         Generate required disclosures
         """
         disclosures = []
-        
-        title_status = vehicle_data.get("title_status", "").lower()
+
+        title_status_raw = vehicle_data.get("title_status")
+        title_status = (str(title_status_raw) if title_status_raw and isinstance(title_status_raw, str) else "").lower()
         if title_status in ["rebuilt", "salvage", "junk"]:
             disclosures.append(f"⚠️ {title_status.title()} title - Vehicle has been previously damaged/repaired")
         
@@ -302,7 +303,8 @@ class ContentGenerationAgent(BaseAgent):
         if mileage > 150000:
             disclosures.append("⚠️ High mileage vehicle")
         
-        condition = vehicle_data.get("condition", "").lower()
+        condition_raw = vehicle_data.get("condition")
+        condition = (str(condition_raw) if condition_raw and isinstance(condition_raw, str) else "").lower()
         if condition in ["fair", "poor"]:
             disclosures.append(f"⚠️ {condition.title()} condition - Some wear and tear")
         
@@ -347,8 +349,10 @@ class ContentGenerationAgent(BaseAgent):
         hashtags = []
         
         year = vehicle_data.get("year", "")
-        make = vehicle_data.get("make", "").lower()
-        model = vehicle_data.get("model", "").lower()
+        make_raw = vehicle_data.get("make")
+        make = (str(make_raw) if make_raw and isinstance(make_raw, str) else "").lower()
+        model_raw = vehicle_data.get("model")
+        model = (str(model_raw) if model_raw and isinstance(model_raw, str) else "").lower()
         
         if year:
             hashtags.append(f"#{year}")
@@ -371,8 +375,10 @@ class ContentGenerationAgent(BaseAgent):
         keywords = []
         
         year = vehicle_data.get("year", "")
-        make = vehicle_data.get("make", "").lower()
-        model = vehicle_data.get("model", "").lower()
+        make_raw = vehicle_data.get("make")
+        make = (str(make_raw) if make_raw and isinstance(make_raw, str) else "").lower()
+        model_raw = vehicle_data.get("model")
+        model = (str(model_raw) if model_raw and isinstance(model_raw, str) else "").lower()
         
         if year:
             keywords.append(str(year))
@@ -393,8 +399,10 @@ class ContentGenerationAgent(BaseAgent):
         Check SEO optimization of content
         """
         year = str(vehicle_data.get("year", ""))
-        make = vehicle_data.get("make", "").lower()
-        model = vehicle_data.get("model", "").lower()
+        make_raw = vehicle_data.get("make")
+        make = (str(make_raw) if make_raw and isinstance(make_raw, str) else "").lower()
+        model_raw = vehicle_data.get("model")
+        model = (str(model_raw) if model_raw and isinstance(model_raw, str) else "").lower()
         
         seo_score = 0
         issues = []

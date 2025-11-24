@@ -40,7 +40,8 @@ from app.api.v1 import (
     search_history as search_history_router,
     facebook_oauth as facebook_oauth_router,
     user_facebook_posting as user_facebook_posting_router,
-    user_ebay_posting as user_ebay_posting_router
+    user_ebay_posting as user_ebay_posting_router,
+    speech_to_text as speech_to_text_router
 )
 # Import test_apis_router separately since it's optional
 try:
@@ -282,6 +283,9 @@ app.include_router(user_ebay_posting_router.router, prefix="/api/v1/ebay", tags=
 # User Presets
 from app.api.v1 import user_presets
 app.include_router(user_presets.router, prefix="/api/v1", tags=["User Presets"])
+
+# Speech-to-Text
+app.include_router(speech_to_text_router.router, prefix="/api/v1/speech-to-text", tags=["Speech-to-Text"])
 
 # API Testing
 if test_apis_router:

@@ -12,6 +12,7 @@ This agent specializes in:
 import asyncio
 import logging
 import os
+import re
 from typing import Any, Dict, List, Optional
 from datetime import datetime, timedelta
 import json
@@ -19,6 +20,13 @@ import openai
 import httpx
 from .base_agent import BaseAgent, AgentOutput
 from app.services.cache import cache_get, cache_set, _normalize_key
+from app.utils.pricing_rules import (
+    calculate_mileage_penalty_percent,
+    detect_trim_tier,
+    get_reliability_tier,
+    get_trim_adjustment_percent,
+    normalize_title_status,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -83,6 +91,12 @@ class MarketIntelligenceAgent(BaseAgent):
             "Mercedes-Benz": ["C-Class", "E-Class", "GLC", "GLE"]
         }
     
+    def _redact_query(self, query: str) -> str:
+        """Redact sensitive tokens (zip codes) from logged queries."""
+        if not query:
+            return query
+        return re.sub(r'\b\d{5}(?:-\d{4})?\b', "#####", query)
+    
     async def process(self, input_data: Dict[str, Any]) -> AgentOutput:
         """
         Process market intelligence request with caching.
@@ -96,13 +110,18 @@ class MarketIntelligenceAgent(BaseAgent):
         try:
             # Check cache first (exclude price from cache key)
             # CRITICAL: Include title_status in cache key - rebuilt vs clean titles have different pricing!
+            raw_title_status = input_data.get("title_status")
+            if raw_title_status is None:
+                raw_title_status = input_data.get("titleStatus")
+            normalized_title_status = normalize_title_status(raw_title_status)
+
             cache_key = _normalize_key({
                 "make": input_data.get("make"),
                 "model": input_data.get("model"),
                 "year": input_data.get("year"),
                 "mileage": input_data.get("mileage"),
                 "location": input_data.get("location"),
-                "title_status": input_data.get("title_status") or input_data.get("titleStatus", "clean"),
+                "title_status": normalized_title_status,
                 "analysis_type": input_data.get("analysis_type", "comprehensive"),
             })
             
@@ -229,8 +248,11 @@ class MarketIntelligenceAgent(BaseAgent):
         
         # Get market pricing data (pass user's entered price as fallback)
         user_entered_price = input_data.get("asking_price") or input_data.get("price")
-        # Pass title_status to market pricing function
-        title_status = input_data.get("title_status") or input_data.get("titleStatus", "clean")
+        # Pass normalized title_status to market pricing function
+        raw_title_status = input_data.get("title_status")
+        if raw_title_status is None:
+            raw_title_status = input_data.get("titleStatus")
+        title_status = normalize_title_status(raw_title_status)
         market_prices = await self._get_market_prices(make, model, year, mileage, location, user_entered_price, trim, title_status)
         
         # Analyze price trends
@@ -422,7 +444,7 @@ Return ONLY the JSON object, no additional text or markdown formatting."""
                             }],
                             "generationConfig": {
                                 "maxOutputTokens": 2000,
-                                "temperature": 0.1
+                                "temperature": 0  # Deterministic pricing - no randomness
                                 # NOTE: Cannot use responseMimeType with googleSearch tool
                                 # Google Search Grounding returns text with search results embedded
                             }
@@ -452,7 +474,7 @@ Return ONLY the JSON object, no additional text or markdown formatting."""
                                 }],
                                 "generationConfig": {
                                     "maxOutputTokens": 2000,
-                                    "temperature": 0.1
+                                    "temperature": 0  # Deterministic pricing - no randomness
                                 }
                             },
                             timeout=60.0
@@ -777,9 +799,10 @@ Return ONLY the JSON object, no additional text or markdown formatting."""
         clean_title_estimate = max(3000, base_new_price - (vehicle_age * depreciation_per_year))
         
         # Adjust for title status
-        if title_status and "rebuilt" in title_status.lower():
-            clean_title_estimate *= 0.7  # Rebuilt title = 30% reduction
-        elif title_status and "salvage" in title_status.lower():
+        title_status_safe = (str(title_status).lower() if title_status and isinstance(title_status, str) else "")
+        if title_status_safe and "rebuilt" in title_status_safe:
+            clean_title_estimate *= 0.575  # Detroit: Rebuilt title = -38% to -47% reduction (avg -42.5%)
+        elif title_status_safe and "salvage" in title_status_safe:
             clean_title_estimate *= 0.5  # Salvage title = 50% reduction
         
         # CRITICAL: For vehicles 8+ years old, use MUCH stricter checks
@@ -840,6 +863,63 @@ Return ONLY the JSON object, no additional text or markdown formatting."""
         
         return base_price
     
+    def _apply_midwest_discount(self, price: float, make: str, model: str, mileage: Optional[int], location: str) -> float:
+        """
+        Apply Detroit/Michigan Midwest discount curve to market prices.
+        
+        Discounts:
+        - Sedans: -15% to -22%
+        - Coupes: -10%
+        - Trucks/SUVs: -3% to -12%
+        - Luxury brands: -20% to -30%
+        - High mileage (>150k): additional -3% to -7%
+        """
+        location_lower = (location or "").lower()
+        is_detroit_michigan = any(term in location_lower for term in ["detroit", "michigan", "mi", "flint", "redford", "warren", "troy", "dearborn"])
+        
+        if not is_detroit_michigan:
+            return price  # No discount for non-Midwest locations
+        
+        make_lower = (make or "").lower()
+        model_lower = (model or "").lower()
+        
+        # Determine vehicle type and base discount
+        base_discount = 0.0
+        
+        # Luxury brands: -20% to -30%
+        luxury_brands = ["bmw", "mercedes", "mercedes-benz", "audi", "lexus", "infiniti", "acura", "cadillac", "lincoln", "porsche", "jaguar", "land rover"]
+        if any(brand in make_lower for brand in luxury_brands):
+            base_discount = 0.25  # Average -25% for luxury
+        # Trucks/SUVs: -3% to -12%
+        elif any(term in model_lower for term in ["truck", "pickup", "f-150", "f150", "silverado", "ram", "tundra", "tacoma", "ranger", "colorado"]):
+            base_discount = 0.075  # Average -7.5% for trucks
+        elif any(term in model_lower for term in ["suv", "explorer", "escape", "cr-v", "rav4", "highlander", "pilot", "pathfinder", "tahoe", "suburban", "yukon", "escalade"]):
+            base_discount = 0.075  # Average -7.5% for SUVs
+        # Coupes: -10%
+        elif any(term in model_lower for term in ["coupe", "camaro", "mustang", "challenger", "charger"]):
+            base_discount = 0.10
+        # Sedans: -15% to -22% (default)
+        else:
+            base_discount = 0.185  # Average -18.5% for sedans
+        
+        # High mileage additional discount: -3% to -7%
+        mileage_discount = 0.0
+        if mileage and mileage > 150000:
+            # Scale from -3% at 150k to -7% at 200k+
+            mileage_discount = min(0.07, 0.03 + ((mileage - 150000) / 50000) * 0.04)
+        
+        total_discount = base_discount + mileage_discount
+        discounted_price = price * (1 - total_discount)
+        
+        print(f"[MARKET-INTEL] 🏭 Midwest discount applied: {make} {model} in {location}")
+        print(f"[MARKET-INTEL]   Base discount: -{base_discount*100:.1f}% ({'luxury' if any(brand in make_lower for brand in luxury_brands) else 'truck/suv' if base_discount == 0.075 else 'coupe' if base_discount == 0.10 else 'sedan'})")
+        if mileage_discount > 0:
+            print(f"[MARKET-INTEL]   High mileage discount: -{mileage_discount*100:.1f}% ({mileage:,} miles)")
+        print(f"[MARKET-INTEL]   Total discount: -{total_discount*100:.1f}%")
+        print(f"[MARKET-INTEL]   Price: ${price:,.0f} → ${discounted_price:,.0f}")
+        
+        return discounted_price
+    
     def _calculate_fallback_price(self, make: str, model: str, year: Optional[int], mileage: Optional[int], trim: Optional[str] = None, title_status: str = "clean") -> float:
         """
         Fallback pricing algorithm using KBB/Edmunds/AutoTrader average.
@@ -867,16 +947,44 @@ Return ONLY the JSON object, no additional text or markdown formatting."""
                 base_new_price = 22000  # Compass was cheaper new
             else:
                 base_new_price = 25000
-        elif "toyota" in make_lower or "honda" in make_lower:
-            base_new_price = 25000
+        elif "honda" in make_lower:
+            if "accord" in model_lower:
+                base_new_price = 23000  # Accord base price when new
+                if "sport" in model_lower or "ex" in model_lower:
+                    base_new_price = 26000  # Sport/EX trim was more expensive
+            elif "civic" in model_lower:
+                base_new_price = 20000
+            else:
+                base_new_price = 25000
+        elif "toyota" in make_lower:
+            if "camry" in model_lower:
+                base_new_price = 24000
+            else:
+                base_new_price = 25000
+        elif "chevrolet" in make_lower or "chevy" in make_lower:
+            if "malibu" in model_lower:
+                base_new_price = 23000  # Malibu base price when new
+                if "ltz" in model_lower or "premier" in model_lower:
+                    base_new_price = 28000  # Higher trims cost more new
+            elif "silverado" in model_lower:
+                base_new_price = 30000
+            elif "equinox" in model_lower:
+                base_new_price = 24000
+            else:
+                base_new_price = 25000
         elif "bmw" in make_lower or "mercedes" in make_lower:
             base_new_price = 40000
         else:
             base_new_price = 25000
         
         # Calculate depreciation
-        # For 8+ year old vehicles, use more aggressive depreciation
-        if vehicle_age >= 8:
+        # For 10+ year old Malibus, use market average as base (AutoTrader shows ~$7,748 for 2014 Malibu)
+        if vehicle_age >= 10 and "malibu" in (model or "").lower():
+            # Market data: 2014 Malibu average ~$7,748 (AutoTrader, all trims/mileages)
+            # Use this as starting point instead of depreciation calculation
+            base_price = 7748  # AutoTrader average for 2014 Malibu (all trims/mileages)
+            print(f"[MARKET-INTEL] 📊 Using market average base price for {year} Malibu: ${base_price:,.0f} (AutoTrader data)")
+        elif vehicle_age >= 8:
             # Older vehicles depreciate faster: ~$1200-1500 per year
             depreciation_per_year = 1300
             base_price = max(3000, base_new_price - (vehicle_age * depreciation_per_year))
@@ -890,37 +998,64 @@ Return ONLY the JSON object, no additional text or markdown formatting."""
             depreciation_per_year = 800
             base_price = max(5000, base_new_price - (vehicle_age * depreciation_per_year))
         
-        # Mileage adjustment (only if mileage is higher than expected)
-        if mileage:
-            # Standard mileage: 12,000 miles/year
-            expected_mileage = vehicle_age * 12000
-            mileage_delta = mileage - expected_mileage
-            
-            if mileage_delta > 0:
-                # Higher than expected mileage: reduce price
-                base_price -= mileage_delta * 0.15
-            elif mileage_delta < -10000 and vehicle_age >= 8:
-                # Very low mileage on old vehicle: small premium (already capped)
-                # Don't add premium here - it's handled by mileage premium cap
-                pass
+        # Trim tier adjustment before mileage and title deductions
+        trim_tier, trim_matches = detect_trim_tier(trim)
+        trim_percent = get_trim_adjustment_percent(trim_tier, len(trim_matches) or (1 if trim else 0), trim, model)
+        if trim_percent:
+            trim_boost = base_price * trim_percent
+            base_price += trim_boost
+            print(f"[MARKET-INTEL] 🎯 Trim tier '{trim_tier}' detected ({', '.join(trim_matches) or trim or 'base'}): +{trim_percent*100:.1f}% → +${trim_boost:,.0f}")
+        
+        # Mileage adjustment using reliability tiers
+        reliability_tier = get_reliability_tier(make)
+        mileage_percent, mileage_label = calculate_mileage_penalty_percent(mileage, reliability_tier)
+        if mileage_percent:
+            mileage_adjustment = base_price * mileage_percent
+            base_price += mileage_adjustment
+            print(f"[MARKET-INTEL] 📉 Mileage curve {mileage_label}: {mileage_percent*100:.1f}% → ${mileage_adjustment:,.0f}")
         
         # Make/model value retention adjustments
         if "jeep" in make_lower and "wrangler" in model_lower:
             base_price *= 1.2  # Wranglers hold value well
         elif "toyota" in make_lower or "honda" in make_lower:
             base_price *= 1.05  # Reliable brands hold value
+        elif "chevrolet" in make_lower or "chevy" in make_lower:
+            if "malibu" in model_lower:
+                base_price *= 1.0  # Malibu holds average value
+            else:
+                base_price *= 0.98  # Other Chevys slightly below average
         elif "jeep" in make_lower and "compass" in model_lower:
             base_price *= 0.95  # Compass doesn't hold value as well
         
-        # Title status adjustment
-        if title_status and "rebuilt" in title_status.lower():
-            base_price *= 0.7  # Rebuilt title = 30% reduction
-        elif title_status and "salvage" in title_status.lower():
-            base_price *= 0.5  # Salvage title = 50% reduction
+        # Title status adjustment (Step 5: Rebuilt -30%, Salvage -47% to -50%)
+        normalized_title = normalize_title_status(title_status)
+        if normalized_title == "rebuilt":
+            base_price *= 0.70  # Rebuilt title = -30% reduction
+        elif normalized_title == "salvage":
+            base_price *= 0.515  # Salvage title = -47% to -50% reduction (avg -48.5%)
         
         # Apply mileage premium cap for low-mileage older vehicles
         if mileage and vehicle_age >= 5:
             base_price = self._apply_mileage_premium_cap(base_price, mileage, year)
+        
+        # Apply minimum price floor (Step 7: Detroit floors for 10+ year vehicles)
+        # Determine if SUV/Truck or Sedan
+        model_lower = (model or "").lower()
+        is_suv_truck = any(term in model_lower for term in ["suv", "truck", "pickup", "explorer", "escape", "cr-v", "rav4", "highlander", "pilot", "tahoe", "suburban", "yukon", "f-150", "f150", "silverado", "ram", "tundra", "tacoma"])
+        
+        if vehicle_age >= 10:
+            if is_suv_truck:
+                min_floor = 2500  # 10+ year SUVs/Trucks: $2,500-$3,800 (using $2,500)
+            else:
+                min_floor = 1500  # 10+ year sedans: $1,500-$2,500 (using $1,500)
+        elif vehicle_age >= 8:
+            min_floor = 3000  # 8-9 year cars: minimum $3,000
+        elif vehicle_age >= 5:
+            min_floor = 4000  # 5-7 year cars: minimum $4,000
+        else:
+            min_floor = 5000  # Newer cars: minimum $5,000
+        
+        base_price = max(min_floor, base_price)
         
         # Clamp to reasonable range (±20% of calculated price)
         min_price = base_price * 0.8
@@ -934,6 +1069,7 @@ Return ONLY the JSON object, no additional text or markdown formatting."""
     async def _get_market_prices(self, make: str, model: str, year: Optional[int], mileage: Optional[int], location: str, user_entered_price: Optional[int] = None, trim: Optional[str] = None, title_status: str = "clean") -> Dict[str, Any]:
         """Get market pricing data using Google Search Grounding (real-time data from Google)."""
         try:
+            title_status = normalize_title_status(title_status)
             # Format location better (separate zip code from city name)
             formatted_location = location
             if "," in location:
@@ -943,22 +1079,81 @@ Return ONLY the JSON object, no additional text or markdown formatting."""
                     # If second part is just a zip code, format as "City, ZIP"
                     formatted_location = f"{parts[0]}, {parts[1]}"
             
+            reliability_tier = get_reliability_tier(make)
+
             # GUARDRAIL 1: Build query that explicitly excludes MSRP and requests current used pricing
             # Force TODAY's market year and used car pricing only
             current_year = datetime.now().year
             year_str = f"{year} " if year else ""
             trim_str = f" {trim}" if trim else ""
             mileage_str = f" with {mileage:,} miles" if mileage else ""
-            title_str = f" {title_status} title" if title_status and title_status != "clean" else ""
+            title_str = f" {title_status} title"
+            location_clause = f" near {formatted_location}" if formatted_location else ""
             
-            # Build query with explicit guardrails
-            search_query = (
-                f"used market price for {year_str}{make} {model}{trim_str}{mileage_str}{title_str} "
-                f"current resale value {current_year} "
-                f"used value not MSRP not original price used car listings only"
-            )
+            # STEP 1: LOCAL MARKET QUERY (Detroit/Michigan)
+            # Add Detroit-specific phrases to influence Google Search Grounding results
+            # We are NOT scraping - just influencing Google's search results
+            location_lower = formatted_location.lower() if formatted_location else ""
+            is_detroit_michigan = any(term in location_lower for term in ["detroit", "michigan", "mi", "flint", "redford", "warren", "troy", "dearborn"])
+            
+            if is_detroit_michigan:
+                # Extract zip code if available (e.g., 48239)
+                zip_code = ""
+                if formatted_location and "," in formatted_location:
+                    parts = formatted_location.split(",")
+                    if len(parts) >= 2:
+                        zip_part = parts[-1].strip()
+                        if zip_part.isdigit() and len(zip_part) == 5:
+                            zip_code = zip_part
+                
+                # Build query with Detroit/Michigan-specific phrases to influence Google Search
+                # These phrases help Google return more Detroit-area listings via Grounding
+                detroit_phrases = [
+                    "Detroit MI",
+                    "Michigan",
+                    "Redford MI",
+                    "48239" if zip_code == "48239" else "",
+                    "for sale Detroit",
+                    "used cars Detroit Michigan"
+                ]
+                # Filter out empty phrases
+                detroit_phrases = [p for p in detroit_phrases if p]
+                detroit_context = " ".join(detroit_phrases)
+                
+                # Build comprehensive query that influences Google to return Detroit listings
+                search_query = (
+                    f"{year_str}{make} {model}{trim_str}{mileage_str}{title_str} "
+                    f"price {detroit_context} "
+                    f"used car market value {current_year} "
+                    f"Detroit Michigan area listings"
+                )
+                
+                print(f"[MARKET-INTEL] 🔍 DETROIT MARKET QUERY (Google Search Grounding): {search_query}")
+                print(f"[MARKET-INTEL] ✅ Using Google Search Grounding ONLY - NO scraping, NO crawling")
+            else:
+                # Default query for other locations
+                search_query = (
+                    f"used market price for {year_str}{make} {model}{trim_str}{mileage_str}{title_str}{location_clause} "
+                    f"current resale value {current_year} at {formatted_location} "
+                    f"used value not MSRP not original price used car listings only"
+                )
             print(f"[MARKET-INTEL] 🔍 Price search query (with MSRP guardrails): {search_query}")
+            logger.info(f"[MARKET-INTEL] Query: {self._redact_query(search_query)}")
             web_search_result = await self._web_search(search_query)
+            debug_info = {
+                "raw_prices": [],
+                "msrp_candidates": [],
+                "used_candidates": [],
+                "filtered_prices": [],
+                "sanity_check_failures": [],
+                "data_source": None,
+                "fallback_used": False,
+                "search_query": search_query,
+                "location": formatted_location,
+                "title_status": title_status,
+                "trim": trim,
+                "reliability_tier": reliability_tier,
+            }
             
             # GUARDRAIL 2: Filter out MSRP data from search results
             if web_search_result:
@@ -1027,9 +1222,10 @@ Return ONLY the JSON object, no additional text or markdown formatting."""
                                 debug_info["used_candidates"].append(market_average)
                                 # GUARDRAIL 4: Apply mileage premium cap for older vehicles
                                 market_average = self._apply_mileage_premium_cap(market_average, mileage, year)
+                                # NOTE: Midwest discount is applied LAST in Pricing Strategy Agent (after trim, mileage, title adjustments)
                                 debug_info["filtered_prices"].append(market_average)
                                 debug_info["data_source"] = "google_search_structured_json"
-                                print(f"[MARKET-INTEL] ✅ REAL MARKET DATA from structured JSON: ${market_average:,.0f} (after sanity check and mileage cap)")
+                                print(f"[MARKET-INTEL] ✅ REAL MARKET DATA from structured JSON: ${market_average:,.0f} (after sanity check and mileage cap - Midwest discount applied later)")
                                 return {
                                 "kbb_value": round(trade_in.get("high", market_average * 0.95)),
                                 "edmunds_value": round(dealer_retail.get("low", market_average * 1.02)),
@@ -1055,6 +1251,11 @@ Return ONLY the JSON object, no additional text or markdown formatting."""
                                 "confidence": structured_data.get("confidence", 0.9),
                                 "prices_found": 1,  # Structured data counts as 1 source
                                 "web_search_snippet": f"Structured data from Google AI: Market average ${market_average:,.0f}",
+                                "search_query": search_query,
+                                "location_used": formatted_location,
+                                "title_status_used": title_status,
+                                "trim_used": trim,
+                                "reliability_tier": reliability_tier,
                                 "debug": debug_info
                             }
                         else:
@@ -1100,6 +1301,7 @@ Return ONLY the JSON object, no additional text or markdown formatting."""
                                 # Also cap the range
                                 low_price = self._apply_mileage_premium_cap(low_price, mileage, year)
                                 high_price = self._apply_mileage_premium_cap(high_price, mileage, year)
+                                # NOTE: Midwest discount is applied LAST in Pricing Strategy Agent
                                 debug_info["filtered_prices"].extend([low_price, high_price, market_average])
                                 debug_info["data_source"] = "google_search_primary_range"
                                 
@@ -1117,6 +1319,11 @@ Return ONLY the JSON object, no additional text or markdown formatting."""
                                 "web_search_snippet": f"Primary market range: ${low_price:,} - ${high_price:,}",
                                 "prices_found": 1,
                                 "confidence": 0.9,
+                                "search_query": search_query,
+                                "location_used": formatted_location,
+                                "title_status_used": title_status,
+                                "trim_used": trim,
+                                "reliability_tier": reliability_tier,
                                 "debug": debug_info
                             }
                     except (ValueError, AttributeError) as e:
@@ -1150,9 +1357,10 @@ Return ONLY the JSON object, no additional text or markdown formatting."""
                                 debug_info["used_candidates"].append(typical_price)
                                 # GUARDRAIL 4: Apply mileage premium cap
                                 market_average = self._apply_mileage_premium_cap(typical_price, mileage, year)
+                                # NOTE: Midwest discount is applied LAST in Pricing Strategy Agent
                                 debug_info["filtered_prices"].append(market_average)
                                 debug_info["data_source"] = "google_search_typical_price"
-                                print(f"[MARKET-INTEL] ✅ Found TYPICAL price from Google: ${market_average:,.0f} (after sanity check)")
+                                print(f"[MARKET-INTEL] ✅ Found TYPICAL price from Google: ${market_average:,.0f} (after sanity check and mileage cap - Midwest discount applied later)")
                                 return {
                                     "kbb_value": round(market_average * 0.95),
                                     "edmunds_value": round(market_average * 1.02),
@@ -1166,6 +1374,11 @@ Return ONLY the JSON object, no additional text or markdown formatting."""
                                     "web_search_snippet": f"Typical market price: ${market_average:,.0f}",
                                     "prices_found": 1,
                                     "confidence": 0.8,
+                                    "search_query": search_query,
+                                    "location_used": formatted_location,
+                                    "title_status_used": title_status,
+                                    "trim_used": trim,
+                                    "reliability_tier": reliability_tier,
                                     "debug": debug_info
                                 }
                         except (ValueError, AttributeError):
@@ -1275,6 +1488,8 @@ Return ONLY the JSON object, no additional text or markdown formatting."""
                             price_range_low = self._apply_mileage_premium_cap(price_range_low, mileage, year)
                             price_range_high = self._apply_mileage_premium_cap(price_range_high, mileage, year)
                             
+                            # NOTE: Midwest discount is applied LAST in Pricing Strategy Agent (after trim, mileage, title)
+                            
                             debug_info["filtered_prices"] = [price_range_low, market_average, price_range_high]
                             debug_info["data_source"] = "google_search_extracted_prices"
                             
@@ -1300,6 +1515,11 @@ Return ONLY the JSON object, no additional text or markdown formatting."""
                                 "web_search_snippet": web_search_result[:300] + "..." if web_search_result else None,
                                 "prices_found": len(filtered_prices),
                                 "raw_prices": filtered_prices[:10],  # First 10 prices for debugging
+                                "search_query": search_query,
+                                "location_used": formatted_location,
+                                "title_status_used": title_status,
+                                "trim_used": trim,
+                                "reliability_tier": reliability_tier,
                                 "debug": debug_info
                             }
             
@@ -1346,6 +1566,11 @@ Return ONLY the JSON object, no additional text or markdown formatting."""
                 "data_source": data_source,
                 "web_search_snippet": web_search_result[:300] + "..." if web_search_result else None,
                 "google_search_ran": web_search_result is not None,  # Flag to indicate if Google Search was called
+                "search_query": search_query,
+                "location_used": formatted_location,
+                "title_status_used": title_status,
+                "trim_used": trim,
+                "reliability_tier": reliability_tier,
                 "debug": debug_info
             }
         except Exception as e:
@@ -1357,8 +1582,8 @@ Return ONLY the JSON object, no additional text or markdown formatting."""
             if mileage:
                 base_price -= (mileage - 50000) * 0.15  # $0.15 per mile
             # Adjust for make/model
-            make_lower = make.lower()
-            model_lower = model.lower()
+            make_lower = (make or "").lower()
+            model_lower = (model or "").lower()
             if "jeep" in make_lower and "wrangler" in model_lower:
                 base_price *= 1.3  # Wranglers hold value well
             print(f"[MARKET-INTEL] ⚠️  Google Search failed, using estimate (${base_price:,.0f}) - NOT user price")
@@ -1374,7 +1599,12 @@ Return ONLY the JSON object, no additional text or markdown formatting."""
                 },
                 "data_source": "estimated",
                 "error": str(e),
-                "note": "Google Search failed - using estimate only"
+                "note": "Google Search failed - using estimate only",
+                "search_query": search_query if 'search_query' in locals() else None,
+                "location_used": formatted_location,
+                "title_status_used": title_status,
+                "trim_used": trim,
+                "reliability_tier": reliability_tier
             }
     
     async def _analyze_price_trends(self, make: str, model: str, location: str) -> Dict[str, Any]:

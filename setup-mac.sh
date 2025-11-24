@@ -47,6 +47,14 @@ else
     echo "✅ Git found: $GIT_VERSION"
 fi
 
+# Check Homebrew (optional but recommended)
+if ! command -v brew &> /dev/null; then
+    echo "⚠️  Homebrew not found (optional but recommended for Mac package management)"
+    echo "   Install from: https://brew.sh"
+else
+    echo "✅ Homebrew found"
+fi
+
 echo ""
 echo "📦 Step 1: Installing root npm dependencies..."
 if [ ! -d "node_modules" ]; then
@@ -87,6 +95,14 @@ if [ -f "requirements.txt" ]; then
     echo "Installing Python dependencies (this may take a few minutes)..."
     pip install -r requirements.txt
     echo "✅ Python dependencies installed"
+    
+    # Install Playwright browsers if playwright is installed
+    if pip show playwright &> /dev/null; then
+        echo ""
+        echo "🎭 Installing Playwright browsers (for Facebook Marketplace automation)..."
+        playwright install chromium
+        echo "✅ Playwright browsers installed"
+    fi
 else
     echo "⚠️  requirements.txt not found"
 fi
@@ -119,28 +135,14 @@ fi
 
 # Check frontend .env.local
 if [ ! -f "frontend/.env.local" ]; then
-    echo "⚠️  Frontend .env.local not found."
-    echo "   Creating template file..."
-    cat > frontend/.env.local << 'EOF'
-# Supabase Configuration
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGci...your-anon-key
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGci...your-service-role-key
-
-# Site Configuration
-NEXT_PUBLIC_SITE_URL=http://localhost:3000
-
-# Backend API Configuration
-NEXT_PUBLIC_API_URL=http://localhost:8000
-
-# Facebook OAuth (for NextAuth)
-AUTH_FACEBOOK_ID=your-facebook-app-id
-AUTH_FACEBOOK_SECRET=your-facebook-app-secret
-
-# OpenAI API Key (for Accorria Chatbot)
-OPENAI_API_KEY=sk-proj-...your-openai-key
-EOF
-    echo "✅ Created frontend/.env.local - **PLEASE UPDATE WITH YOUR ACTUAL VALUES**"
+    if [ -f "frontend/env.example" ]; then
+        echo "⚠️  Frontend .env.local not found. Creating from env.example..."
+        cp frontend/env.example frontend/.env.local
+        echo "✅ Created frontend/.env.local - **PLEASE UPDATE WITH YOUR ACTUAL VALUES**"
+    else
+        echo "⚠️  Frontend .env.local not found and no env.example available"
+        echo "   Please create frontend/.env.local manually with required variables"
+    fi
 else
     echo "✅ Frontend .env.local exists"
 fi
@@ -154,7 +156,7 @@ echo "1. ⚠️  IMPORTANT: Update environment variables:"
 echo "   - Edit backend/.env with your API keys"
 echo "   - Edit frontend/.env.local with your API keys"
 echo ""
-echo "   See API_KEY_SETUP_GUIDE.md for where to get API keys"
+echo "   See backend/API_SETUP_GUIDE.md for where to get API keys"
 echo ""
 echo "2. Start the development servers:"
 echo "   npm run dev"
@@ -170,6 +172,8 @@ echo "3. Access the application:"
 echo "   - Frontend: http://localhost:3000"
 echo "   - Backend API Docs: http://localhost:8000/docs"
 echo ""
-echo "📚 For more details, see MAC_SETUP_GUIDE.md"
+echo "📚 For more details, see:"
+echo "   - backend/API_SETUP_GUIDE.md (API key setup)"
+echo "   - SUPABASE_SETUP_GUIDE.md (Database setup)"
 echo ""
 

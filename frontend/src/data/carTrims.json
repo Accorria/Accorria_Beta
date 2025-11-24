@@ -22,16 +22,16 @@
     "Transit": ["XL", "XLT", "Limited", "Passenger", "Cargo"]
   },
   "Chevrolet": {
-    "Silverado 1500": ["Work Truck", "Custom", "LT", "RST", "LTZ", "High Country", "ZR2", "Trail Boss"],
+    "Silverado 1500": ["Custom", "High Country", "LT", "LTZ", "RST", "Trail Boss", "Work Truck", "ZR2"],
     "Equinox": ["L", "LS", "LT", "Premier", "RS"],
-    "Malibu": ["LS", "RS", "LT", "Premier"],
-    "Tahoe": ["LS", "LT", "RST", "Premier", "High Country", "Z71"],
-    "Traverse": ["LS", "LT", "RS", "Premier"],
-    "Camaro": ["LS", "LT", "SS", "ZL1", "1LE"],
-    "Suburban": ["LS", "LT", "RST", "Premier", "High Country", "Z71"],
-    "Blazer": ["L", "LT", "RS", "Premier"],
-    "Trailblazer": ["L", "LS", "LT", "Activ", "RS", "Premier"],
-    "Colorado": ["Work Truck", "LT", "Z71", "ZR2", "Trail Boss"]
+    "Malibu": ["LS", "LT", "LTZ", "Premier", "RS"],
+    "Tahoe": ["High Country", "LS", "LT", "Premier", "RST", "Z71"],
+    "Traverse": ["LS", "LT", "Premier", "RS"],
+    "Camaro": ["1LE", "LS", "LT", "SS", "ZL1"],
+    "Suburban": ["High Country", "LS", "LT", "Premier", "RST", "Z71"],
+    "Blazer": ["L", "LT", "Premier", "RS"],
+    "Trailblazer": ["Activ", "L", "LS", "LT", "Premier", "RS"],
+    "Colorado": ["LT", "Trail Boss", "Work Truck", "Z71", "ZR2"]
   },
   "Toyota": {
     "Camry": ["LE", "SE", "XLE", "XSE", "TRD", "Nightshade"],

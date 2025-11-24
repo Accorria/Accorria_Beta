@@ -131,13 +131,16 @@ class VINDecoder:
     
     async def get_vehicle_features_from_vin(self, vin: str) -> List[str]:
         """
-        Get vehicle features based on VIN (infer from specifications)
+        Get vehicle features from VIN - PURE NHTSA DATA ONLY.
+        NO INFERENCE, NO ASSUMPTIONS, NO ENRICHMENT.
+        
+        Only returns features that are explicitly in the NHTSA response.
         
         Args:
             vin: VIN number
             
         Returns:
-            List of inferred features
+            List of features from NHTSA data (column names and values only)
         """
         vin_data = await self.decode_vin(vin)
         if not vin_data:
@@ -145,37 +148,14 @@ class VINDecoder:
         
         features = []
         
-        # Infer features from VIN data
-        drivetrain = vin_data.get("drivetrain", "").lower()
-        if "all wheel" in drivetrain or "4wd" in drivetrain or "awd" in drivetrain:
-            features.append("All-Wheel Drive")
-        elif "front wheel" in drivetrain or "fwd" in drivetrain:
-            features.append("Front-Wheel Drive")
-        elif "rear wheel" in drivetrain or "rwd" in drivetrain:
-            features.append("Rear-Wheel Drive")
+        # ONLY use actual NHTSA data - no inference
+        # Only add drivetrain if it's explicitly in the NHTSA response
+        drivetrain = vin_data.get("drivetrain", "")
+        if drivetrain and drivetrain != "Not Applicable":
+            # Use the exact NHTSA value, formatted nicely
+            features.append(drivetrain)
         
-        # Modern vehicles (2015+) likely have these features
-        year = vin_data.get("year", 0)
-        if year and year >= 2015:
-            # Most modern cars have these
-            if "Backup Camera" not in features:
-                features.append("Backup Camera")
-            if "Bluetooth" not in features:
-                features.append("Bluetooth")
-            if "Touchscreen" not in features:
-                features.append("Touchscreen")
-        
-        # Luxury brands likely have premium features
-        make = vin_data.get("make", "").lower()
-        luxury_brands = ["bmw", "mercedes", "audi", "lexus", "infiniti", "acura", "cadillac", "lincoln"]
-        if any(brand in make for brand in luxury_brands):
-            if "Leather Seats" not in features:
-                features.append("Leather Seats")
-            if "Navigation System" not in features:
-                features.append("Navigation System")
-            if "Heated Seats" not in features:
-                features.append("Heated Seats")
-        
+        # Return ONLY what NHTSA provides - no assumptions about modern cars, luxury brands, etc.
         return features
     
     async def close(self):

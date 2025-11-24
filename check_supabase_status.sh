@@ -1,8 +1,8 @@
 #!/bin/bash
 # Check Supabase RLS Status using Management API
 
-PROJECT_REF="jchmewblysdlzibaaikl"
-ACCESS_TOKEN="sbp_3b528fe42fdbae36e6f381910fe492ca79e1c69f"
+PROJECT_REF="your-project-ref-here"
+ACCESS_TOKEN="your-supabase-access-token-here"
 
 echo "🔍 Checking Supabase RLS Status for project: $PROJECT_REF"
 echo ""
