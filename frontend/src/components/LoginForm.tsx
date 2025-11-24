@@ -79,7 +79,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({
                 required
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-colors text-gray-900 bg-white"
                 placeholder="Enter your password"
-                style={{ WebkitTextSecurity: 'disc', textSecurity: 'disc' }}
                 autoComplete="current-password"
               />
           </div>
