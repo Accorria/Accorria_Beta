@@ -44,9 +44,11 @@ function FacebookCallbackContent() {
       try {
         // Exchange code for tokens via backend
         const backendUrl = getBackendUrl();
+        console.log('🔄 Exchanging Facebook OAuth code for tokens...', { code: code.substring(0, 20) + '...', state: state.substring(0, 20) + '...' });
         const response = await authenticatedFetch(
           `${backendUrl}/api/v1/auth/facebook/callback?code=${code}&state=${state}`
         );
+        console.log('📡 Backend callback response:', response.status, response.statusText);
 
         if (response.ok) {
           const contentType = response.headers.get('content-type');
@@ -79,17 +81,29 @@ function FacebookCallbackContent() {
           setStatus('success');
           setMessage(data.message || 'Facebook account connected successfully!');
           
+          console.log('✅ Facebook connection successful!', data);
+          
           // Close popup if opened in popup, otherwise redirect
           setTimeout(() => {
             if (window.opener) {
               // Tell parent window that connection succeeded
-              window.opener.postMessage({ type: 'FACEBOOK_CONNECTED', success: true }, '*');
-              window.close();
+              const origin = window.location.origin;
+              console.log('📤 Sending success message to parent window:', origin);
+              window.opener.postMessage({ 
+                type: 'FACEBOOK_CONNECTED', 
+                success: true,
+                connectionId: data.connection_id,
+                userInfo: data.user_info
+              }, origin);
+              // Give parent time to receive message before closing
+              setTimeout(() => {
+                window.close();
+              }, 500);
             } else {
               // Redirect to connections page
               router.push('/dashboard/connections');
             }
-          }, 2000);
+          }, 1500);
         } else {
           let errorMessage = 'Failed to connect Facebook account';
           try {

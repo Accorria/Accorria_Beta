@@ -1,8 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { authenticatedFetch } from '@/utils/api';
+import { getBackendUrl } from '@/config/api';
 
 interface Listing {
   id: string;
@@ -23,6 +25,9 @@ interface Listing {
   detectedFeatures?: string[];
   aiAnalysis?: string;
   finalDescription?: string;
+  make?: string;
+  model?: string;
+  year?: number;
 }
 
 interface DashboardListingProps {
@@ -35,6 +40,8 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
   const [showSaleForm, setShowSaleForm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
+  const [isFacebookConnected, setIsFacebookConnected] = useState(false);
+  const [isPostingToFacebook, setIsPostingToFacebook] = useState(false);
   const [saleData, setSaleData] = useState({
     soldFor: '',
     soldTo: ''
@@ -45,6 +52,169 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
     description: listing.description,
     mileage: listing.mileage
   });
+
+  // Check if Facebook is connected
+  const checkFacebookConnection = async (): Promise<'connected' | 'not_connected' | 'database_error'> => {
+    try {
+      const backendUrl = getBackendUrl();
+      const response = await authenticatedFetch(`${backendUrl}/api/v1/facebook/connection-status`);
+      if (response.ok) {
+        const data = await response.json();
+        
+        // If there's a database error, stop checking immediately
+        if (data.error && (data.error.includes('Connection refused') || data.error.includes('Database error'))) {
+          console.warn('Database connection error - stopping Facebook status checks:', data.error);
+          setIsFacebookConnected(false);
+          return 'database_error'; // Signal to stop polling
+        }
+        
+        const isConnected = data.connected === true;
+        setIsFacebookConnected(isConnected);
+        if (isConnected) {
+          console.log('✅ Facebook is connected! Showing Post button.');
+          return 'connected';
+        } else {
+          console.log('❌ Facebook is not connected.');
+          return 'not_connected';
+        }
+      } else {
+        const errorText = await response.text();
+        console.log('Facebook connection check failed:', response.status, errorText);
+        setIsFacebookConnected(false);
+        return 'not_connected';
+      }
+    } catch (error: any) {
+      // Don't log database connection errors repeatedly
+      if (error.message?.includes('Connection refused') || error.message?.includes('Failed to connect')) {
+        console.debug('Database connection error - stopping status checks');
+        setIsFacebookConnected(false);
+        return 'database_error'; // Signal to stop polling
+      }
+      console.error('Error checking Facebook connection:', error);
+      setIsFacebookConnected(false);
+      return 'not_connected';
+    }
+  };
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    let isPolling = true;
+    
+    const startPolling = async () => {
+      // Check immediately on mount
+      const status = await checkFacebookConnection();
+      
+      // Stop immediately if there's a database error
+      if (status === 'database_error') {
+        console.log('Stopping Facebook status checks due to database error');
+        return;
+      }
+      
+      // Only start polling if no database errors
+      // Check every 30 seconds instead of 5 seconds to reduce load
+      if (isPolling) {
+        interval = setInterval(async () => {
+          if (document.visibilityState === 'visible' && isPolling) {
+            const continueStatus = await checkFacebookConnection();
+            // Stop polling immediately if we get a database error
+            if (continueStatus === 'database_error') {
+              isPolling = false;
+              if (interval) {
+                clearInterval(interval);
+                interval = null;
+              }
+            }
+          }
+        }, 30000); // Check every 30 seconds (reduced from 5 seconds)
+      }
+    };
+    
+    startPolling();
+    
+    return () => {
+      isPolling = false;
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
+  }, []);
+
+  // Post listing to Facebook Marketplace
+  const handlePostToFacebook = async () => {
+    if (!isFacebookConnected) {
+      // Redirect to connections page if not connected
+      window.location.href = '/dashboard/connections';
+      return;
+    }
+
+    setIsPostingToFacebook(true);
+    try {
+      const backendUrl = getBackendUrl();
+      
+      // Prepare listing data for Facebook
+      const listingData = {
+        title: listing.title,
+        description: listing.description,
+        price: listing.price,
+        make: listing.make || '',
+        model: listing.model || '',
+        year: listing.year || 0,
+        mileage: parseInt(listing.mileage) || 0,
+        condition: 'GOOD',
+        post_to_marketplace: true
+      };
+
+      // Convert images to File objects for upload
+      const imageFiles: File[] = [];
+      for (const imageUrl of listing.images.slice(0, 10)) {
+        try {
+          const response = await fetch(imageUrl);
+          const blob = await response.blob();
+          const fileName = imageUrl.split('/').pop() || 'image.jpg';
+          const file = new File([blob], fileName, { type: blob.type });
+          imageFiles.push(file);
+        } catch (error) {
+          console.warn('Failed to fetch image:', imageUrl);
+        }
+      }
+
+      // Create FormData for multipart/form-data request
+      const formData = new FormData();
+      formData.append('title', listingData.title);
+      formData.append('description', listingData.description);
+      formData.append('price', listingData.price.toString());
+      formData.append('make', listingData.make);
+      formData.append('model', listingData.model);
+      formData.append('year', listingData.year.toString());
+      formData.append('mileage', listingData.mileage.toString());
+      formData.append('condition', listingData.condition);
+      formData.append('post_to_marketplace', 'true');
+      
+      imageFiles.forEach((file) => {
+        formData.append('images', file);
+      });
+
+      const response = await authenticatedFetch(`${backendUrl}/api/v1/user-facebook-posting/post-to-marketplace-playwright`, {
+        method: 'POST',
+        body: formData
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        alert(`✅ Listing posted to Facebook Marketplace!\n\n${result.message || 'Check Facebook Marketplace to review and publish.'}`);
+        // Refresh the page to update platform badges
+        window.location.reload();
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to post to Facebook Marketplace');
+      }
+    } catch (error: any) {
+      console.error('Error posting to Facebook:', error);
+      alert(`❌ Failed to post to Facebook Marketplace: ${error.message || 'Unknown error'}`);
+    } finally {
+      setIsPostingToFacebook(false);
+    }
+  };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -78,10 +248,10 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
       {/* Images */}
-      <div className="relative">
+      <div className="relative w-full overflow-hidden">
         <Link href={`/listings/${listing.id}`}>
           <div 
-            className="grid grid-cols-2 gap-1 h-20 sm:h-24 md:h-32 cursor-pointer"
+            className="grid grid-cols-2 gap-1 aspect-[2/1] cursor-pointer"
             onClick={(e) => {
               e.preventDefault();
               setShowPhotoGallery(true);
@@ -100,15 +270,16 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
             const imageSrc = isValidImage ? image : '/placeholder-car.jpg';
             
             return (
-              <div key={index} className="relative">
+              <div key={index} className="relative w-full h-full overflow-hidden">
                 {isValidImage ? (
                   <Image
                     src={imageSrc}
                     alt={`${listing.title} - Image ${index + 1}`}
                     className="w-full h-full object-cover rounded-lg"
-                    width={200}
-                    height={150}
+                    width={400}
+                    height={200}
                     unoptimized={image.startsWith('data:image/')}
+                    style={{ objectFit: 'cover' }}
                   />
                 ) : (
                   <div className="w-full h-full bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center">
@@ -116,7 +287,7 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
                   </div>
                 )}
                 {index === 1 && listing.images.length > 2 && (
-                  <div className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center rounded-lg">
+                  <div className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center rounded-lg z-10">
                     <span className="text-white font-bold text-xs sm:text-sm">
                       +{listing.images.length - 2}
                     </span>
@@ -127,7 +298,7 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
           })}
           </div>
         </Link>
-        <div className="absolute bottom-1 right-1 sm:bottom-2 sm:right-2 bg-black bg-opacity-70 text-white text-xs px-1 py-0.5 sm:px-2 sm:py-1 rounded">
+        <div className="absolute bottom-2 right-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded z-20 pointer-events-none">
           Click to view all {validImages.length} photos
         </div>
       </div>
@@ -195,33 +366,76 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
           
           {/* Platforms Section */}
           <div className="space-y-2">
-            <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">Posted to:</div>
-            <div className="flex flex-wrap gap-2">
-              {listing.platforms?.map((platform, index) => {
-                const platformInfo = {
-                  'facebook_marketplace': { name: 'Facebook', icon: '📘', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300' },
-                  'craigslist': { name: 'Craigslist', icon: '📋', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-300' },
-                  'offerup': { name: 'OfferUp', icon: '📱', color: 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300' },
-                  'ebay': { name: 'eBay Motors', icon: '🛒', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300' },
-                  'autotrader': { name: 'AutoTrader', icon: '🚗', color: 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300' },
-                  'cars_com': { name: 'Cars.com', icon: '🚙', color: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/20 dark:text-indigo-300' },
-                  'cargurus': { name: 'CarGurus', icon: '🔍', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300' },
-                  'vroom': { name: 'Vroom', icon: '💨', color: 'bg-pink-100 text-pink-800 dark:bg-pink-900/20 dark:text-pink-300' }
-                };
-                const info = platformInfo[platform as keyof typeof platformInfo];
-                if (!info) {
+            <div className="flex items-center justify-between">
+              <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">Posted to:</div>
+              <div className="flex items-center gap-2">
+                {isFacebookConnected ? (
+                  <button
+                    onClick={handlePostToFacebook}
+                    disabled={isPostingToFacebook}
+                    className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isPostingToFacebook ? 'Posting...' : '📘 Post to Facebook'}
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      onClick={async () => {
+                        console.log('🔄 Manually checking Facebook connection...');
+                        const connected = await checkFacebookConnection();
+                        if (connected) {
+                          alert('✅ Facebook is connected! You can now post to Facebook Marketplace.');
+                        } else {
+                          alert('❌ Facebook is not connected. Click "Connect Platforms" to connect your account.');
+                        }
+                      }}
+                      className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:underline"
+                      title="Check Facebook connection status"
+                    >
+                      🔍 Check
+                    </button>
+                    <Link 
+                      href="/dashboard/connections"
+                      className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline font-medium"
+                    >
+                      + Connect Platforms
+                    </Link>
+                  </>
+                )}
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2 items-center">
+              {listing.platforms && listing.platforms.length > 0 ? (
+                listing.platforms.map((platform, index) => {
+                  const platformInfo = {
+                    'facebook_marketplace': { name: 'Facebook', icon: '📘', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300' },
+                    'craigslist': { name: 'Craigslist', icon: '📋', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-300' },
+                    'offerup': { name: 'OfferUp', icon: '📱', color: 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300' },
+                    'ebay': { name: 'eBay Motors', icon: '🛒', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300' },
+                    'autotrader': { name: 'AutoTrader', icon: '🚗', color: 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300' },
+                    'cars_com': { name: 'Cars.com', icon: '🚙', color: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/20 dark:text-indigo-300' },
+                    'cargurus': { name: 'CarGurus', icon: '🔍', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300' },
+                    'vroom': { name: 'Vroom', icon: '💨', color: 'bg-pink-100 text-pink-800 dark:bg-pink-900/20 dark:text-pink-300' }
+                  };
+                  const info = platformInfo[platform as keyof typeof platformInfo];
+                  if (!info) {
+                    return (
+                      <span key={index} className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300 whitespace-nowrap">
+                        📱 {platform}
+                      </span>
+                    );
+                  }
                   return (
-                    <span key={index} className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300 whitespace-nowrap">
-                      📱 {platform}
+                    <span key={index} className={`text-xs px-2 py-1 rounded-full ${info.color} whitespace-nowrap`}>
+                      {info.icon} {info.name}
                     </span>
                   );
-                }
-                return (
-                  <span key={index} className={`text-xs px-2 py-1 rounded-full ${info.color} whitespace-nowrap`}>
-                    {info.icon} {info.name}
-                  </span>
-                );
-              })}
+                })
+              ) : (
+                <span className="text-xs text-gray-500 dark:text-gray-400 italic">
+                  Only on Accorria • <Link href="/dashboard/connections" className="text-blue-600 dark:text-blue-400 hover:underline">Connect platforms</Link>
+                </span>
+              )}
             </div>
           </div>
 
@@ -515,7 +729,8 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
                   type="text"
                   value={editData.title}
                   onChange={(e) => setEditData(prev => ({ ...prev, title: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                  placeholder="Enter listing title"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white text-gray-900 dark:text-white"
                 />
               </div>
               
@@ -524,10 +739,11 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
                   Price
                 </label>
                 <input
-                  type="text"
+                  type="number"
                   value={editData.price}
                   onChange={(e) => setEditData(prev => ({ ...prev, price: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                  placeholder="Enter price"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white text-gray-900 dark:text-white"
                 />
               </div>
               
@@ -539,7 +755,8 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
                   type="text"
                   value={editData.mileage}
                   onChange={(e) => setEditData(prev => ({ ...prev, mileage: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                  placeholder="Enter mileage (e.g., 55000)"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white text-gray-900 dark:text-white"
                 />
               </div>
               
@@ -551,7 +768,8 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
                   value={editData.description}
                   onChange={(e) => setEditData(prev => ({ ...prev, description: e.target.value }))}
                   rows={6}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white resize-none"
+                  placeholder="Enter listing description"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white resize-none text-gray-900 dark:text-white"
                 />
               </div>
             </div>

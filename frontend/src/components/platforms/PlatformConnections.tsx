@@ -83,6 +83,25 @@ export default function PlatformConnections() {
   const [connecting, setConnecting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Listen for Facebook connection success message from popup
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      // Only accept messages from same origin for security
+      if (event.origin !== window.location.origin) return;
+      
+      if (event.data?.type === 'FACEBOOK_CONNECTED' && event.data?.success) {
+        console.log('✅ Facebook connection successful! Reloading connections...');
+        // Reload connections after a short delay to ensure backend has saved
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      }
+    };
+    
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
+
   // Load connection statuses for all platforms
   useEffect(() => {
     if (!user) return;
@@ -104,9 +123,9 @@ export default function PlatformConnections() {
             if (platform.id === 'facebook_marketplace') {
               const backendUrl = getBackendUrl();
               
-              // Add timeout to the fetch request
+              // Add timeout to the fetch request - shorter timeout for connection status
               const controller = new AbortController();
-              const timeout = setTimeout(() => controller.abort(), 8000); // 8 second timeout
+              const timeout = setTimeout(() => controller.abort(), 5000); // 5 second timeout (backend has 3 second DB timeout)
               
               let response;
               try {
@@ -116,12 +135,21 @@ export default function PlatformConnections() {
                 clearTimeout(timeout);
               } catch (fetchErr: any) {
                 clearTimeout(timeout);
-                if (fetchErr.name === 'AbortError') {
-                  console.warn('Facebook connection status request timed out');
+                if (fetchErr.name === 'AbortError' || fetchErr.message?.includes('timeout') || fetchErr.message?.includes('aborted')) {
+                  console.warn('Facebook connection status request timed out or was aborted');
                   return {
                     platform: platform.id,
                     connected: false,
                     error: 'Request timed out'
+                  };
+                }
+                // For network errors, return gracefully
+                if (fetchErr.message?.includes('Failed to fetch') || fetchErr.message?.includes('network')) {
+                  console.warn('Facebook connection status network error:', fetchErr.message);
+                  return {
+                    platform: platform.id,
+                    connected: false,
+                    error: 'Network error'
                   };
                 }
                 throw fetchErr;
@@ -205,26 +233,53 @@ export default function PlatformConnections() {
       if (platformId === 'facebook_marketplace') {
         // Initiate Facebook OAuth
         const backendUrl = getBackendUrl();
+        console.log('🔄 Initiating Facebook connection...');
         const response = await authenticatedFetch(`${backendUrl}/api/v1/auth/facebook/connect`);
         if (response.ok) {
           const data = await response.json();
+          console.log('✅ Received authorization URL, opening popup...');
           if (data.authorization_url) {
             // Open Facebook authorization in popup
+            // First, open Facebook logout to clear session, then redirect to OAuth
+            // This allows user to select the correct account (Megan's, not Preston's)
+            const logoutUrl = `https://www.facebook.com/logout.php?next=${encodeURIComponent(data.authorization_url)}&ref=logout`;
+            
             const width = 600;
             const height = 700;
             const left = window.screen.width / 2 - width / 2;
             const top = window.screen.height / 2 - height / 2;
             
             const popup = window.open(
-              data.authorization_url,
+              logoutUrl,
               'Facebook Connection',
               `width=${width},height=${height},left=${left},top=${top}`
             );
+            
+            // Facebook logout will automatically redirect to the OAuth URL
+            // User can then log in with the correct account
 
-            // Poll for popup to close or redirect
+            // Listen for success message from popup
+            const handleMessage = (event: MessageEvent) => {
+              if (event.origin !== window.location.origin) return;
+              
+              if (event.data?.type === 'FACEBOOK_CONNECTED' && event.data?.success) {
+                console.log('✅ Received Facebook connection success message!', event.data);
+                window.removeEventListener('message', handleMessage);
+                clearInterval(checkClosed);
+                // Reload connections after a short delay to ensure backend has saved
+                setTimeout(() => {
+                  window.location.reload();
+                }, 1500);
+              }
+            };
+            
+            window.addEventListener('message', handleMessage);
+            
+            // Poll for popup to close (fallback if message doesn't work)
             const checkClosed = setInterval(() => {
               if (popup?.closed) {
                 clearInterval(checkClosed);
+                window.removeEventListener('message', handleMessage);
                 // Reload connections after a short delay
                 setTimeout(() => {
                   window.location.reload();

@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/utils/supabase';
 import { User, Session, AuthError } from '@supabase/supabase-js';
-import { getAppUrl, getHomeUrl } from '@/utils/urls';
+import { getAppUrl, getHomeUrl, getBaseUrl } from '@/utils/urls';
 
 interface AuthContextType {
   user: User | null;
@@ -55,12 +55,32 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         
         // Handle refresh token errors gracefully
         if (error) {
-          console.warn('Session error (will clear invalid session):', error.message);
+          console.warn('⚠️ Session error (will clear invalid session):', {
+            message: error.message,
+            code: error.code,
+            name: error.name
+          });
           
-          // If refresh token is missing or invalid, clear the session
-          if (error.message?.includes('Refresh Token') || error.message?.includes('refresh_token')) {
-            // Clear invalid session
-            await supabase.auth.signOut();
+          // If refresh token is missing or invalid, clear the session silently
+          if (
+            error.message?.includes('Refresh Token') || 
+            error.message?.includes('refresh_token') ||
+            error.message?.includes('Invalid Refresh Token') ||
+            error.code === 'PGRST301' ||
+            error.name === 'AuthApiError'
+          ) {
+            console.log('🧹 Clearing invalid session...');
+            // Clear invalid session silently
+            try {
+              await supabase.auth.signOut();
+            } catch (signOutError) {
+              // Ignore sign out errors - we're just cleaning up
+              console.log('Note: Error during sign out cleanup (ignored)');
+            }
+            // Clear localStorage tokens manually
+            if (typeof window !== 'undefined') {
+              localStorage.removeItem('sb-' + (process.env.NEXT_PUBLIC_SUPABASE_URL?.split('//')[1]?.split('.')[0] || '') + '-auth-token');
+            }
             setSession(null);
             setUser(null);
             setIsEmailVerified(false);
@@ -73,11 +93,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(session?.user ?? null);
         setIsEmailVerified(session?.user?.email_confirmed_at ? true : false);
         setLoading(false);
-      } catch (error) {
+      } catch (error: any) {
         clearTimeout(timeoutId);
-        console.error('Error getting session:', error);
-        // Clear session on any error
-        await supabase.auth.signOut();
+        console.error('❌ Error getting session:', {
+          error,
+          message: error?.message,
+          code: error?.code,
+          name: error?.name
+        });
+        
+        // Clear session on any error, especially refresh token errors
+        if (
+          error?.message?.includes('Refresh Token') || 
+          error?.message?.includes('refresh_token') ||
+          error?.message?.includes('Invalid Refresh Token')
+        ) {
+          console.log('🧹 Clearing invalid session due to refresh token error...');
+          try {
+            await supabase.auth.signOut();
+          } catch (signOutError) {
+            // Ignore sign out errors
+          }
+          // Clear localStorage tokens manually
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('sb-' + (process.env.NEXT_PUBLIC_SUPABASE_URL?.split('//')[1]?.split('.')[0] || '') + '-auth-token');
+          }
+        }
+        
         setSession(null);
         setUser(null);
         setIsEmailVerified(false);
@@ -90,6 +132,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('🔄 Auth state change:', event, {
+          hasSession: !!session,
+          userId: session?.user?.id,
+          email: session?.user?.email
+        });
+
         // Handle token refresh errors
         if (event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN') {
           setSession(session);
@@ -99,6 +147,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setSession(null);
           setUser(null);
           setIsEmailVerified(false);
+        } else if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
+          setSession(session);
+          setUser(session?.user ?? null);
+          setIsEmailVerified(session?.user?.email_confirmed_at ? true : false);
         } else {
           setSession(session);
           setUser(session?.user ?? null);
@@ -140,7 +192,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       // Sign up with Supabase
-      const { error } = await supabase.auth.signUp({
+      console.log('🔵 Attempting to sign up user:', { email, hasPassword: !!password });
+      const { data: signUpData, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -150,13 +203,43 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             phone: phone,
             full_name: `${firstName || ''} ${lastName || ''}`.trim()
           },
-          emailRedirectTo: getAppUrl()
+          emailRedirectTo: `${getBaseUrl()}/auth/callback?type=signup`
         }
       });
 
+      console.log('🔵 Sign up response:', {
+        hasData: !!signUpData,
+        hasUser: !!signUpData?.user,
+        userId: signUpData?.user?.id,
+        email: signUpData?.user?.email,
+        emailConfirmed: !!signUpData?.user?.email_confirmed_at,
+        hasError: !!error,
+        errorMessage: error?.message,
+        errorCode: error?.code
+      });
+
       if (error) {
+        console.error('❌ Sign up error:', error);
         setError(error.message);
         return { error };
+      }
+
+      // Check if user was actually created
+      if (!signUpData?.user) {
+        console.error('❌ Sign up succeeded but no user object returned');
+        setError('User account was not created. Please try again.');
+        return { error: { message: 'User account was not created' } as AuthError };
+      }
+
+      console.log('✅ User created successfully:', signUpData.user.id);
+
+      // Set the user in context if email is already confirmed (for testing)
+      if (signUpData.user.email_confirmed_at) {
+        setUser(signUpData.user);
+        setIsEmailVerified(true);
+      } else {
+        // User needs to verify email
+        console.log('📧 User needs to verify email');
       }
 
       // User will need to verify email before accessing dashboard
@@ -204,8 +287,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       });
 
       if (error) {
-        setError(error.message);
-        return { error };
+        // Improve error message for email confirmation
+        let errorMessage = error.message;
+        if (error.message.toLowerCase().includes('email not confirmed') || 
+            error.message.toLowerCase().includes('email_not_confirmed')) {
+          errorMessage = 'Please confirm your email to log in. Check your inbox for the confirmation link.';
+        }
+        setError(errorMessage);
+        return { error: { ...error, message: errorMessage } };
       }
 
       return { error: null };

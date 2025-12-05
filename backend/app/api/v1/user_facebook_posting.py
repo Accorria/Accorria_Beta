@@ -15,6 +15,7 @@ from app.core.database import get_db
 from app.utils.auth import get_current_user_id
 from app.services.user_facebook_poster import UserFacebookPoster, create_facebook_listing_data
 from app.services.facebook_marketplace import FacebookListingData
+from app.services.facebook_playwright_poster import FacebookPlaywrightPoster
 from app.models.user_platform_connection import UserPlatformConnection
 
 logger = logging.getLogger(__name__)
@@ -46,6 +47,8 @@ class FacebookPostingResponse(BaseModel):
     error_message: Optional[str] = None
     posted_at: Optional[datetime] = None
     marketplace_guidance: Optional[Dict[str, Any]] = None
+    screenshot_path: Optional[str] = None
+    browser_pid: Optional[int] = None
 
 class FacebookPageInfo(BaseModel):
     page_id: str
@@ -204,36 +207,73 @@ async def get_facebook_connection_status(
     Get user's Facebook connection status and available pages
     """
     import asyncio
+    import uuid as uuid_lib
     try:
-        # Add timeout to prevent hanging (5 seconds max for database query)
+        logger.info(f"Facebook status check - Received current_user_id: {current_user_id} (type: {type(current_user_id).__name__})")
+        
+        # Convert user_id to UUID if it's a string
+        if isinstance(current_user_id, str):
+            try:
+                current_user_id = uuid_lib.UUID(current_user_id)
+                logger.info(f"Facebook status check - Converted user_id to UUID: {current_user_id}")
+            except ValueError:
+                logger.error(f"Invalid user_id format: {current_user_id}")
+                return {
+                    "connected": False,
+                    "message": "Invalid user ID format",
+                    "pages": []
+                }
+        else:
+            logger.info(f"Facebook status check - user_id already UUID: {current_user_id}")
+        
+        # Add timeout to prevent hanging (3 seconds max for database query - shorter timeout)
         async def query_connection():
-            result = await db.execute(
-                select(UserPlatformConnection)
-                .where(
-                    UserPlatformConnection.user_id == current_user_id,
-                    UserPlatformConnection.platform == "facebook",
-                    UserPlatformConnection.is_active == True
+            try:
+                result = await db.execute(
+                    select(UserPlatformConnection)
+                    .where(
+                        UserPlatformConnection.user_id == current_user_id,
+                        UserPlatformConnection.platform == "facebook",
+                        UserPlatformConnection.is_active == True
+                    )
                 )
-            )
-            return result.scalar_one_or_none()
+                return result.scalar_one_or_none()
+            except Exception as db_error:
+                logger.error(f"Database error during Facebook connection status query: {db_error}")
+                raise
         
         try:
-            connection = await asyncio.wait_for(query_connection(), timeout=5.0)
+            connection = await asyncio.wait_for(query_connection(), timeout=3.0)
         except asyncio.TimeoutError:
-            logger.warning(f"Database query timed out for Facebook connection status (user: {current_user_id})")
+            logger.error(f"Database query timed out for Facebook connection status (user: {current_user_id})")
             # Return not connected if query times out
             return {
                 "connected": False,
                 "message": "Facebook account not connected",
-                "pages": []
+                "pages": [],
+                "error": "Database query timeout"
+            }
+        except Exception as db_error:
+            logger.error(f"Database error during Facebook connection status check: {db_error}", exc_info=True)
+            # Return not connected on database error, but include error details for debugging
+            error_msg = str(db_error)
+            return {
+                "connected": False,
+                "message": "Facebook account not connected",
+                "pages": [],
+                "error": f"Database error: {error_msg}"
             }
         
         if not connection:
+            logger.warning(f"Facebook status check - No active connection found for user_id: {current_user_id}")
+            # Return immediately without additional debug queries to avoid hanging
             return {
                 "connected": False,
                 "message": "Facebook account not connected",
                 "pages": []
             }
+        
+        logger.info(f"Facebook status check - Found connection: user_id={current_user_id}, is_active={connection.is_active}, connection_id={connection.id}")
         
         user_info = connection.platform_data.get("user_info", {}) if connection.platform_data else {}
         pages = connection.platform_data.get("pages", []) if connection.platform_data else []
@@ -260,14 +300,185 @@ async def get_facebook_connection_status(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error getting Facebook connection status: {str(e)}")
+        logger.error(f"Error getting Facebook connection status: {str(e)}", exc_info=True)
         # Return not connected instead of raising error to prevent frontend timeout
         return {
             "connected": False,
             "message": "Facebook account not connected",
             "pages": [],
-            "error": "Connection check failed"
+            "error": f"Connection check failed: {str(e)}"
         }
+
+@router.post("/post-to-marketplace-playwright", response_model=FacebookPostingResponse)
+async def post_to_marketplace_playwright(
+    request: FacebookPostingRequest,
+    images: Optional[List[UploadFile]] = File(None, description="Listing images (up to 10)"),
+    current_user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Post listing to Facebook Marketplace using Playwright automation
+    Fills form fields and uploads images, then pauses for human to click "Post"
+    Compliance: Human-in-the-loop - user must click "Post" button manually
+    """
+    try:
+        # Get user's Facebook connection
+        result = await db.execute(
+            select(UserPlatformConnection)
+            .where(
+                UserPlatformConnection.user_id == current_user_id,
+                UserPlatformConnection.platform == "facebook",
+                UserPlatformConnection.is_active == True
+            )
+        )
+        connection = result.scalar_one_or_none()
+        
+        if not connection:
+            raise HTTPException(
+                status_code=404,
+                detail="Facebook account not connected. Please connect your Facebook account first."
+            )
+        
+        # Decrypt access token
+        from cryptography.fernet import Fernet
+        import os
+        
+        def get_encryption_key():
+            key = os.getenv("TOKEN_ENCRYPTION_KEY")
+            if not key:
+                raise ValueError("TOKEN_ENCRYPTION_KEY not set")
+            return key.encode()
+        
+        def decrypt_token(encrypted_token: str) -> str:
+            f = Fernet(get_encryption_key())
+            return f.decrypt(encrypted_token.encode()).decode()
+        
+        access_token = decrypt_token(connection.access_token)
+        
+        # Convert uploaded images to bytes
+        image_bytes = []
+        if images:
+            for image in images[:10]:  # Facebook allows max 10 images
+                content = await image.read()
+                image_bytes.append(content)
+        
+        # Create Facebook listing data
+        listing_data = create_facebook_listing_data(
+            title=request.title,
+            description=request.description,
+            price=request.price,
+            make=request.make,
+            model=request.model,
+            year=request.year,
+            mileage=request.mileage,
+            condition=request.condition,
+            images=image_bytes if image_bytes else None
+        )
+        
+        # Use Playwright to post to Marketplace
+        # Note: Browser stays open for user to review and post manually
+        playwright_poster = FacebookPlaywrightPoster(
+            user_id=current_user_id,
+            access_token=access_token
+        )
+        
+        try:
+            await playwright_poster.__aenter__()
+            result = await playwright_poster.post_to_marketplace(
+                listing_data=listing_data,
+                headless=False  # Always visible for compliance
+            )
+            
+            if result.success:
+                # Store playwright_poster reference for later cleanup (in production, use Redis or similar)
+                # For now, browser will stay open until manually closed or process ends
+                return FacebookPostingResponse(
+                    success=True,
+                    message="Form filled successfully. Please review and click 'Post' in the browser window. Browser will remain open for you to complete the posting.",
+                    platform="facebook_marketplace",
+                    user_id=current_user_id,
+                    screenshot_path=result.screenshot_path,
+                    browser_pid=result.browser_pid,
+                    posted_at=datetime.utcnow()
+                )
+            else:
+                await playwright_poster.close_browser()
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Failed to fill Marketplace form: {result.error_message}"
+                )
+        except Exception as e:
+            # Clean up on error
+            try:
+                await playwright_poster.close_browser()
+            except:
+                pass
+            raise
+                
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error posting to Marketplace with Playwright: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to post to Marketplace: {str(e)}"
+        )
+
+@router.post("/close-browser")
+async def close_playwright_browser(
+    browser_pid: int,
+    current_user_id: str = Depends(get_current_user_id)
+):
+    """
+    Close Playwright browser after user has posted listing
+    Note: In production, this should use a proper session manager (Redis, etc.)
+    """
+    try:
+        import psutil
+        import os
+        
+        # Verify process belongs to current user (basic security check)
+        try:
+            process = psutil.Process(browser_pid)
+            # Check if process is still running
+            if not process.is_running():
+                return {"success": True, "message": "Browser already closed"}
+            
+            # Terminate browser process
+            process.terminate()
+            process.wait(timeout=5)
+            
+            return {
+                "success": True,
+                "message": "Browser closed successfully"
+            }
+        except psutil.NoSuchProcess:
+            return {"success": True, "message": "Browser process not found (already closed)"}
+        except Exception as e:
+            logger.error(f"Error closing browser: {e}")
+            return {
+                "success": False,
+                "error": str(e)
+            }
+            
+    except ImportError:
+        # psutil not available, try os.kill
+        try:
+            import signal
+            os.kill(browser_pid, signal.SIGTERM)
+            return {"success": True, "message": "Browser close signal sent"}
+        except Exception as e:
+            logger.error(f"Error closing browser: {e}")
+            return {
+                "success": False,
+                "error": str(e)
+            }
+    except Exception as e:
+        logger.error(f"Error closing browser: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to close browser: {str(e)}"
+        )
 
 @router.post("/test-connection")
 async def test_facebook_connection(

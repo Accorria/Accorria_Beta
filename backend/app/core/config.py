@@ -92,6 +92,12 @@ class Settings(BaseSettings):
     OFFERUP_API_KEY: Optional[str] = None
     CARGURUS_API_KEY: Optional[str] = None
     
+    # Facebook OAuth2 Configuration (Multi-Tenant)
+    FACEBOOK_APP_ID: Optional[str] = None
+    FACEBOOK_APP_SECRET: Optional[str] = None
+    FACEBOOK_REDIRECT_URI: Optional[str] = None
+    TOKEN_ENCRYPTION_KEY: Optional[str] = None
+    
     # AI Reply Settings
     MIN_REPLY_DELAY_MINUTES: int = 1
     MAX_REPLY_DELAY_MINUTES: int = 30

@@ -3,7 +3,7 @@ Facebook OAuth2 API endpoints
 Handles user Facebook account connections for multi-tenant posting
 """
 
-from fastapi import APIRouter, HTTPException, Depends, status, Query
+from fastapi import APIRouter, HTTPException, Depends, status, Query, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
@@ -73,26 +73,50 @@ async def initiate_facebook_connection(
     Initiate Facebook OAuth2 connection for the current user
     Returns the authorization URL for the user to visit
     """
+    import asyncio
     try:
-        config = get_facebook_oauth_config()
+        logger.info(f"Facebook connect - Initiating connection for user_id: {current_user_id} (type: {type(current_user_id).__name__})")
         
-        async with FacebookOAuthService(config) as oauth_service:
-            # For now, use only basic scopes that don't require App Review
-            # Once App Review is approved, you can add:
-            # additional_scopes=["pages_manage_posts", "pages_read_engagement"]
-            auth_url = oauth_service.generate_authorization_url(
-                user_id=current_user_id
+        # Wrap the entire operation in a timeout to prevent hanging
+        async def generate_auth_url():
+            config = get_facebook_oauth_config()
+            
+            async with FacebookOAuthService(config) as oauth_service:
+                # For now, use only basic scopes that don't require App Review
+                # Once App Review is approved, you can add:
                 # additional_scopes=["pages_manage_posts", "pages_read_engagement"]
-            )
-            
-            return {
-                "success": True,
-                "authorization_url": auth_url,
-                "message": "Visit the authorization URL to connect your Facebook account"
-            }
-            
+                auth_url = oauth_service.generate_authorization_url(
+                    user_id=current_user_id
+                    # additional_scopes=["pages_manage_posts", "pages_read_engagement"]
+                )
+                return auth_url
+        
+        # Set a 5-second timeout for the entire operation
+        auth_url = await asyncio.wait_for(generate_auth_url(), timeout=5.0)
+        
+        logger.info(f"Facebook connect - Generated auth URL for user_id: {current_user_id}")
+        
+        return {
+            "success": True,
+            "authorization_url": auth_url,
+            "message": "Visit the authorization URL to connect your Facebook account"
+        }
+        
+    except asyncio.TimeoutError:
+        logger.error(f"Facebook connect timed out for user_id: {current_user_id}")
+        raise HTTPException(
+            status_code=504,
+            detail="Facebook connection initiation timed out. Please try again."
+        )
+    except ValueError as e:
+        # Configuration error
+        logger.error(f"Facebook OAuth configuration error: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Facebook OAuth not configured: {str(e)}"
+        )
     except Exception as e:
-        logger.error(f"Error initiating Facebook connection: {str(e)}")
+        logger.error(f"Error initiating Facebook connection: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=500,
             detail=f"Failed to initiate Facebook connection: {str(e)}"
@@ -100,6 +124,7 @@ async def initiate_facebook_connection(
 
 @router.get("/facebook/callback")
 async def facebook_oauth_callback(
+    request: Request,
     code: str = Query(..., description="Authorization code from Facebook"),
     state: str = Query(..., description="State parameter for CSRF protection"),
     db: AsyncSession = Depends(get_db)
@@ -109,6 +134,15 @@ async def facebook_oauth_callback(
     Exchange code for tokens and store user connection
     """
     try:
+        # Try to get authenticated user_id for verification (optional, but recommended)
+        authenticated_user_id = None
+        try:
+            if request:
+                authenticated_user_id = get_current_user_id(request)
+                logger.info(f"Facebook callback - Authenticated user_id from JWT: {authenticated_user_id}")
+        except Exception as e:
+            logger.warning(f"Facebook callback - Could not get authenticated user_id: {e}")
+        
         config = get_facebook_oauth_config()
         
         async with FacebookOAuthService(config) as oauth_service:
@@ -122,22 +156,59 @@ async def facebook_oauth_callback(
                 )
             
             user_id = result["user_id"]
+            
+            # Verify that the user_id from state matches the authenticated user_id (if available)
+            if authenticated_user_id:
+                import uuid as uuid_lib
+                auth_uuid = authenticated_user_id
+                state_uuid = user_id
+                
+                # Convert both to UUID strings for comparison
+                if isinstance(auth_uuid, str):
+                    try:
+                        auth_uuid = str(uuid_lib.UUID(auth_uuid))
+                    except ValueError:
+                        pass
+                else:
+                    auth_uuid = str(auth_uuid)
+                    
+                if isinstance(state_uuid, str):
+                    try:
+                        state_uuid = str(uuid_lib.UUID(state_uuid))
+                    except ValueError:
+                        pass
+                else:
+                    state_uuid = str(state_uuid)
+                
+                if auth_uuid != state_uuid:
+                    logger.error(f"Facebook callback - User ID mismatch! JWT user_id: {auth_uuid}, State user_id: {state_uuid}")
+                    raise HTTPException(
+                        status_code=403,
+                        detail="User ID mismatch. The connection request does not match your authenticated session."
+                    )
+                else:
+                    logger.info(f"Facebook callback - User ID verified: {auth_uuid} == {state_uuid}")
             access_token = result["access_token"]
             expires_at = result["expires_at"]
             user_info = result["user_info"]
             pages = result["pages"]
+            
+            logger.info(f"Facebook callback - Received user_id from state: {user_id} (type: {type(user_id).__name__})")
             
             # Convert user_id to UUID if it's a string
             import uuid as uuid_lib
             if isinstance(user_id, str):
                 try:
                     user_id = uuid_lib.UUID(user_id)
+                    logger.info(f"Facebook callback - Converted user_id to UUID: {user_id}")
                 except ValueError:
                     logger.error(f"Invalid user_id format: {user_id}")
                     raise HTTPException(
                         status_code=400,
                         detail=f"Invalid user ID format"
                     )
+            else:
+                logger.info(f"Facebook callback - user_id already UUID: {user_id}")
             
             # Store connection in database
             # Check if connection already exists
@@ -197,6 +268,21 @@ async def facebook_oauth_callback(
             
             await db.commit()
             
+            # Verify the connection was saved by querying it back
+            verify_result = await db.execute(
+                select(UserPlatformConnection)
+                .where(
+                    UserPlatformConnection.user_id == user_id,
+                    UserPlatformConnection.platform == "facebook"
+                )
+            )
+            verified_connection = verify_result.scalar_one_or_none()
+            
+            if verified_connection:
+                logger.info(f"Facebook callback - Verified connection saved: user_id={user_id}, connection_id={verified_connection.id}, is_active={verified_connection.is_active}")
+            else:
+                logger.error(f"Facebook callback - WARNING: Connection not found after commit! user_id={user_id}")
+            
             # Ensure connection_id is not None
             if not connection_id:
                 logger.error("Connection ID is None after commit")
@@ -247,6 +333,18 @@ async def get_facebook_connection_status(
     Get the current user's Facebook connection status
     """
     try:
+        # Convert user_id to UUID if it's a string
+        import uuid as uuid_lib
+        if isinstance(current_user_id, str):
+            try:
+                current_user_id = uuid_lib.UUID(current_user_id)
+            except ValueError:
+                logger.error(f"Invalid user_id format: {current_user_id}")
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid user ID format"
+                )
+        
         # Query user's Facebook connection
         result = await db.execute(
             select(UserPlatformConnection)
@@ -303,6 +401,18 @@ async def disconnect_facebook(
     Disconnect user's Facebook account
     """
     try:
+        # Convert user_id to UUID if it's a string
+        import uuid as uuid_lib
+        if isinstance(current_user_id, str):
+            try:
+                current_user_id = uuid_lib.UUID(current_user_id)
+            except ValueError:
+                logger.error(f"Invalid user_id format: {current_user_id}")
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid user ID format"
+                )
+        
         # Deactivate Facebook connection
         await db.execute(
             update(UserPlatformConnection)

@@ -5,6 +5,19 @@ from .comprehensive_models import (
     AgentLog, Conversion
 )
 
+# Import knowledge graph models (Phase 0)
+from .knowledge_graph import (
+    KnowledgeGraphNode,
+    VINKnowledgeBase,
+    SellerProfileRules,
+    ListingRules,
+    StandardQuestionsKB,
+    NegotiationResponses,
+    WeirdQuestionLibrary,
+    KnowledgeGraphLearning,
+    UserSession
+)
+
 __all__ = [
     "User",
     "Session", 
@@ -17,5 +30,15 @@ __all__ = [
     "AgentLog",
     "Conversion",
     "DealAnalysis",
-    "AgentPerformance"
+    "AgentPerformance",
+    # Knowledge Graph Models (Phase 0)
+    "KnowledgeGraphNode",
+    "VINKnowledgeBase",
+    "SellerProfileRules",
+    "ListingRules",
+    "StandardQuestionsKB",
+    "NegotiationResponses",
+    "WeirdQuestionLibrary",
+    "KnowledgeGraphLearning",
+    "UserSession"
 ] 

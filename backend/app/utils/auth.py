@@ -26,8 +26,14 @@ def get_current_user(request: Request) -> Dict[str, Any]:
     if not SUPABASE_JWT_SECRET:
         logger.warning("SUPABASE_JWT_SECRET not set, using mock authentication for development")
         # Return mock user even without auth header in development
+        # Use a valid UUID format for mock user so it works with database queries
+        # Use a fixed UUID so it's consistent across requests
+        import uuid
+        if not hasattr(get_current_user, '_mock_uuid'):
+            # Use a fixed UUID for mock user (consistent across restarts)
+            get_current_user._mock_uuid = "00000000-0000-0000-0000-000000000001"
         return {
-            "sub": "mock-user-id",
+            "sub": get_current_user._mock_uuid,
             "email": "test@example.com",
             "user_metadata": {"full_name": "Test User"},
             "app_metadata": {"provider": "email"}

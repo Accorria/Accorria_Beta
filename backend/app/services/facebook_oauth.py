@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 STATE_STORE: Dict[str, Dict[str, Any]] = {}
 
 # Try to use Redis for state storage if available
+# Use connection pool with timeout to prevent hanging
 try:
     import redis
     redis_host = os.getenv("REDIS_HOST", "localhost")
@@ -32,8 +33,13 @@ try:
         host=redis_host,
         port=redis_port,
         password=redis_password,
-        decode_responses=True
+        decode_responses=True,
+        socket_connect_timeout=2,  # 2 second timeout for connection
+        socket_timeout=2,  # 2 second timeout for operations
+        retry_on_timeout=False,  # Don't retry on timeout
+        health_check_interval=30  # Check connection health every 30 seconds
     )
+    # Test connection with timeout - don't block if Redis is unavailable
     redis_client.ping()
     logger.info("Using Redis for OAuth state storage")
     USE_REDIS = True
@@ -120,12 +126,23 @@ class FacebookOAuthService:
         
         if USE_REDIS and redis_client:
             # Store in Redis with 10-minute expiration
-            redis_client.setex(
-                f"oauth_state:{state}",
-                600,  # 10 minutes
-                json.dumps(state_data)
-            )
-            logger.info(f"Stored OAuth state in Redis: {state[:20]}...")
+            # Wrap in try-except to fallback to in-memory if Redis fails
+            try:
+                redis_client.setex(
+                    f"oauth_state:{state}",
+                    600,  # 10 minutes
+                    json.dumps(state_data)
+                )
+                logger.info(f"Stored OAuth state in Redis: {state[:20]}...")
+            except Exception as redis_error:
+                logger.warning(f"Redis storage failed, falling back to in-memory: {redis_error}")
+                # Fallback to in-memory storage
+                STATE_STORE[state] = {
+                    "user_id": user_id,
+                    "timestamp": datetime.utcnow(),
+                    "scopes": additional_scopes or []
+                }
+                logger.info(f"Stored OAuth state in memory (Redis fallback): {state[:20]}...")
         else:
             # Fallback to in-memory storage
             STATE_STORE[state] = {
@@ -147,7 +164,8 @@ class FacebookOAuthService:
             "scope": ",".join(all_scopes),
             "response_type": "code",
             "state": state,
-            "auth_type": "rerequest"  # Force re-authentication to get fresh permissions
+            "auth_type": "rerequest",  # Force re-request permissions and allow account switching
+            "display": "popup"  # Use popup display mode
         }
         
         return f"{self.oauth_base_url}?{urlencode(params)}"
@@ -169,17 +187,21 @@ class FacebookOAuthService:
             
             state_data = None
             if USE_REDIS and redis_client:
-                # Try to get from Redis
-                redis_key = f"oauth_state:{state}"
-                stored_data = redis_client.get(redis_key)
-                if stored_data:
-                    state_data = json.loads(stored_data)
-                    # Convert timestamp back to datetime if needed
-                    if isinstance(state_data.get("timestamp"), str):
-                        state_data["timestamp"] = datetime.fromisoformat(state_data["timestamp"])
-                    # Delete from Redis after use
-                    redis_client.delete(redis_key)
-                    logger.info(f"State found in Redis: {state[:20]}...")
+                # Try to get from Redis with error handling
+                try:
+                    redis_key = f"oauth_state:{state}"
+                    stored_data = redis_client.get(redis_key)
+                    if stored_data:
+                        state_data = json.loads(stored_data)
+                        # Convert timestamp back to datetime if needed
+                        if isinstance(state_data.get("timestamp"), str):
+                            state_data["timestamp"] = datetime.fromisoformat(state_data["timestamp"])
+                        # Delete from Redis after use
+                        redis_client.delete(redis_key)
+                        logger.info(f"State found in Redis: {state[:20]}...")
+                except Exception as redis_error:
+                    logger.warning(f"Redis retrieval failed, checking in-memory store: {redis_error}")
+                    # Fall through to in-memory check
             
             # Fallback to in-memory storage
             if not state_data:
@@ -408,9 +430,14 @@ def get_facebook_oauth_config() -> FacebookOAuthConfig:
     """
     import os
     from dotenv import load_dotenv
+    from pathlib import Path
     
-    # Load .env file if it exists (pydantic-settings should handle this, but we'll ensure it)
-    load_dotenv()
+    # Load .env file if it exists (pydantic-settings may not load all vars)
+    # Find .env file relative to this file or backend directory
+    backend_dir = Path(__file__).parent.parent.parent
+    env_file = backend_dir / ".env"
+    if env_file.exists():
+        load_dotenv(env_file, override=False)  # Don't override existing env vars
     
     app_id = os.getenv("FACEBOOK_APP_ID")
     app_secret = os.getenv("FACEBOOK_APP_SECRET")

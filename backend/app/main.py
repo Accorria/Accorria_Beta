@@ -287,6 +287,10 @@ app.include_router(user_presets.router, prefix="/api/v1", tags=["User Presets"])
 # Speech-to-Text
 app.include_router(speech_to_text_router.router, prefix="/api/v1/speech-to-text", tags=["Speech-to-Text"])
 
+# Knowledge Graph (Phase 0)
+from app.api.v1 import knowledge_graph as knowledge_graph_router
+app.include_router(knowledge_graph_router.router, prefix="/api/v1", tags=["Knowledge Graph"])
+
 # API Testing
 if test_apis_router:
     app.include_router(test_apis_router, prefix="/api/v1", tags=["API Testing"])

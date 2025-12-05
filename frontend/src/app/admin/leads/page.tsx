@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { onboardingService } from '@/services/onboardingService';
 
 interface Lead {
   id: string;
@@ -39,7 +40,10 @@ interface Lead {
 
 export default function LeadsAdmin() {
   const [leads, setLeads] = useState<Lead[]>([]);
+  const [onboardingUsers, setOnboardingUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingOnboarding, setLoadingOnboarding] = useState(true);
+  const [activeTab, setActiveTab] = useState<'leads' | 'onboarding'>('onboarding');
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -63,7 +67,26 @@ export default function LeadsAdmin() {
 
   useEffect(() => {
     fetchLeads();
+    fetchOnboardingUsers();
   }, []);
+
+  const fetchOnboardingUsers = async () => {
+    try {
+      setLoadingOnboarding(true);
+      const { data, error } = await onboardingService.getAllOnboardingProfiles();
+      if (error) {
+        console.error('Error fetching onboarding users:', error);
+        setOnboardingUsers([]);
+      } else {
+        setOnboardingUsers(data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching onboarding users:', error);
+      setOnboardingUsers([]);
+    } finally {
+      setLoadingOnboarding(false);
+    }
+  };
 
   // Lead management functions
   const deleteLead = async (leadId: string) => {
@@ -269,15 +292,261 @@ export default function LeadsAdmin() {
     );
   }
 
+  // Filter onboarding users
+  const filteredOnboardingUsers = onboardingUsers.filter(user => {
+    const matchesSearch = searchTerm === '' || 
+      user.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.phone?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesStatus = statusFilter === 'all' || 
+      (statusFilter === 'completed' && user.onboarding_complete) ||
+      (statusFilter === 'incomplete' && !user.onboarding_complete);
+    
+    return matchesSearch && matchesStatus;
+  });
+
   return (
     <div>
       <div className="mb-8">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Lead Capture System</h2>
-        <p className="text-gray-600">Track and manage your leads from the chatbot and signup forms.</p>
+        <p className="text-gray-600">Track and manage your leads from onboarding and signup forms.</p>
       </div>
 
-      {/* Status */}
-      <div className="bg-green-50 border border-green-200 rounded-lg p-6 mb-8">
+      {/* Tabs */}
+      <div className="mb-6 border-b border-gray-200">
+        <nav className="-mb-px flex space-x-8">
+          <button
+            onClick={() => setActiveTab('onboarding')}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'onboarding'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            Onboarding Users ({onboardingUsers.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('leads')}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'leads'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            Form Leads ({leads.length})
+          </button>
+        </nav>
+      </div>
+
+      {/* Onboarding Users Tab */}
+      {activeTab === 'onboarding' && (
+        <>
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div className="bg-white overflow-hidden shadow rounded-lg">
+              <div className="p-5">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                      <span className="text-white text-sm font-bold">👥</span>
+                    </div>
+                  </div>
+                  <div className="ml-5 w-0 flex-1">
+                    <dl>
+                      <dt className="text-sm font-medium text-gray-500 truncate">Total Users</dt>
+                      <dd className="text-lg font-medium text-gray-900">{onboardingUsers.length}</dd>
+                    </dl>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white overflow-hidden shadow rounded-lg">
+              <div className="p-5">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                      <span className="text-white text-sm font-bold">✅</span>
+                    </div>
+                  </div>
+                  <div className="ml-5 w-0 flex-1">
+                    <dl>
+                      <dt className="text-sm font-medium text-gray-500 truncate">Completed</dt>
+                      <dd className="text-lg font-medium text-gray-900">
+                        {onboardingUsers.filter(u => u.onboarding_complete).length}
+                      </dd>
+                    </dl>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white overflow-hidden shadow rounded-lg">
+              <div className="p-5">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center">
+                      <span className="text-white text-sm font-bold">🚗</span>
+                    </div>
+                  </div>
+                  <div className="ml-5 w-0 flex-1">
+                    <dl>
+                      <dt className="text-sm font-medium text-gray-500 truncate">Automotive</dt>
+                      <dd className="text-lg font-medium text-gray-900">
+                        {onboardingUsers.filter(u => u.selected_category === 'automotive').length}
+                      </dd>
+                    </dl>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white overflow-hidden shadow rounded-lg">
+              <div className="p-5">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center">
+                      <span className="text-white text-sm font-bold">📅</span>
+                    </div>
+                  </div>
+                  <div className="ml-5 w-0 flex-1">
+                    <dl>
+                      <dt className="text-sm font-medium text-gray-500 truncate">This Week</dt>
+                      <dd className="text-lg font-medium text-gray-900">
+                        {onboardingUsers.filter(u => {
+                          const userDate = new Date(u.created_at);
+                          const weekAgo = new Date();
+                          weekAgo.setDate(weekAgo.getDate() - 7);
+                          return userDate > weekAgo;
+                        }).length}
+                      </dd>
+                    </dl>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Filters */}
+          <div className="bg-white shadow rounded-lg p-6 mb-8">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
+              <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Search users..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="block w-64 pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  />
+                </div>
+                
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="block w-40 px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                >
+                  <option value="all">All Status</option>
+                  <option value="completed">Completed</option>
+                  <option value="incomplete">Incomplete</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Onboarding Users Table */}
+          <div className="bg-white shadow overflow-hidden sm:rounded-md">
+            <div className="px-4 py-5 sm:px-6">
+              <h3 className="text-lg leading-6 font-medium text-gray-900">Onboarding Users</h3>
+              <p className="mt-1 max-w-2xl text-sm text-gray-500">
+                All users who have started or completed onboarding.
+              </p>
+            </div>
+            
+            {loadingOnboarding ? (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                <p className="mt-4 text-gray-600">Loading onboarding users...</p>
+              </div>
+            ) : filteredOnboardingUsers.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="text-gray-400 text-6xl mb-4">👥</div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No onboarding users yet</h3>
+                <p className="text-gray-500">Users will appear here as they complete onboarding.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Experience</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {filteredOnboardingUsers.map((user) => (
+                      <tr key={user.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {user.first_name || user.last_name 
+                            ? `${user.first_name || ''} ${user.last_name || ''}`.trim()
+                            : 'N/A'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {user.email || 'N/A'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {user.phone || 'N/A'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {user.selected_category ? (
+                            <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                              {user.selected_category.replace('_', ' ')}
+                            </span>
+                          ) : 'N/A'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {user.experience_level || 'N/A'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                            user.onboarding_complete 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-yellow-100 text-yellow-800'
+                          }`}>
+                            {user.onboarding_complete ? 'Completed' : 'In Progress'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* Form Leads Tab */}
+      {activeTab === 'leads' && (
+        <>
+
+          {/* Status */}
+          <div className="bg-green-50 border border-green-200 rounded-lg p-6 mb-8">
         <h3 className="text-lg font-semibold text-green-900 mb-3">✅ CRM System Active</h3>
         <div className="text-green-800 space-y-3">
           <p><strong>Current Status:</strong> Lead capture is working perfectly! All leads are being saved with automatic scoring and classification.</p>
@@ -890,6 +1159,8 @@ export default function LeadsAdmin() {
             </div>
           </div>
         </div>
+      )}
+        </>
       )}
     </div>
   );

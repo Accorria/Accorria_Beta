@@ -24,13 +24,16 @@ export async function authenticatedFetch(
     
     // Use provided signal or create a default timeout
     // Market intelligence calls need longer timeout (60 seconds) for Google Search API
+    // Connection status checks should use shorter timeout (already provided by caller)
     let timeoutController: AbortController | null = null;
     let signal = options.signal;
     if (!signal) {
       timeoutController = new AbortController();
       // Check if this is a market intelligence call - needs longer timeout
       const isMarketIntelligence = url.includes('market-intelligence');
-      const timeout = isMarketIntelligence ? 60000 : 30000; // 60s for market intel, 30s for others
+      // Connection status checks should be fast - use shorter timeout if not provided
+      const isConnectionStatus = url.includes('connection-status');
+      const timeout = isMarketIntelligence ? 60000 : (isConnectionStatus ? 10000 : 30000); // 60s for market intel, 10s for connection status, 30s for others
       setTimeout(() => timeoutController!.abort(), timeout);
       signal = timeoutController.signal;
     }
@@ -50,8 +53,14 @@ export async function authenticatedFetch(
       if (fetchError.name === 'AbortError' || fetchError.name === 'TimeoutError') {
         const timeout = url.includes('market-intelligence') ? 60 : 30;
         throw new Error(`Request to ${url} timed out after ${timeout} seconds`);
-      } else if (fetchError.message?.includes('Failed to fetch')) {
-        throw new Error(`Failed to connect to ${url}. Check your network connection.`);
+      } else if (fetchError.message?.includes('Failed to fetch') || fetchError.message?.includes('network')) {
+        // For connection status checks, return a rejected promise that can be caught gracefully
+        // Don't throw a noisy error for backend connection checks
+        const error = new Error(`Failed to connect to ${url}. Check your network connection.`);
+        // Mark as network error so components can handle gracefully
+        (error as any).isNetworkError = true;
+        (error as any).isSilent = url.includes('connection-status'); // Mark connection-status checks as silent
+        throw error;
       }
       throw fetchError;
     }

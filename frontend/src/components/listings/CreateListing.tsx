@@ -238,6 +238,35 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
     setAnalysisError(null);
   }, []);
 
+  // Auto-fill zip code when city is set (from profile or AI analysis)
+  useEffect(() => {
+    const autoFillZip = async () => {
+      // Only auto-fill if city is set but zip is not
+      if (carDetails.city && !carDetails.zipCode) {
+        try {
+          const { supabase } = await import('@/utils/supabase');
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('zip_code, city')
+              .eq('id', user.id)
+              .maybeSingle();
+            
+            // If profile has zip code, auto-fill it
+            if (profile?.zip_code) {
+              setCarDetails(prev => ({ ...prev, zipCode: profile.zip_code }));
+            }
+          }
+        } catch (err) {
+          // Ignore errors - zip auto-fill is optional
+        }
+      }
+    };
+
+    autoFillZip();
+  }, [carDetails.city]); // Run when city changes
+
   // Cleanup: Unlock scroll if component unmounts while dragging
   useEffect(() => {
     return () => {
@@ -277,6 +306,7 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
   const [savedRebuildReasons, setSavedRebuildReasons] = useState<string[]>([]);
   const [citySuggestions, setCitySuggestions] = useState<string[]>([]);
   const [zipSuggestions, setZipSuggestions] = useState<string[]>([]);
+  const [locationMismatchWarning, setLocationMismatchWarning] = useState<string | null>(null);
   const rebuildReasonSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [postSuccess, setPostSuccess] = useState(false);
   const [postResult, setPostResult] = useState<{successCount: number, totalCount: number} | null>(null);
@@ -321,47 +351,27 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
               facebook_marketplace: false
             }));
           }
-        } catch (fetchErr: any) {
+        } catch (error: any) {
           clearTimeout(timeoutId);
-          // Handle timeout or fetch errors gracefully
-          if (fetchErr.name === 'AbortError' || 
-              fetchErr.message?.includes('timeout') || 
-              fetchErr.message?.includes('Failed to connect') ||
-              fetchErr.message?.includes('Failed to fetch') ||
-              fetchErr.message?.includes('network')) {
-            // Connection error - silently set to false (backend may not be ready or not configured)
-            console.warn('Facebook connection check failed (backend may not be ready):', fetchErr.message);
-            setConnectedPlatforms(prev => ({
-              ...prev,
-              facebook_marketplace: false
-            }));
-          } else {
-            // Other errors - also handle gracefully
-            console.warn('Facebook connection check error:', fetchErr.message);
-            setConnectedPlatforms(prev => ({
-              ...prev,
-              facebook_marketplace: false
-            }));
+          // Backend not available or network error - silently handle
+          // This is expected in development when backend isn't running
+          // Don't log connection-status errors - they're expected when backend is down
+          if (!error?.isSilent && !error?.message?.includes('connection-status')) {
+            // Only log non-connection-status errors
+            console.debug('Platform connection check:', error.message);
           }
-        }
-      } catch (err: any) {
-        // Facebook connection check failed - this is expected if Facebook isn't configured
-        // Silently set to false and don't log errors for 500 responses (Facebook not set up)
-        if (err?.message?.includes('500') || err?.status === 500 || err?.message?.includes('timeout')) {
-          // Expected: Facebook OAuth not configured or timeout
-          setConnectedPlatforms(prev => ({
-            ...prev,
-            facebook_marketplace: false
-          }));
-        } else {
-          // Only log unexpected errors
-          console.warn('Platform connection check (optional):', err?.message || 'Connection check failed');
-          // Still set to false on any error
+          // Silently set to false - backend not available
           setConnectedPlatforms(prev => ({
             ...prev,
             facebook_marketplace: false
           }));
         }
+      } catch (outerError: any) {
+        // Outer catch for any other errors - also handle silently
+        setConnectedPlatforms(prev => ({
+          ...prev,
+          facebook_marketplace: false
+        }));
       }
     };
 
@@ -454,15 +464,48 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
             }
             
             if (profile) {
-              // Auto-fill city and zip code from profile if available
-              // Use optional chaining since columns might not exist
+              // Auto-fill city and zip code from onboarding profile (source of truth)
+              // These were validated during onboarding to ensure they match
+              const updates: Partial<CarDetails> = {};
+              
+              // Use onboarding profile data as source of truth
               if (profile.city && !carDetails.city) {
-                setCarDetails(prev => ({ ...prev, city: profile.city }));
+                updates.city = profile.city;
               }
+              
+              // Always use zip from onboarding profile if available (it was validated to match city)
               if (profile.zip_code && !carDetails.zipCode) {
-                setCarDetails(prev => ({ ...prev, zipCode: profile.zip_code }));
+                updates.zipCode = profile.zip_code;
+                console.log(`✅ Using zip ${profile.zip_code} and city ${profile.city} from onboarding profile`);
               }
-              // Note: state is not part of CarDetails interface, so we skip it
+              
+              // If both city and zip exist in profile, validate they still match
+              if (profile.city && profile.zip_code) {
+                try {
+                  const { default: onboardingService } = await import('@/services/onboardingService');
+                  const zipCity = await onboardingService.getCityFromZip(profile.zip_code);
+                  
+                  if (zipCity && zipCity.toLowerCase().trim() === profile.city.toLowerCase().trim()) {
+                    // They match - use both from onboarding
+                    updates.city = profile.city;
+                    updates.zipCode = profile.zip_code;
+                    console.log(`✅ Using validated city/zip from onboarding: ${profile.city}, ${profile.zip_code}`);
+                  } else if (zipCity) {
+                    // Zip city doesn't match profile city - use zip's city (more accurate)
+                    updates.city = zipCity;
+                    updates.zipCode = profile.zip_code;
+                    console.warn(`⚠️ Profile city ${profile.city} doesn't match zip ${profile.zip_code} (${zipCity}) - using zip's city`);
+                  }
+                } catch (err) {
+                  // If validation fails, still use profile data
+                  if (profile.city) updates.city = profile.city;
+                  if (profile.zip_code) updates.zipCode = profile.zip_code;
+                }
+              }
+              
+              if (Object.keys(updates).length > 0) {
+                setCarDetails(prev => ({ ...prev, ...updates }));
+              }
             }
           } catch (profileError: any) {
             // Handle any errors gracefully - profile is optional
@@ -1169,25 +1212,13 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
     description += `💰 Asking Price: $${displayPrice.toLocaleString()}\n`;
     description += `🏁 Mileage: ${parseInt(mileage).toLocaleString()} miles\n`;
     
-    const titleStatusText = titleStatus === 'clean' ? 'Clean' : 
-                           titleStatus === 'rebuilt' ? 'Rebuilt' : 
-                           titleStatus === 'salvage' ? 'Salvage' :
-                           titleStatus === 'flood' ? 'Flood' :
-                           titleStatus === 'lemon' ? 'Lemon' :
-                           titleStatus === 'junk' ? 'Junk' : 'Clean';
-    
-    // Add title status with appropriate emoji and context
-    const titleEmoji = titleStatus === 'clean' ? '✅' : 
-                      titleStatus === 'rebuilt' ? '🔧' : 
-                      titleStatus === 'salvage' ? '⚠️' :
-                      titleStatus === 'flood' ? '🌊' :
-                      titleStatus === 'lemon' ? '🍋' :
-                      titleStatus === 'junk' ? '🗑️' : '✅';
-    
-    description += `${titleEmoji} Title: ${titleStatusText}\n`;
-    const location = carDetails.city && carDetails.zipCode 
-      ? `${carDetails.city}, ${carDetails.zipCode}` 
-      : carDetails.city || 'Detroit, MI';
+    // Title status is metadata for AI conversations - NOT included in listing description
+    // The AI will use this information when answering buyer questions about the title
+    // Show location: Just city (or city, state) - don't show zip code as it can be confusing
+    // Zip code 48239 is Bradford, not Detroit, so showing "Detroit, 48239" is misleading
+    const location = carDetails.city 
+      ? carDetails.city.includes(',') ? carDetails.city : `${carDetails.city}, MI`
+      : 'Detroit, MI';
     description += `📍 Location: ${location}\n\n`;
     
     // Details section
@@ -1201,10 +1232,8 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
       }
     }
     
-    // Add title rebuild explanation if applicable
-    if (titleStatus === 'rebuilt' && titleRebuildExplanation) {
-      description += `• ${titleRebuildExplanation}\n`;
-    }
+    // Title rebuild explanation is metadata for AI conversations - NOT included in listing description
+    // The AI will use this when buyers ask "Why was the title rebuilt?"
     
     // Add default details if no AI analysis
     if (!analysisResult.data?.features_detected) {
@@ -1959,8 +1988,11 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
             );
           }
         } else if (healthError.message?.includes('Failed to fetch') || healthError.message?.includes('NetworkError')) {
-          console.error('❌ [ANALYZE] Network error - backend may be unreachable');
+          // Only log in development mode, and only if backend URL is localhost
           const isLocal = backendUrl.includes('localhost') || backendUrl.includes('127.0.0.1');
+          if (isLocal && process.env.NODE_ENV === 'development') {
+            console.debug('⚠️ [ANALYZE] Backend not available - image analysis disabled');
+          }
           
           if (isLocal) {
             setAnalysisError(
@@ -2041,6 +2073,11 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
       formData.append('lowestPrice', carDetails.lowestPrice || '');
       formData.append('titleStatus', carDetails.titleStatus || '');
       formData.append('aboutVehicle', correctedAboutVehicle);
+      // Add title rebuild explanation if rebuilt title
+      if (carDetails.titleStatus === 'rebuilt' && titleRebuildExplanation) {
+        formData.append('titleRebuildReason', titleRebuildExplanation);
+        console.log('📝 [ANALYZE] Adding title rebuild reason:', titleRebuildExplanation);
+      }
       if (extractedVIN) {
         formData.append('vin', extractedVIN);
         console.log('🔍 [ANALYZE] Extracted VIN from aboutVehicle:', extractedVIN);
@@ -2805,7 +2842,7 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                   <div className="flex items-center justify-between mb-2">
                     <div>
                       <p className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
-                        🎯 Select 5 Key Photos for AI Analysis
+                        🎯 Select 5 Key Photos for Accorria Analysis
                       </p>
                       <p className="text-xs text-gray-600 dark:text-gray-400">
                         Hover to see selection checkbox • Drag to reorder
@@ -3664,16 +3701,84 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                 <input
                   type="text"
                   value={carDetails.city || ''}
-                  onChange={(e) => {
+                  onChange={async (e) => {
                     const value = e.target.value;
                     setCarDetails(prev => ({ ...prev, city: value }));
+                    
+                    // VALIDATION: If zip is already set, validate city matches zip
+                    if (value && carDetails.zipCode && carDetails.zipCode.length === 5) {
+                      try {
+                        const { default: onboardingService } = await import('@/services/onboardingService');
+                        const zipCity = await onboardingService.getCityFromZip(carDetails.zipCode);
+                        
+                        if (zipCity) {
+                          const enteredCityLower = value.toLowerCase().trim();
+                          const zipCityLower = zipCity.toLowerCase().trim();
+                          
+                          if (enteredCityLower !== zipCityLower) {
+                            // Show warning but don't auto-correct (user might be typing)
+                            console.warn(`⚠️ City "${value}" doesn't match zip ${carDetails.zipCode} (belongs to ${zipCity})`);
+                            setLocationMismatchWarning(`City "${value}" doesn't match zip ${carDetails.zipCode} (belongs to ${zipCity})`);
+                          } else {
+                            // They match - clear warnings
+                            setLocationMismatchWarning(null);
+                          }
+                        }
+                      } catch (err) {
+                        // Ignore errors
+                      }
+                    }
+                    
+                    // If city is set and zip is empty, try to get zip from profile (onboarding data)
+                    if (value && !carDetails.zipCode) {
+                      try {
+                        const { supabase } = await import('@/utils/supabase');
+                        const { data: { user } } = await supabase.auth.getUser();
+                        if (user) {
+                          const { data: profile } = await supabase
+                            .from('profiles')
+                            .select('zip_code, city')
+                            .eq('id', user.id)
+                            .maybeSingle();
+                          
+                          // Use onboarding profile data - if city matches, use the zip from onboarding
+                          if (profile?.zip_code && profile.city && profile.city.toLowerCase().trim() === value.toLowerCase().trim()) {
+                            setCarDetails(prev => ({ ...prev, zipCode: profile.zip_code }));
+                            console.log(`✅ Using zip ${profile.zip_code} from onboarding profile (matches city ${value})`);
+                          }
+                        }
+                      } catch (err) {
+                        // Ignore errors - zip auto-fill is optional
+                      }
+                    }
+                    
                     // Simple autocomplete - show nearby cities based on user's profile
-                    // In a real implementation, you'd use a geocoding API
                     if (value.length > 2) {
-                      // For now, just clear suggestions - can be enhanced with actual API
                       setCitySuggestions([]);
                     } else {
                       setCitySuggestions([]);
+                    }
+                  }}
+                  onBlur={async () => {
+                    // Final validation when user leaves city field
+                    if (carDetails.city && carDetails.zipCode && carDetails.zipCode.length === 5) {
+                      try {
+                        const { default: onboardingService } = await import('@/services/onboardingService');
+                        const zipCity = await onboardingService.getCityFromZip(carDetails.zipCode);
+                        
+                        if (zipCity) {
+                          const enteredCityLower = carDetails.city.toLowerCase().trim();
+                          const zipCityLower = zipCity.toLowerCase().trim();
+                          
+                          if (enteredCityLower !== zipCityLower) {
+                            // Auto-correct city to match zip (zip is more specific)
+                            setCarDetails(prev => ({ ...prev, city: zipCity }));
+                            console.log(`✅ Auto-corrected city to ${zipCity} to match zip ${carDetails.zipCode}`);
+                          }
+                        }
+                      } catch (err) {
+                        // Ignore errors
+                      }
                     }
                   }}
                   onFocus={() => {
@@ -3716,24 +3821,64 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                 <input
                   type="text"
                   value={carDetails.zipCode || ''}
-                  onChange={(e) => {
+                  onChange={async (e) => {
                     // Only allow numbers, max 5 digits
                     const value = e.target.value.replace(/[^0-9]/g, '').slice(0, 5);
                     setCarDetails(prev => ({ ...prev, zipCode: value }));
+                    
+                    // VALIDATION: When zip is entered, lookup city and validate it matches
+                    if (value.length === 5 && carDetails.city) {
+                      try {
+                        const { default: onboardingService } = await import('@/services/onboardingService');
+                        const zipCity = await onboardingService.getCityFromZip(value);
+                        
+                        if (zipCity) {
+                          // Check if zip's city matches entered city
+                          const enteredCityLower = carDetails.city.toLowerCase().trim();
+                          const zipCityLower = zipCity.toLowerCase().trim();
+                          
+                          if (enteredCityLower !== zipCityLower) {
+                            // Show warning - zip doesn't match city
+                            console.warn(`⚠️ Zip ${value} belongs to ${zipCity}, but city is set to ${carDetails.city}`);
+                            setLocationMismatchWarning(`Zip ${value} belongs to ${zipCity}, not ${carDetails.city}`);
+                            // Auto-update city to match zip (since zip is more specific)
+                            setCarDetails(prev => ({ ...prev, city: zipCity }));
+                            // Clear warning after auto-correction
+                            setTimeout(() => setLocationMismatchWarning(null), 3000);
+                          }
+                        }
+                      } catch (err) {
+                        // Ignore errors - validation is optional
+                        console.debug('Zip validation error:', err);
+                      }
+                    }
+                    
                     // Show nearby zip codes as user types (if we have their city)
                     if (value.length >= 3 && carDetails.city) {
-                      // In a real implementation, you'd fetch nearby zip codes from an API
-                      // For now, just clear suggestions - can be enhanced
                       setZipSuggestions([]);
                     } else {
                       setZipSuggestions([]);
                     }
                   }}
-                  onFocus={() => {
-                    // Load nearby zip codes when user focuses (if we have their city)
-                    if (carDetails.city) {
-                      // Could fetch nearby zip codes based on city
-                      // For now, just show profile zip if available
+                  onBlur={async () => {
+                    // Final validation when user leaves zip field
+                    if (carDetails.zipCode && carDetails.zipCode.length === 5 && carDetails.city) {
+                      try {
+                        const { default: onboardingService } = await import('@/services/onboardingService');
+                        const zipCity = await onboardingService.getCityFromZip(carDetails.zipCode);
+                        
+                        if (zipCity) {
+                          const enteredCityLower = carDetails.city.toLowerCase().trim();
+                          const zipCityLower = zipCity.toLowerCase().trim();
+                          
+                          if (enteredCityLower !== zipCityLower) {
+                            // Auto-correct city to match zip
+                            setCarDetails(prev => ({ ...prev, city: zipCity }));
+                          }
+                        }
+                      } catch (err) {
+                        // Ignore errors
+                      }
                     }
                   }}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -3763,6 +3908,26 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                 </p>
               </div>
             </div>
+            
+            {/* Location Mismatch Warning */}
+            {locationMismatchWarning && (
+              <div className="mt-2 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                <div className="flex items-start">
+                  <span className="text-yellow-600 dark:text-yellow-400 mr-2">⚠️</span>
+                  <div className="flex-1">
+                    <p className="text-sm text-yellow-800 dark:text-yellow-200 font-medium">
+                      Location Mismatch
+                    </p>
+                    <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-1">
+                      {locationMismatchWarning}
+                    </p>
+                    <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
+                      Using onboarding profile data ensures city and zip code match.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div>
               <div className="flex items-center justify-between mb-1">
@@ -3961,7 +4126,7 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                           </div>
                           <div className="text-right">
                             <div className="font-bold text-lg text-gray-900 dark:text-white">${quickPrice.toLocaleString()}</div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400">~7 days</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">Less • Quick</div>
                           </div>
                         </div>
                       </button>
@@ -3982,7 +4147,7 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                           </div>
                           <div className="text-right">
                             <div className="font-bold text-lg text-gray-900 dark:text-white">${marketPrice.toLocaleString()}</div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400">~14 days</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">Moderate</div>
                           </div>
                         </div>
                       </button>
@@ -4003,7 +4168,7 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                           </div>
                           <div className="text-right">
                             <div className="text-lg font-bold text-gray-900 dark:text-white">${premiumPrice.toLocaleString()}</div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400">~21 days</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">More • Slower</div>
                           </div>
                         </div>
                       </button>
@@ -4053,28 +4218,37 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                     </button>
                     {showPricingBreakdown && (
                       <div className="space-y-2 text-xs bg-white/50 dark:bg-gray-800/50 rounded-lg p-3">
+                      {/* Show raw Google price if different from base */}
+                      {pricingBreakdown.raw_google_price && pricingBreakdown.raw_google_price !== pricingBreakdown.base_market_value && (
+                        <div className="flex justify-between items-center py-1 border-b border-gray-100 dark:border-gray-700 bg-blue-50 dark:bg-blue-900/20 px-2 -mx-2 rounded">
+                          <span className="text-gray-600 dark:text-gray-400 font-medium">Raw Google Search Price:</span>
+                          <span className="font-semibold text-blue-600 dark:text-blue-400">
+                            ${(pricingBreakdown.raw_google_price || 0).toLocaleString()}
+                          </span>
+                        </div>
+                      )}
                       <div className="flex justify-between items-center py-1 border-b border-gray-100 dark:border-gray-700">
-                        <span className="text-gray-600 dark:text-gray-400">Base Market Value:</span>
+                        <span className="text-gray-600 dark:text-gray-400">Base Market Value (after adjustments):</span>
                         <span className="font-semibold text-gray-900 dark:text-white">
-                          ${pricingBreakdown.base_market_value.toLocaleString()}
+                          ${(pricingBreakdown.base_market_value || 0).toLocaleString()}
                         </span>
                       </div>
                       
-                      {pricingBreakdown.title_status_adjustment !== 0 && (
+                      {pricingBreakdown.title_status_adjustment != null && pricingBreakdown.title_status_adjustment !== 0 && (
                         <div className="flex justify-between items-center py-1 border-b border-gray-100 dark:border-gray-700">
                           <span className="text-gray-600 dark:text-gray-400">
                             {pricingBreakdown.title_status_label || 'Title'}:
                           </span>
-                          <span className={`font-semibold ${pricingBreakdown.title_status_adjustment < 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
-                            {pricingBreakdown.title_status_adjustment > 0 ? '+' : ''}
-                            ${pricingBreakdown.title_status_adjustment.toLocaleString()} 
-                            ({pricingBreakdown.title_status_percent > 0 ? '+' : ''}
-                            {pricingBreakdown.title_status_percent}%)
+                          <span className={`font-semibold ${(pricingBreakdown.title_status_adjustment || 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+                            {(pricingBreakdown.title_status_adjustment || 0) > 0 ? '+' : ''}
+                            ${(pricingBreakdown.title_status_adjustment || 0).toLocaleString()} 
+                            ({(pricingBreakdown.title_status_percent || 0) > 0 ? '+' : ''}
+                            {pricingBreakdown.title_status_percent || 0}%)
                           </span>
                         </div>
                       )}
                       
-                      {pricingBreakdown.trim_adjustment !== 0 && (
+                      {pricingBreakdown.trim_adjustment != null && pricingBreakdown.trim_adjustment !== 0 && (
                         <div className="flex justify-between items-center py-1 border-b border-gray-100 dark:border-gray-700">
                           <span className="text-gray-600 dark:text-gray-400">
                             Trim:
@@ -4083,13 +4257,13 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                             )}
                           </span>
                           <span className="font-semibold text-green-600 dark:text-green-400">
-                            +${pricingBreakdown.trim_adjustment.toLocaleString()} 
-                            (+{pricingBreakdown.trim_percent}%)
+                            +${(pricingBreakdown.trim_adjustment || 0).toLocaleString()} 
+                            (+{pricingBreakdown.trim_percent || 0}%)
                           </span>
                         </div>
                       )}
                       
-                      {pricingBreakdown.mileage_adjustment !== 0 && (
+                      {pricingBreakdown.mileage_adjustment != null && pricingBreakdown.mileage_adjustment !== 0 && (
                         <div className="flex justify-between items-center py-1 border-b border-gray-100 dark:border-gray-700">
                           <span className="text-gray-600 dark:text-gray-400">
                             Mileage:
@@ -4097,16 +4271,16 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                               <span className="block text-xs text-gray-500 dark:text-gray-400">{pricingBreakdown.mileage_range_label}</span>
                             )}
                           </span>
-                          <span className={`font-semibold ${pricingBreakdown.mileage_adjustment < 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
-                            {pricingBreakdown.mileage_adjustment > 0 ? '+' : ''}
-                            ${pricingBreakdown.mileage_adjustment.toLocaleString()} 
-                            ({pricingBreakdown.mileage_percent > 0 ? '+' : ''}
-                            {pricingBreakdown.mileage_percent}%)
+                          <span className={`font-semibold ${(pricingBreakdown.mileage_adjustment || 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+                            {(pricingBreakdown.mileage_adjustment || 0) > 0 ? '+' : ''}
+                            ${(pricingBreakdown.mileage_adjustment || 0).toLocaleString()} 
+                            ({(pricingBreakdown.mileage_percent || 0) > 0 ? '+' : ''}
+                            {pricingBreakdown.mileage_percent || 0}%)
                           </span>
                         </div>
                       )}
                       
-                      {pricingBreakdown.feature_adjustment !== 0 && (
+                      {pricingBreakdown.feature_adjustment != null && pricingBreakdown.feature_adjustment !== 0 && (
                         <div className="flex justify-between items-center py-1 border-b border-gray-100 dark:border-gray-700">
                           <span className="text-gray-600 dark:text-gray-400">
                             Features:
@@ -4114,15 +4288,15 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                               <ul className="mt-1 text-xs text-gray-500 dark:text-gray-400 list-disc list-inside space-y-0.5">
                                 {pricingBreakdown.feature_details.slice(0, 3).map((detail, idx) => (
                                   <li key={`${detail.label ?? detail.keyword ?? 'feature'}-${idx}`}>
-                                    {detail.label || detail.keyword}: +{detail.percent}%
+                                    {detail.label || detail.keyword}: +{detail.percent || 0}%
                                   </li>
                                 ))}
                               </ul>
                             )}
                           </span>
                           <span className="font-semibold text-green-600 dark:text-green-400">
-                            +${pricingBreakdown.feature_adjustment.toLocaleString()} 
-                            (+{pricingBreakdown.feature_percent}%)
+                            +${(pricingBreakdown.feature_adjustment || 0).toLocaleString()} 
+                            (+{pricingBreakdown.feature_percent || 0}%)
                           </span>
                         </div>
                       )}
@@ -4130,7 +4304,7 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                       <div className="flex justify-between items-center py-2 pt-3 border-t-2 border-gray-300 dark:border-gray-600">
                         <span className="font-semibold text-gray-900 dark:text-white">Suggested Price:</span>
                         <span className="font-bold text-sm text-green-600 dark:text-green-400">
-                          ${pricingBreakdown.final_adjusted_price.toLocaleString()}
+                          ${(pricingBreakdown.final_adjusted_price || pricingBreakdown.base_market_value || 0).toLocaleString()}
                         </span>
                       </div>
                       

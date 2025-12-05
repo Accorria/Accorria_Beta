@@ -10,9 +10,12 @@ import Header from '@/components/Header';
 import DealerMode from '@/components/DealerMode';
 import DashboardListing from '@/components/DashboardListing';
 import { listingsService, Listing } from '@/services/listingsService';
+import { onboardingService } from '@/services/onboardingService';
+import { useRouter } from 'next/navigation';
 
 export default function Dashboard() {
   const { user, loading, isEmailVerified } = useAuth();
+  const router = useRouter();
   const [listings, setListings] = useState<Listing[]>([]);
   const [stats, setStats] = useState({
     totalListings: 0,
@@ -24,6 +27,50 @@ export default function Dashboard() {
   const [showCreateListing, setShowCreateListing] = useState(false);
   const [isLoadingListings, setIsLoadingListings] = useState(true);
   const [currentMode, setCurrentMode] = useState<'solo' | 'dealer'>('solo');
+  const [checkingOnboarding, setCheckingOnboarding] = useState(true);
+
+  // Check onboarding status
+  useEffect(() => {
+    const checkOnboarding = async () => {
+      // Wait for auth to finish loading
+      if (loading) return;
+      
+      // If no user, redirect to login
+      if (!user) {
+        router.push('/login');
+        setCheckingOnboarding(false);
+        return;
+      }
+
+      // User exists, check onboarding status
+      try {
+        console.log('🔍 Dashboard: Checking onboarding status for user:', user.id);
+        const isComplete = await onboardingService.getOnboardingStatus(user.id);
+        console.log('📊 Dashboard: Onboarding status check result:', { userId: user.id, isComplete });
+        
+        if (!isComplete) {
+          console.log('⚠️ Dashboard: Onboarding NOT complete - redirecting to /onboarding');
+          // Always redirect to onboarding if not complete
+          router.push('/onboarding');
+          setCheckingOnboarding(false);
+          return;
+        }
+        
+        // Onboarding is complete, allow dashboard to load
+        console.log('✅ Dashboard: Onboarding complete - loading dashboard');
+        setCheckingOnboarding(false);
+      } catch (error) {
+        console.error('❌ Dashboard: Error checking onboarding status:', error);
+        // If error, assume onboarding not complete and redirect
+        console.log('⚠️ Dashboard: Error occurred - redirecting to /onboarding as fallback');
+        router.push('/onboarding');
+        setCheckingOnboarding(false);
+        return;
+      }
+    };
+
+    checkOnboarding();
+  }, [user, loading, router]);
 
   // Load listings from Supabase database
   useEffect(() => {
@@ -91,7 +138,7 @@ export default function Dashboard() {
 
 
   // Show loading state
-  if (loading) {
+  if (loading || checkingOnboarding) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">

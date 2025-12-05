@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import Chatbot from '@/components/Chatbot';
 import { useAuth } from '@/contexts/AuthContext';
 import { AuthModal } from '@/components/AuthModal';
@@ -28,9 +29,46 @@ const ArrowRight = () => (
 
 
 export default function Home() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode] = useState<'login' | 'register'>('login');
+  const router = useRouter();
+
+  // Check if user just verified email (from URL hash) and redirect appropriately
+  useEffect(() => {
+    const checkEmailVerification = async () => {
+      if (loading) return;
+
+      // Check for Supabase auth hash in URL (email verification)
+      if (typeof window !== 'undefined') {
+        const hash = window.location.hash;
+        const hasAuthHash = hash.includes('access_token') || hash.includes('type=email') || hash.includes('type=signup');
+        
+        if (hasAuthHash) {
+          // User just verified email via hash, redirect to callback handler
+          router.push('/auth/callback');
+          return;
+        }
+      }
+
+      // If user is logged in and verified, check onboarding
+      if (user && user.email_confirmed_at) {
+        try {
+          const { onboardingService } = await import('@/services/onboardingService');
+          const isComplete = await onboardingService.getOnboardingStatus(user.id);
+          if (!isComplete) {
+            router.push('/onboarding');
+          } else {
+            router.push('/dashboard');
+          }
+        } catch (error) {
+          console.error('Error checking onboarding:', error);
+        }
+      }
+    };
+
+    checkEmailVerification();
+  }, [user, loading, router]);
 
   const handleAuthSuccess = () => {
     console.log('Authentication successful');
@@ -69,7 +107,7 @@ export default function Home() {
                   <Link href="/login" className="text-gray-600 hover:text-gray-900 text-sm font-medium">
                     Sign in
                   </Link>
-                  <Link href="/beta-signup" className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
+                  <Link href="/register" className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
                     Get started
                   </Link>
                 </>
@@ -108,7 +146,7 @@ export default function Home() {
             {/* CTA Buttons */}
             <div className="mt-10 flex items-center justify-center gap-x-6">
               <Link 
-                href="/beta-signup" 
+                href="/register" 
                 className="rounded-md bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 transition-colors"
               >
                 Get started free
@@ -349,7 +387,7 @@ export default function Home() {
             </p>
             <div className="mt-8 flex items-center justify-center gap-x-6">
               <Link 
-                href="/beta-signup" 
+                href="/register" 
                 className="rounded-md bg-white px-6 py-3 text-sm font-semibold text-blue-600 shadow-sm hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white transition-colors"
               >
                 Get started free

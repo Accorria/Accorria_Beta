@@ -6,11 +6,12 @@
 // Common misspellings dictionary - expandable
 const SPELLING_CORRECTIONS: Record<string, string> = {
   // Keys variations
-  'kyes': 'keys', 'keis': 'keys', 'kees': 'keys', 'keyes': 'keys',
+  'kyes': 'keys', 'keis': 'keys', 'kees': 'keys', 'keyes': 'keys', 'jeys': 'keys',
   // Numbers
   'teo': 'two', 'tow': 'two', 'thre': 'three', 'for': 'four', 'fiv': 'five',
   // Common phrases
   'sets of kyes': 'sets of keys', 'sets of keis': 'sets of keys', 'sets of kees': 'sets of keys',
+  'sets of jeys': 'sets of keys', 'two sets of jeys': 'two sets of keys',
   'teo sets': 'two sets', 'tow sets': 'two sets',
   // Automotive terms
   'replased': 'replaced', 'replaed': 'replaced', 'replced': 'replaced', 'replcaed': 'replaced',

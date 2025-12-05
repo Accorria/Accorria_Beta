@@ -35,7 +35,8 @@ async def enhanced_analyze_car(
     lowestPrice: Optional[str] = Form(None),
     titleStatus: Optional[str] = Form(None),
     aboutVehicle: Optional[str] = Form(None),
-    vin: Optional[str] = Form(None)
+    vin: Optional[str] = Form(None),
+    titleRebuildReason: Optional[str] = Form(None)
 ):
     """
     Enhanced car analysis endpoint - REAL IMAGE PROCESSING
@@ -197,7 +198,7 @@ CRITICAL: Look for these SPECIFIC visual details in ALL photos - YOU MUST CHECK 
 
 **IMPORTANT: For each feature, if you can see it in ANY photo, mark it as present=True with appropriate confidence (0.7+ for clearly visible, 0.5-0.7 for partially visible). Do NOT mark features as absent if you simply cannot see them - only mark present=False if you can clearly see the area where the feature would be and it's not there.**
 
-CRITICAL VIN DETECTION: The FIRST images in this set may contain the VIN number. You MUST carefully examine the first 1-3 images for any VIN numbers visible on the dashboard, door jamb, windshield, or title documents. VIN numbers are 17 characters (alphanumeric, excluding I, O, Q). If you see a VIN, extract it EXACTLY and set vin_visible confidence to 0.9 or higher. This is critical for accurate vehicle specifications.
+CRITICAL VIN DETECTION: You MUST carefully examine ALL images in this set for VIN numbers. VINs can appear in ANY image - dashboard, door jamb, windshield, title documents, or photos of the VIN plate. Check EVERY image systematically. VIN numbers are 17 characters (alphanumeric, excluding I, O, Q). If you see a VIN in ANY image, extract it EXACTLY and set vin_visible confidence to 0.9 or higher. This is critical for accurate vehicle specifications. Do not limit your search to just the first few images - check all images thoroughly.
 
 Return ONLY this JSON structure:
 {{
@@ -563,6 +564,18 @@ Return ONLY this JSON structure:
                         is_duplicate = True
                         print(f"[ENHANCED-ANALYZE] ⚠️ Skipping duplicate feature: '{feature_name}' (already exists as '{existing_feature}')")
                         break
+                    # Check for "alloy wheels" duplicates (can appear as "Alloy Wheels", "Alloy", "Wheels", etc.)
+                    if "alloy" in feature_lower and "wheel" in feature_lower:
+                        if "alloy" in existing_lower and "wheel" in existing_lower:
+                            is_duplicate = True
+                            print(f"[ENHANCED-ANALYZE] ⚠️ Skipping duplicate alloy wheels feature: '{feature_name}' (similar to '{existing_feature}')")
+                            break
+                    # Check for "tinted windows" duplicates
+                    if "tint" in feature_lower and "window" in feature_lower:
+                        if "tint" in existing_lower and "window" in existing_lower:
+                            is_duplicate = True
+                            print(f"[ENHANCED-ANALYZE] ⚠️ Skipping duplicate tinted windows feature: '{feature_name}' (similar to '{existing_feature}')")
+                            break
                     # Partial match prevention (e.g., "Leather Seats" vs "Black Leather")
                     if "leather" in feature_lower and "leather" in existing_lower:
                         if feature_lower in existing_lower or existing_lower in feature_lower:
@@ -656,9 +669,34 @@ Return ONLY this JSON structure:
                 listing_context["condition_blurbs"].append(f"VIN visible: {vin_value}")
         
         # Decode VIN to get real vehicle specifications and features
+        # FIRST: Check VIN Knowledge Base to avoid expensive API calls
         vin_features = []
         vin_data = None
+        vin_kb_features = None
         if vin_to_decode:
+            try:
+                from app.services.vin_knowledge_base import VINKnowledgeBase
+                vin_kb = VINKnowledgeBase()
+                vin_kb_record = await vin_kb.get_vin_features(vin_to_decode)
+                if vin_kb_record:
+                    print(f"[ENHANCED-ANALYZE] ✅ Found VIN {vin_to_decode} in knowledge base (used {vin_kb_record.get('usage_count', 0)} times)")
+                    vin_kb_features = vin_kb.get_all_features_from_record(vin_kb_record)
+                    # Use stored data if available
+                    if vin_kb_record.get('nhtsa_data'):
+                        vin_data = vin_kb_record['nhtsa_data']
+                    # Add all features from knowledge base
+                    if vin_kb_features:
+                        for feature in vin_kb_features:
+                            if feature and feature not in listing_context["features_list"]:
+                                listing_context["features_list"].append(feature)
+                        print(f"[ENHANCED-ANALYZE] ✅ Added {len(vin_kb_features)} features from knowledge base")
+                        listing_context["vin_attributes"] = vin_kb_features.copy()
+            except Exception as kb_error:
+                logger.warning(f"VIN knowledge base lookup failed: {kb_error}")
+                print(f"[ENHANCED-ANALYZE] ⚠️  Knowledge base lookup failed: {kb_error}")
+        
+        # If not in knowledge base, decode VIN via API
+        if vin_to_decode and not vin_kb_features:
             try:
                 vin_data = await vin_decoder.decode_vin(vin_to_decode)
                 
@@ -724,30 +762,270 @@ Return ONLY this JSON structure:
                             listing_context["features_list"].append(fuel_feature)
                             vin_attributes_added.append(fuel_feature)
                     
-                    if vin_data.get("body_style") and vin_data["body_style"] != "Not Applicable":
-                        body_feature = vin_data["body_style"]
-                        if body_feature not in listing_context["features_list"]:
-                            listing_context["features_list"].append(body_feature)
-                            vin_attributes_added.append(body_feature)
+                    # SKIP body_style - user doesn't want it mentioned (sedan, SUV, etc.)
+                    # if vin_data.get("body_style") and vin_data["body_style"] != "Not Applicable":
+                    #     body_feature = vin_data["body_style"]
+                    #     if body_feature not in listing_context["features_list"]:
+                    #         listing_context["features_list"].append(body_feature)
+                    #         vin_attributes_added.append(body_feature)
                     
                     if vin_attributes_added:
                         print(f"[ENHANCED-ANALYZE] ✅ Added {len(vin_attributes_added)} NHTSA VIN attributes to features: {vin_attributes_added}")
                         # Store VIN attributes separately for description generation
                         listing_context["vin_attributes"] = vin_attributes_added
+                        
+                        # Store NHTSA data in knowledge base (even if we don't have Google Search features yet)
+                        try:
+                            from app.services.vin_knowledge_base import VINKnowledgeBase
+                            vin_kb = VINKnowledgeBase()
+                            print(f"[ENHANCED-ANALYZE] 🔍 Attempting to store NHTSA VIN data in knowledge base...")
+                            storage_result = await vin_kb.store_vin_features(
+                                vin=vin_to_decode,
+                                make=vin_data.get("make"),
+                                model=vin_data.get("model"),
+                                year=vin_data.get("year"),
+                                trim=vin_data.get("trim"),
+                                nhtsa_data=vin_data,
+                                all_features=vin_attributes_added,
+                                extraction_source='nhtsa',
+                                confidence_score=0.95
+                            )
+                            if storage_result:
+                                print(f"[ENHANCED-ANALYZE] ✅ Stored NHTSA VIN data in knowledge base")
+                            else:
+                                print(f"[ENHANCED-ANALYZE] ⚠️  Failed to store NHTSA VIN data (storage_result=False)")
+                        except Exception as kb_error:
+                            logger.warning(f"Failed to store NHTSA VIN in knowledge base: {kb_error}")
+                            print(f"[ENHANCED-ANALYZE] ❌ ERROR storing NHTSA VIN: {kb_error}")
+                            import traceback
+                            print(f"[ENHANCED-ANALYZE] ❌ Traceback: {traceback.format_exc()}")
                     
-                    # PURE NHTSA VIN DATA ONLY - no feature inference or enrichment
-                    # Only use actual NHTSA attributes (make, model, year, trim, drivetrain, etc.)
-                    # DO NOT add inferred features like "remote start", "navigation", etc.
+                    # ENHANCED: Search Google for detailed VIN features (like adaptive cruise control, LED headlights, etc.)
+                    # This pulls the same type of detailed feature list that Google shows when searching "{VIN} features"
+                    # Use AI/LLM to extract features from Google Search results (more accurate than keyword matching)
+                    try:
+                        print(f"[ENHANCED-ANALYZE] 🔍 Searching Google for detailed features for VIN: {vin_to_decode}")
+                        from app.agents.market_intelligence_agent import MarketIntelligenceAgent
+                        market_agent = MarketIntelligenceAgent()
+                        
+                        # Search for "{VIN} features" to get detailed feature list
+                        vin_features_query = f"{vin_to_decode} features"
+                        vin_features_search = await market_agent._web_search(vin_features_query)
+                        
+                        if vin_features_search:
+                            print(f"[ENHANCED-ANALYZE] ✅ Google Search returned {len(vin_features_search)} characters of VIN feature data")
+                            
+                            # Use OpenAI to extract features from Google Search results (more accurate than keyword matching)
+                            if openai_client:
+                                try:
+                                    extraction_prompt = f"""You are a vehicle feature extraction expert. Extract ALL vehicle features from the following Google Search results for VIN {vin_to_decode}.
+
+Google Search Results:
+{vin_features_search[:4000]}
+
+CRITICAL: Extract features and categorize them into these categories:
+
+**INTERIOR FEATURES:**
+- Seating: Heated seats, ventilated seats, memory seats, premium seats, leather seats, power seats, reclining seats, captain's chairs
+- Climate: Dual-zone climate control, tri-zone climate control, heated steering wheel, ventilated seats, air conditioning
+- Storage: Center console, storage compartments, cup holders, cargo management
+- Materials: Leather, premium materials, wood trim, carbon fiber trim, aluminum trim
+
+**EXTERIOR FEATURES:**
+- Lighting: LED headlights, LED taillights, fog lights, daytime running lights, adaptive headlights, auto-dimming headlights
+- Mirrors: Power-folding mirrors, auto-dimming mirrors, heated mirrors, memory mirrors, blind-spot mirrors
+- Roof: Sunroof, moonroof, panoramic roof, glass roof, roof rails, roof rack
+- Wheels: Alloy wheels, chrome wheels, performance wheels, wheel locks
+- Other: Running boards, tow package, trailer hitch, roof spoiler, body kit
+
+**SAFETY FEATURES:**
+- Driver Assistance: Adaptive cruise control, lane-keeping assist, lane departure warning, blind-spot monitoring, forward collision warning, automatic emergency braking, pedestrian detection
+- Parking: Backup camera, rearview camera, 360-degree camera, parking sensors, front parking sensors, rear parking sensors, parking assist
+- Airbags: Multiple airbags, side curtain airbags, knee airbags
+- Stability: Traction control, stability control, anti-lock brakes, electronic stability control
+
+**TECHNOLOGY FEATURES:**
+- Infotainment: Navigation system, touchscreen display, Apple CarPlay, Android Auto, Bluetooth, WiFi, USB ports, wireless charging
+- Driver Tech: Head-up display, digital instrument cluster, driver information display
+- Connectivity: Remote start, keyless entry, push-button start, smartphone app integration, over-the-air updates
+- Advanced: Autopilot, Full Self-Driving, Tesla Autopilot, Super Cruise, ProPILOT Assist
+
+**COMFORT FEATURES:**
+- Entry/Exit: Keyless entry, push-button start, power liftgate, power tailgate, hands-free liftgate
+- Convenience: Auto-dimming rearview mirror, garage door opener, universal garage door opener, power windows, one-touch windows
+- Comfort: Power-adjustable seats, memory seats, lumbar support, massage seats
+
+**POWERTRAIN FEATURES:**
+- Drivetrain: All-Wheel Drive (AWD), Front-Wheel Drive (FWD), Rear-Wheel Drive (RWD), 4-Wheel Drive (4WD)
+- Performance: Sport mode, eco mode, tow/haul mode, paddle shifters, performance package
+- Electric: Electric motor, battery pack, fast charging, regenerative braking
+
+**AUDIO/ENTERTAINMENT FEATURES:**
+- Audio: Premium audio system, Bose audio, Harman Kardon, Bang & Olufsen, subwoofer, amplifier, satellite radio, HD Radio
+- Entertainment: Rear-seat entertainment, DVD player, streaming services, music apps
+
+Return a JSON object with this structure:
+{{
+  "features_interior": ["Heated Seats", "Leather Seats", "Heated Steering Wheel"],
+  "features_exterior": ["LED Headlights", "Power-Folding Mirrors", "Sunroof"],
+  "features_safety": ["Backup Camera", "Blind-Spot Monitoring", "Adaptive Cruise Control"],
+  "features_technology": ["Navigation System", "Apple CarPlay", "Touchscreen Display"],
+  "features_comfort": ["Keyless Entry", "Push-Button Start", "Power Windows"],
+  "features_powertrain": ["All-Wheel Drive", "Sport Mode"],
+  "features_audio_entertainment": ["Premium Audio", "Bluetooth"]
+}}
+
+IMPORTANT:
+- Extract EVERY feature mentioned, even if it seems obvious
+- Use proper capitalization (e.g., "LED Headlights" not "led headlights")
+- Do NOT include specs/numbers (like "425 hp" or "15-inch screen")
+- Do NOT include colors (like "gray exterior" or "black leather")
+- Do NOT include generic descriptions
+- Only include actual FEATURES/OPTIONS that add value
+- If a feature appears in multiple categories, include it in the most appropriate one
+
+Return ONLY the JSON object, nothing else."""
+
+                                    extraction_response = openai_client.chat.completions.create(
+                                        model="gpt-4o-mini",
+                                        messages=[
+                                            {"role": "user", "content": extraction_prompt}
+                                        ],
+                                        max_tokens=1500,
+                                        temperature=0.1,
+                                        response_format={"type": "json_object"}
+                                    )
+                                    
+                                    extracted_text = extraction_response.choices[0].message.content.strip()
+                                    
+                                    # Parse categorized JSON response
+                                    try:
+                                        features_by_category = json.loads(extracted_text)
+                                        
+                                        # Combine all features
+                                        vin_features_found = []
+                                        features_interior = features_by_category.get("features_interior", [])
+                                        features_exterior = features_by_category.get("features_exterior", [])
+                                        features_safety = features_by_category.get("features_safety", [])
+                                        features_technology = features_by_category.get("features_technology", [])
+                                        features_comfort = features_by_category.get("features_comfort", [])
+                                        features_powertrain = features_by_category.get("features_powertrain", [])
+                                        features_audio_entertainment = features_by_category.get("features_audio_entertainment", [])
+                                        
+                                        # Combine all categories
+                                        vin_features_found.extend(features_interior)
+                                        vin_features_found.extend(features_exterior)
+                                        vin_features_found.extend(features_safety)
+                                        vin_features_found.extend(features_technology)
+                                        vin_features_found.extend(features_comfort)
+                                        vin_features_found.extend(features_powertrain)
+                                        vin_features_found.extend(features_audio_entertainment)
+                                        
+                                        # Remove duplicates
+                                        vin_features_found = list(dict.fromkeys([str(f).strip() for f in vin_features_found if f]))
+                                        
+                                        # Add all extracted features to features_list
+                                        for feature in vin_features_found:
+                                            if feature and feature not in listing_context["features_list"]:
+                                                listing_context["features_list"].append(feature)
+                                        
+                                        if vin_features_found:
+                                            print(f"[ENHANCED-ANALYZE] ✅ AI extracted {len(vin_features_found)} categorized features from Google Search")
+                                            print(f"[ENHANCED-ANALYZE]   Interior: {len(features_interior)}, Exterior: {len(features_exterior)}, Safety: {len(features_safety)}, Tech: {len(features_technology)}")
+                                            # Add to vin_attributes for tracking
+                                            if "vin_attributes" not in listing_context:
+                                                listing_context["vin_attributes"] = []
+                                            listing_context["vin_attributes"].extend(vin_features_found)
+                                            
+                                            # Store in knowledge base for future use
+                                            try:
+                                                from app.services.vin_knowledge_base import VINKnowledgeBase
+                                                vin_kb = VINKnowledgeBase()
+                                                print(f"[ENHANCED-ANALYZE] 🔍 Attempting to store AI-extracted VIN features in knowledge base...")
+                                                storage_result = await vin_kb.store_vin_features(
+                                                    vin=vin_to_decode,
+                                                    make=vin_data.get("make") if vin_data else listing_context.get("make"),
+                                                    model=vin_data.get("model") if vin_data else listing_context.get("model"),
+                                                    year=vin_data.get("year") if vin_data else listing_context.get("year"),
+                                                    trim=vin_data.get("trim") if vin_data else listing_context.get("trim"),
+                                                    nhtsa_data=vin_data,
+                                                    features_interior=features_interior,
+                                                    features_exterior=features_exterior,
+                                                    features_safety=features_safety,
+                                                    features_technology=features_technology,
+                                                    features_comfort=features_comfort,
+                                                    features_powertrain=features_powertrain,
+                                                    features_audio_entertainment=features_audio_entertainment,
+                                                    all_features=vin_features_found,
+                                                    extraction_source='ai_extraction',
+                                                    confidence_score=0.9
+                                                )
+                                                if storage_result:
+                                                    print(f"[ENHANCED-ANALYZE] ✅ Stored VIN features in knowledge base for future use")
+                                                else:
+                                                    print(f"[ENHANCED-ANALYZE] ⚠️  Failed to store VIN features (storage_result=False)")
+                                            except Exception as kb_error:
+                                                logger.warning(f"Failed to store VIN in knowledge base: {kb_error}")
+                                                print(f"[ENHANCED-ANALYZE] ❌ ERROR storing VIN features: {kb_error}")
+                                                import traceback
+                                                print(f"[ENHANCED-ANALYZE] ❌ Traceback: {traceback.format_exc()}")
+                                        else:
+                                            print(f"[ENHANCED-ANALYZE] ⚠️  AI extraction returned no features")
+                                    except json.JSONDecodeError as json_error:
+                                        print(f"[ENHANCED-ANALYZE] ⚠️  Could not parse JSON from AI extraction response: {json_error}")
+                                        # Try to extract JSON object using regex as fallback
+                                        import re
+                                        json_match = re.search(r'\{.*\}', extracted_text, re.DOTALL)
+                                        if json_match:
+                                            try:
+                                                features_by_category = json.loads(json_match.group(0))
+                                                # Process same as above...
+                                            except:
+                                                print(f"[ENHANCED-ANALYZE] ⚠️  Regex fallback also failed")
+                                        
+                                except Exception as ai_error:
+                                    logger.warning(f"AI feature extraction failed, falling back to keyword matching: {ai_error}")
+                                    print(f"[ENHANCED-ANALYZE] ⚠️  AI extraction failed: {ai_error}, using keyword fallback")
+                                    
+                                    # Fallback to keyword matching if AI extraction fails
+                                    vin_feature_keywords = [
+                                        "adaptive cruise control", "LED headlights", "navigation system", "heated steering wheel",
+                                        "heated seats", "autopilot", "blind spot monitoring", "lane keep assist", "lane-keeping",
+                                        "keyless entry", "push button start", "power folding mirrors", "auto-dimming mirror",
+                                        "all-wheel drive", "AWD", "climate control", "backup camera", "parking sensors"
+                                    ]
+                                    
+                                    vin_features_found = []
+                                    search_lower = vin_features_search.lower()
+                                    
+                                    for keyword in vin_feature_keywords:
+                                        if keyword.lower() in search_lower:
+                                            formatted_feature = keyword.title()
+                                            if formatted_feature not in vin_features_found:
+                                                vin_features_found.append(formatted_feature)
+                                                if formatted_feature not in listing_context["features_list"]:
+                                                    listing_context["features_list"].append(formatted_feature)
+                                    
+                                    if vin_features_found:
+                                        print(f"[ENHANCED-ANALYZE] ✅ Keyword fallback found {len(vin_features_found)} features: {vin_features_found}")
+                                        if "vin_attributes" not in listing_context:
+                                            listing_context["vin_attributes"] = []
+                                        listing_context["vin_attributes"].extend(vin_features_found)
+                            else:
+                                print(f"[ENHANCED-ANALYZE] ⚠️  OpenAI client not available for AI feature extraction")
+                        else:
+                            print(f"[ENHANCED-ANALYZE] ⚠️  Google Search returned no results for VIN features")
+                    except Exception as e:
+                        logger.warning(f"Failed to enrich VIN features via Google Search: {e}")
+                        print(f"[ENHANCED-ANALYZE] ⚠️  VIN feature enrichment failed: {e}")
+                    
                     vin_status = {
                         "state": "decoded",
                         "vin": vin_to_decode,
                         "source": vin_source or "detected",
-                        "message": "VIN decoded via NHTSA (pure data only)",
-                        "attributes": vin_attributes_added if vin_attributes_added else []
+                        "message": "VIN decoded via NHTSA + Google Search features",
+                        "attributes": listing_context.get("vin_attributes", []) if listing_context.get("vin_attributes") else vin_attributes_added
                     }
-                    
-                    # NO OpenAI equipment extraction - only use NHTSA data
-                    # NO feature inference - only use what user types in "About The Vehicle"
                 
             except Exception as e:
                 logger.warning(f"VIN decode failed: {e}")
@@ -912,14 +1190,22 @@ Return ONLY this JSON structure:
         # REMOVED: Feature inference from touchscreen, drivetrain, etc.
         # Only use features from NHTSA VIN data or user-typed "About The Vehicle"
         
-        # Extract condition notes
+        # Extract condition notes - STORE FOR AI/MESSENGER CONTEXT ONLY, NOT FOR LISTING DESCRIPTIONS
+        # These are used when buyers ask questions via messenger, but NOT included in public listings
+        condition_notes_for_ai = []
         for note_data in analysis_json["condition"]["exterior_notes"]:
-            if note_data["confidence"] >= 0.6 and note_data["note"]:
-                listing_context["condition_blurbs"].append(note_data["note"])
+            if note_data.get("confidence", 0) >= 0.6 and note_data.get("note"):
+                condition_notes_for_ai.append(note_data["note"])
         
         for note_data in analysis_json["condition"]["interior_notes"]:
-            if note_data["confidence"] >= 0.6 and note_data["note"]:
-                listing_context["condition_blurbs"].append(note_data["note"])
+            if note_data.get("confidence", 0) >= 0.6 and note_data.get("note"):
+                condition_notes_for_ai.append(note_data["note"])
+        
+        # Store condition notes separately for AI context (not in condition_blurbs which might get added to descriptions)
+        listing_context["condition_notes_ai_only"] = condition_notes_for_ai
+        if condition_notes_for_ai:
+            print(f"[ENHANCED-ANALYZE] 📝 Condition notes stored for AI context only (NOT in listing): {len(condition_notes_for_ai)} notes")
+            print(f"[ENHANCED-ANALYZE] 📝 Notes: {', '.join(condition_notes_for_ai[:3])}...")
         
         # REAL MARKET DATA INTEGRATION - Use market data from parallel Google Search
         # Market data was already fetched in parallel above
@@ -936,37 +1222,29 @@ Return ONLY this JSON structure:
                 market_average = market_prices.get("market_average", 0)
                 data_source = market_prices.get("data_source", "unknown")
                 
-                # CRITICAL GUARDRAIL: Double-check market_average for older vehicles
-                # Even if Market Intelligence Agent returned a value, reject if it's clearly MSRP
-                if market_average > 0 and listing_context.get("year"):
-                    vehicle_year = listing_context["year"]
-                    current_year = datetime.now().year
-                    vehicle_age = current_year - vehicle_year
-                    
-                    # For 8+ year old vehicles, apply strict sanity check
-                    if vehicle_age >= 8:
-                        # Calculate max reasonable price
-                        base_new_price = 30000
-                        depreciation_per_year = 1000
-                        clean_title_estimate = max(3000, base_new_price - (vehicle_age * depreciation_per_year))
-                        
-                        # Adjust for title status
-                        title_status_lower = (titleStatus or "clean").lower()
-                        if "rebuilt" in title_status_lower:
-                            clean_title_estimate *= 0.7
-                        elif "salvage" in title_status_lower:
-                            clean_title_estimate *= 0.5
-                        
-                        max_reasonable = clean_title_estimate * 1.1  # 110% max for 8+ year old
-                        
-                        if market_average > max_reasonable:
-                            print(f"[ENHANCED-ANALYZE] 🚫 REJECTING market_average ${market_average:,.0f} - exceeds max reasonable ${max_reasonable:,.0f} for {vehicle_year} vehicle")
-                            print(f"[ENHANCED-ANALYZE] 🚫 This is likely MSRP - forcing fallback calculation")
-                            # Force fallback by setting market_average to 0
-                            market_average = 0
-                            data_source = "rejected_msrp"
+                # REMOVED: Year mismatch rejection logic
+                # We now trust Google Search results and apply simple deductions in Pricing Strategy Agent
+                # No longer rejecting prices due to year mismatch or "too high" values
+                # Google Search is the source of truth - we only adjust, not reject
                 
                 print(f"[ENHANCED-ANALYZE] 📊 Market average: ${market_average:,.0f} (source: {data_source})")
+                print(f"[ENHANCED-ANALYZE] 📊 RAW Google Search price (before adjustments): ${market_average:,.0f}")
+                
+                # Show what Google actually found
+                price_range = market_prices.get("price_range", {})
+                if price_range.get("low") and price_range.get("high"):
+                    print(f"[ENHANCED-ANALYZE] 📊 Google Search found price range: ${price_range['low']:,} - ${price_range['high']:,}")
+                
+                search_query = market_prices.get("search_query", "")
+                if search_query:
+                    print(f"[ENHANCED-ANALYZE] 🔍 Google Search query used: {search_query}")
+                
+                trim_used = market_prices.get("trim_used", "")
+                if trim_used:
+                    print(f"[ENHANCED-ANALYZE] ✅ Trim included in search: {trim_used}")
+                else:
+                    print(f"[ENHANCED-ANALYZE] ⚠️  WARNING: Trim NOT included in search - may have gotten base model prices!")
+                
                 if data_source == "google_search_grounding":
                     prices_found = market_prices.get("prices_found", 0)
                     print(f"[ENHANCED-ANALYZE] ✅ REAL MARKET DATA: Found {prices_found} prices from Google Search")
@@ -980,8 +1258,18 @@ Return ONLY this JSON structure:
                     from app.agents.pricing_strategy_agent import PricingStrategyAgent
                     pricing_agent = PricingStrategyAgent()
                     
+                    # Ensure location is passed to pricing agent
+                    vehicle_data_with_location = {**listing_context}
+                    if not vehicle_data_with_location.get("location"):
+                        vehicle_data_with_location["location"] = "Detroit, MI"  # Default
+                    
+                    # Add title rebuild reason for damage severity assessment
+                    if titleRebuildReason:
+                        vehicle_data_with_location["title_rebuild_reason"] = titleRebuildReason
+                        print(f"[ENHANCED-ANALYZE] 📝 Title rebuild reason: {titleRebuildReason[:100]}...")
+                    
                     pricing_result = await pricing_agent.process({
-                        "vehicle_data": listing_context,
+                        "vehicle_data": vehicle_data_with_location,
                         "market_intelligence": market_intelligence_data,
                         "user_goals": "balanced"
                     })
@@ -991,49 +1279,33 @@ Return ONLY this JSON structure:
                         print(f"[ENHANCED-ANALYZE] ✅ Pricing strategy calculated")
                     
                     # Calculate price warnings - ChatGPT-style feedback based on REAL market data
+                    # NOTE: All adjustments are now done in Pricing Strategy Agent
+                    # We use the final adjusted price from pricing_strategy_data for comparisons
                     user_price = int(price.replace(",", "")) if price and price.replace(",", "").isdigit() else None
                     if user_price and market_average > 0:
-                        # Apply adjustments for title status, mileage, and condition
-                        # Google Search returns prices for clean-title vehicles, so we need to adjust
-                        adjusted_market_average = market_average
-                        adjustment_factors = []
+                        # Get the final adjusted price from pricing strategy (already includes all adjustments)
+                        if pricing_strategy_data and "pricing_strategy" in pricing_strategy_data:
+                            pricing_tiers = pricing_strategy_data["pricing_strategy"]
+                            market_average_for_comparison = pricing_tiers.get("adjusted_value", market_average)
+                            adjustment_factors = ["All adjustments shown in pricing breakdown"]
+                        else:
+                            # Fallback if pricing strategy not available
+                            market_average_for_comparison = round(market_average)
+                            adjustment_factors = []
                         
-                        # Title status adjustment
-                        if normalized_title_status == "rebuilt":
-                            adjusted_market_average *= 0.575  # Detroit: Rebuilt title = -38% to -47% reduction (avg -42.5%)
-                            adjustment_factors.append("rebuilt title (-38% to -47%)")
-                        elif normalized_title_status == "salvage":
-                            adjusted_market_average *= 0.5  # 50% reduction for salvage
-                            adjustment_factors.append("salvage title (-50%)")
-                        elif normalized_title_status not in ["clean", ""]:
-                            adjusted_market_average *= 0.7  # Default 30% for other non-clean titles
-                            adjustment_factors.append(f"{normalized_title_status} title (-30%)")
-                        
-                        # High mileage adjustment (over 100K miles)
-                        mileage_value = listing_context.get("mileage")
-                        reliability_tier = listing_context.get("reliability_tier") or get_reliability_tier(listing_context.get("make"))
-                        mileage_percent, mileage_label = calculate_mileage_penalty_percent(mileage_value, reliability_tier)
-                        if mileage_percent:
-                            adjusted_market_average *= (1 + mileage_percent)
-                            adjustment_factors.append(f"{mileage_label} ({mileage_percent*100:.0f}%)")
-                        
-                        # Damage/accident history adjustment (if mentioned in aboutVehicle)
-                        if aboutVehicle and isinstance(aboutVehicle, str) and any(word in aboutVehicle.lower() for word in ["damage", "accident", "repaired", "bumper", "collision"]):
-                            adjusted_market_average *= 0.95  # 5% reduction for damage history
-                            adjustment_factors.append("previous damage history (-5%)")
-                        
-                        # Use adjusted market average for comparisons
-                        market_average_for_comparison = round(adjusted_market_average)
-                        
-                        # Get price range from market data (also adjust the range)
-                        price_range = market_prices.get("price_range", {})
-                        original_low = price_range.get("low", market_average * 0.85)
-                        original_high = price_range.get("high", market_average * 1.15)
-                        
-                        # Adjust the range proportionally
-                        adjustment_ratio = adjusted_market_average / market_average
-                        market_low = round(original_low * adjustment_ratio)
-                        market_high = round(original_high * adjustment_ratio)
+                        # Get price range from pricing strategy (already adjusted) or market data
+                        if pricing_strategy_data and "pricing_strategy" in pricing_strategy_data:
+                            pricing_tiers = pricing_strategy_data["pricing_strategy"]
+                            # Use pricing tiers for range
+                            quick_price = pricing_tiers.get("quick_sale", {}).get("price", 0)
+                            premium_price = pricing_tiers.get("top_dollar", {}).get("price", 0)
+                            market_low = round(quick_price)
+                            market_high = round(premium_price)
+                        else:
+                            # Fallback to market data range
+                            price_range = market_prices.get("price_range", {})
+                            market_low = price_range.get("low", round(market_average * 0.85))
+                            market_high = price_range.get("high", round(market_average * 1.15))
                         
                         price_diff = user_price - market_average_for_comparison
                         price_diff_pct = (price_diff / market_average_for_comparison * 100) if market_average_for_comparison > 0 else 0
@@ -1074,20 +1346,41 @@ Return ONLY this JSON structure:
                             }
                         else:
                             # Price is above market range
-                            recommended_price = round(market_average_for_comparison * 1.05)  # 5% above adjusted market for premium
-                            price_warnings = {
-                                "type": "high",
-                                "message": f"💡 Price Above Market: Accorria found the market value, and your price of ${user_price:,.0f} is ${price_diff:,.0f} above market average (${market_average_for_comparison:,.0f}){adjustment_note}. We suggest ${recommended_price:,.0f} for better market fit, but you can keep your price if you prefer.",
-                                "market_average": market_average_for_comparison,
-                                "market_average_raw": market_average,  # Keep original for reference
-                                "market_range": {"low": market_low, "high": market_high},
-                                "price_difference": price_diff,
-                                "price_difference_percent": price_diff_pct,
-                                "recommended_price": recommended_price,
-                                "adjustment_factors": adjustment_factors,
-                                "recommendation": f"Accorria found the market value. Based on real-time market data adjusted for your vehicle's condition, we recommend pricing around ${recommended_price:,.0f} (${price_diff_pct:.1f}% above adjusted market). Your current price may take longer to sell.",
-                                "data_source": market_prices.get("data_source", "google_search")
-                            }
+                            # Check if price is only slightly above premium tier (within 15%)
+                            premium_price = market_high
+                            price_above_premium = user_price - premium_price
+                            price_above_premium_pct = (price_above_premium / premium_price * 100) if premium_price > 0 else 0
+                            
+                            if price_above_premium_pct <= 15:
+                                # Price is only slightly above premium - this is acceptable
+                                price_warnings = {
+                                    "type": "good",
+                                    "message": f"👍 Great pricing! Accorria found the market value, and your price of ${user_price:,.0f} is slightly above premium tier (${premium_price:,.0f}){adjustment_note}. This is reasonable for a well-maintained vehicle!",
+                                    "market_average": market_average_for_comparison,
+                                    "market_average_raw": market_average,
+                                    "market_range": {"low": market_low, "high": market_high},
+                                    "price_difference": price_diff,
+                                    "price_difference_percent": price_diff_pct,
+                                    "adjustment_factors": adjustment_factors,
+                                    "recommendation": f"Accorria found the market value. Your price is slightly above the premium tier, which is reasonable for a well-maintained vehicle. Premium tier is ${premium_price:,.0f}.",
+                                    "data_source": market_prices.get("data_source", "google_search")
+                                }
+                            else:
+                                # Price is significantly above premium - show warning
+                                recommended_price = round(market_average_for_comparison * 1.05)  # 5% above adjusted market for premium
+                                price_warnings = {
+                                    "type": "high",
+                                    "message": f"💡 Price Above Market: Accorria found the market value, and your price of ${user_price:,.0f} is ${price_diff:,.0f} above market average (${market_average_for_comparison:,.0f}){adjustment_note}. We suggest ${recommended_price:,.0f} for better market fit, but you can keep your price if you prefer.",
+                                    "market_average": market_average_for_comparison,
+                                    "market_average_raw": market_average,
+                                    "market_range": {"low": market_low, "high": market_high},
+                                    "price_difference": price_diff,
+                                    "price_difference_percent": price_diff_pct,
+                                    "recommended_price": recommended_price,
+                                    "adjustment_factors": adjustment_factors,
+                                    "recommendation": f"Accorria found the market value. Based on real-time market data adjusted for your vehicle's condition, we recommend pricing around ${recommended_price:,.0f} (${price_diff_pct:.1f}% above adjusted market). Your current price may take longer to sell.",
+                                    "data_source": market_prices.get("data_source", "google_search")
+                                }
                         
                         print(f"[ENHANCED-ANALYZE] ⚠️  Price validation: {price_warnings['type']}")
                         print(f"[ENHANCED-ANALYZE] 📊 Raw market data: ${market_average:,.0f} (clean title)")
@@ -1254,21 +1547,47 @@ CRITICAL INSTRUCTIONS:
 - If the detected vehicle is a "Charger Hellcat", mention the supercharged V8, 707+ horsepower, performance features
 - Include ALL features that Gemini Vision detected (AWD, performance features, etc.)
 - If it's a Hellcat, mention the supercharged V8, performance specs, track capabilities
-- If it's a Trailblazer, mention it's an SUV, not a performance sedan
+- If it's a Trailblazer, mention it's an SUV with available features
 - Trust the photo analysis over user input - photos don't lie
 
-CRITICAL: You MUST include ALL detected features in the listing. The features list is:
+CRITICAL: You MUST include ALL detected features in the listing.
+
+ALL AVAILABLE FEATURES TO INCLUDE (MUST USE ALL OF THESE - DO NOT SKIP ANY):
 {listing_context.get("features_list", [])}
 
-CRITICAL: If a VIN was decoded, you MUST include ALL NHTSA VIN attributes in the description:
+ADDITIONAL VIN ATTRIBUTES (include these too if not already in the list above):
 {listing_context.get("vin_attributes", [])}
 
-These VIN attributes are FACTUAL data from the NHTSA database and MUST be mentioned:
-- Drivetrain (AWD, FWD, RWD, 4WD)
-- Transmission type
-- Engine configuration (V6, V8, I4, etc.) with cylinders and displacement
-- Fuel type
-- Body style
+CRITICAL: Format features in organized, concise categories. DO NOT list all features in one long bullet list.
+
+CRITICAL INSTRUCTIONS:
+- The features_list above includes features detected from photos AND VIN extraction
+- If vin_attributes has features not in features_list, include those too
+- You MUST include ALL features - don't skip any, don't summarize, list them ALL
+- For a Tesla Model 3, you should see features like: Heated Seats, LED Headlights, Navigation System, Apple CarPlay, Adaptive Cruise Control, etc.
+- If those features are in the lists above, you MUST include them in the description
+- Organize them into categories below
+
+FEATURE FORMATTING RULES:
+1. **Organize features into these categories** (only show categories that have features):
+   - **Interior Features:** (heated seats, leather, premium materials, climate control)
+   - **Exterior Features:** (LED headlights, sunroof, power mirrors, alloy wheels)
+   - **Safety Features:** (backup camera, blind-spot monitoring, adaptive cruise control)
+   - **Technology Features:** (navigation, Apple CarPlay, touchscreen, Autopilot)
+   - **Comfort & Convenience:** (keyless entry, push-button start, power windows)
+   - **Performance:** (AWD, sport mode, electric motor)
+
+2. **Sort features alphabetically within each category** (A-Z order)
+
+3. **Limit to top 4-6 features per category** - prioritize the most valuable/desirable features
+
+4. **Use concise formatting:**
+   - Each category on its own line with emoji
+   - Features separated by commas or bullets
+   - Example: "🔧 Interior: Heated Seats, Leather, Premium Audio, Sunroof"
+
+5. **DO NOT** create one long "Features & Equipment" list with 20+ items
+6. **DO NOT** mention body style (sedan, SUV, etc.) - it's redundant
 
 If the features list is empty or minimal, you MUST still describe what you can see in the vehicle data:
 - If drivetrain is AWD/4WD, mention it
@@ -1276,15 +1595,27 @@ If the features list is empty or minimal, you MUST still describe what you can s
 - If any badges are seen, mention them
 - If roof rails, tinted windows, alloy wheels, or other visible features are mentioned in the vehicle data, include them
 
-Create an SEO-optimized listing for {platform} that:
-1. **MUST include ALL detected features from photo analysis** - list them clearly (e.g., "Features: 4x4, Tinted Windows, Roof Rails, Alloy Wheels, Radio/CD Player")
-2. Uses SEO best practices for {platform}
-3. Highlights unique selling points
-4. Includes relevant keywords naturally
-5. Is optimized for {platform}'s search algorithm
-6. Is compelling to human buyers
+CRITICAL: DO NOT include damage descriptions, scratches, bumper condition, or condition notes in the listing description.
+These are stored separately for AI/messenger context when buyers ask questions, but should NOT appear in public listings.
+Only include positive features and selling points.
 
-Format the response as a complete, ready-to-post listing for {platform} that prominently features all detected equipment and options."""
+Create an SEO-optimized listing for {platform} that:
+1. **Organizes features into concise categories** (Interior, Exterior, Safety, Technology, etc.) - NOT one long list
+2. **Sorts features alphabetically** within each category (A-Z order)
+3. **Limits to top 4-6 features per category** - prioritize most valuable features
+4. Uses SEO best practices for {platform}
+5. Highlights unique selling points
+6. Includes relevant keywords naturally
+7. Is optimized for {platform}'s search algorithm
+8. Is compelling to human buyers
+
+EXAMPLE FORMAT (use this structure):
+🔧 Interior Features: Heated Seats, Leather, Premium Audio, Sunroof
+🚗 Exterior Features: LED Headlights, Alloy Wheels, Power Folding Mirrors
+🛡️ Safety Features: Backup Camera, Blind-Spot Monitoring, Adaptive Cruise Control
+📱 Technology Features: Navigation System, Apple CarPlay, Touchscreen Display
+
+Format the response as a complete, ready-to-post listing for {platform} with organized, concise feature categories."""
             
             try:
                 if not openai_client:
@@ -1398,6 +1729,15 @@ Format the response as a complete, ready-to-post listing for {platform} that pro
             r'\bsets of keis\b': 'sets of keys',
             r'\bsets of kees\b': 'sets of keys',
             r'\bteo sets\b': 'two sets',
+            # Fix "So Dan" typo (should be "sedan" but user doesn't want body style mentioned)
+            r'\bSo Dan\b': '',
+            r'\bso dan\b': '',
+            r'\bSo dan\b': '',
+            r'\bso Dan\b': '',
+            # Remove body style mentions entirely (user requested)
+            r'\bsedan\b': '',
+            r'\bSedan\b': '',
+            r'\bSEDAN\b': '',
         }
         
         for pattern, replacement in spelling_fixes.items():

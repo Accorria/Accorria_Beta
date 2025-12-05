@@ -5,12 +5,10 @@ Stores OAuth2 tokens and connection data for each user's platform accounts
 
 from sqlalchemy import Column, String, DateTime, Text, Boolean, ForeignKey, JSON
 from sqlalchemy.dialects.postgresql import UUID, ARRAY
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from datetime import datetime
 import uuid
-
-Base = declarative_base()
+from app.core.database import Base
 
 class UserPlatformConnection(Base):
     """User platform connection model for storing OAuth2 tokens"""
