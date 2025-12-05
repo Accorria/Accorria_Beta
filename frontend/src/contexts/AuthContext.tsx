@@ -229,7 +229,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (!signUpData?.user) {
         console.error('❌ Sign up succeeded but no user object returned');
         setError('User account was not created. Please try again.');
-        return { error: { message: 'User account was not created' } as AuthError };
+        const authError: AuthError = {
+          message: 'User account was not created',
+          name: 'AuthError',
+          __isAuthError: true
+        } as AuthError;
+        return { error: authError };
       }
 
       console.log('✅ User created successfully:', signUpData.user.id);
@@ -249,7 +254,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Registration failed';
       setError(errorMessage);
-      return { error: { message: errorMessage } as AuthError };
+      // Create a proper AuthError object
+      const authError: AuthError = {
+        message: errorMessage,
+        name: 'AuthError',
+        __isAuthError: true
+      } as AuthError;
+      return { error: authError };
     } finally {
       setLoading(false);
     }
@@ -304,7 +315,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Login failed';
       setError(errorMessage);
-      return { error: { message: errorMessage } as AuthError };
+      // Create a proper AuthError object
+      const authError: AuthError = {
+        message: errorMessage,
+        name: 'AuthError',
+        __isAuthError: true
+      } as AuthError;
+      return { error: authError };
     } finally {
       setLoading(false);
     }
