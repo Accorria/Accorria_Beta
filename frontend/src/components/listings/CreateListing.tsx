@@ -145,6 +145,7 @@ interface AnalysisResult {
       local_market_adjustment: number;
       local_market_percent: number;
       final_adjusted_price: number;
+      raw_google_price?: number;
       trim_tier?: string;
       trim_tier_label?: string;
       trim_keywords?: string[];
