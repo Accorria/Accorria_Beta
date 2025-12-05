@@ -232,7 +232,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const authError: AuthError = {
           message: 'User account was not created',
           name: 'AuthError',
-          __isAuthError: true
+          __isAuthError: true,
+          code: 'signup_failed',
+          status: 400
         } as AuthError;
         return { error: authError };
       }
@@ -319,7 +321,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const authError: AuthError = {
         message: errorMessage,
         name: 'AuthError',
-        __isAuthError: true
+        __isAuthError: true,
+        code: 'login_failed',
+        status: 500
       } as AuthError;
       return { error: authError };
     } finally {
