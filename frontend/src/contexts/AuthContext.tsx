@@ -138,7 +138,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           email: session?.user?.email
         });
 
-        // Handle token refresh errors
+        // Handle auth state changes
         if (event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN') {
           setSession(session);
           setUser(session?.user ?? null);
@@ -147,11 +147,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setSession(null);
           setUser(null);
           setIsEmailVerified(false);
-        } else if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
+        } else if (event === 'USER_UPDATED') {
           setSession(session);
           setUser(session?.user ?? null);
           setIsEmailVerified(session?.user?.email_confirmed_at ? true : false);
         } else {
+          // Handle all other events (INITIAL_SESSION, PASSWORD_RECOVERY, etc.)
           setSession(session);
           setUser(session?.user ?? null);
           setIsEmailVerified(session?.user?.email_confirmed_at ? true : false);
