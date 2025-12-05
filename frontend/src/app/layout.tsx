@@ -20,6 +20,11 @@ export const metadata: Metadata = {
   title: 'Accorria – #1 Trust-Native Listing Platform',
   description:
     'The future of selling starts here. Secure listings, instant escrow, and AI-powered posting for cars, homes, and high-value items. Upload photos, we\'ll flip the rest.',
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 5,
+  },
   icons: {
     icon: [
       { url: '/favicon.ico', sizes: 'any' },

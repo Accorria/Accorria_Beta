@@ -8,7 +8,7 @@ interface WelcomeScreenProps {
 
 export default function WelcomeScreen({ onNext }: WelcomeScreenProps) {
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center bg-white px-6">
+    <div className="min-h-full w-full flex flex-col items-center justify-center bg-white px-6 py-8">
       <div className="max-w-md w-full text-center space-y-8">
         {/* Hero Icon/Logo */}
         <div className="mb-8">

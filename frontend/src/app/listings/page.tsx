@@ -119,27 +119,27 @@ export default function ListingsPage() {
       </main>
 
       {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-4 py-2">
-        <div className="flex justify-around items-center">
-          <Link href="/dashboard" className="flex flex-col items-center py-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400">
-            <span className="text-2xl">🏠</span>
-            <span className="text-xs mt-1">Home</span>
+      <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-2 sm:px-4 py-2 overflow-x-auto">
+        <div className="flex justify-around items-center min-w-max">
+          <Link href="/dashboard" className="flex flex-col items-center py-2 px-1 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 min-w-[60px]">
+            <span className="text-xl sm:text-2xl">🏠</span>
+            <span className="text-[10px] sm:text-xs mt-1 whitespace-nowrap">Home</span>
           </Link>
-          <Link href="/listings" className="flex flex-col items-center py-2 text-blue-600 dark:text-blue-400">
-            <span className="text-2xl">🚗</span>
-            <span className="text-xs mt-1">Listings</span>
+          <Link href="/listings" className="flex flex-col items-center py-2 px-1 text-blue-600 dark:text-blue-400 min-w-[60px]">
+            <span className="text-xl sm:text-2xl">🚗</span>
+            <span className="text-[10px] sm:text-xs mt-1 whitespace-nowrap">Listings</span>
           </Link>
-          <Link href="/messages" className="flex flex-col items-center py-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400">
-            <span className="text-2xl">💬</span>
-            <span className="text-xs mt-1">Messages</span>
+          <Link href="/messages" className="flex flex-col items-center py-2 px-1 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 min-w-[60px]">
+            <span className="text-xl sm:text-2xl">💬</span>
+            <span className="text-[10px] sm:text-xs mt-1 whitespace-nowrap">Messages</span>
           </Link>
-          <Link href="/analytics" className="flex flex-col items-center py-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400">
-            <span className="text-2xl">📊</span>
-            <span className="text-xs mt-1">Analytics</span>
+          <Link href="/analytics" className="flex flex-col items-center py-2 px-1 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 min-w-[60px]">
+            <span className="text-xl sm:text-2xl">📊</span>
+            <span className="text-[10px] sm:text-xs mt-1 whitespace-nowrap">Analytics</span>
           </Link>
-          <Link href="/market-intel" className="flex flex-col items-center py-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400">
-            <span className="text-2xl">🔍</span>
-            <span className="text-xs mt-1">Market Intel</span>
+          <Link href="/market-intel" className="flex flex-col items-center py-2 px-1 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 min-w-[60px]">
+            <span className="text-xl sm:text-2xl">🔍</span>
+            <span className="text-[10px] sm:text-xs mt-1 whitespace-nowrap">Intel</span>
           </Link>
         </div>
       </nav>

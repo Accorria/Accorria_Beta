@@ -49,7 +49,7 @@ export default function SellingExperienceScreen({ initialData, onNext, onBack }:
   };
 
   return (
-    <div className="h-full w-full flex flex-col bg-white">
+    <div className="min-h-full w-full flex flex-col bg-white">
       {/* Top Center Header Banner */}
       <div className="w-full bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200 px-6 py-6">
         <div className="max-w-2xl mx-auto">

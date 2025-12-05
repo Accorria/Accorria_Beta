@@ -306,22 +306,22 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
       {/* Content */}
       <div className="p-4 pt-6">
           {/* Title and Price */}
-          <div className="flex justify-between items-start mb-2">
-            <div className="flex-1">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-2">
+            <div className="flex-1 min-w-0">
               <Link href={`/listings/${listing.id}`} className="hover:underline">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white hover:text-blue-600 transition-colors">
+                <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white hover:text-blue-600 transition-colors break-words">
                   {listing.title}
                 </h3>
               </Link>
-              <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+              <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1">
                 {listing.mileage} miles • {listing.titleStatus} title
               </div>
             </div>
-            <div className="text-right">
-              <div className="text-xl font-bold text-green-600">
+            <div className="text-left sm:text-right flex-shrink-0">
+              <div className="text-lg sm:text-xl font-bold text-green-600">
                 ${listing.price.toLocaleString()}
               </div>
-              <div className="text-sm text-gray-500 dark:text-gray-400">
+              <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
                 {formatDate(listing.postedAt)}
               </div>
             </div>
@@ -404,7 +404,7 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
                 )}
               </div>
             </div>
-            <div className="flex flex-wrap gap-2 items-center">
+            <div className="flex flex-wrap gap-1.5 sm:gap-2 items-center">
               {listing.platforms && listing.platforms.length > 0 ? (
                 listing.platforms.map((platform, index) => {
                   const platformInfo = {
@@ -426,7 +426,7 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
                     );
                   }
                   return (
-                    <span key={index} className={`text-xs px-2 py-1 rounded-full ${info.color} whitespace-nowrap`}>
+                    <span key={index} className={`text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full ${info.color} whitespace-nowrap`}>
                       {info.icon} {info.name}
                     </span>
                   );
@@ -459,7 +459,7 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
         {/* Action Buttons */}
         <div className="mt-4 space-y-3">
           {/* Primary Actions */}
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-2 sm:gap-3">
             <button 
               onClick={() => {
                 const newMessages = (listing.messages || 0) + 1;
@@ -611,8 +611,8 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
 
       {/* Sale Form Modal */}
       {showSaleForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md my-4">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-gray-900 dark:text-white">
                 🎉 Car Sold!
@@ -706,8 +706,8 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
 
       {/* Edit Form Modal */}
       {showEditForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto my-4">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-gray-900 dark:text-white">
                 ✏️ Edit Listing
@@ -832,8 +832,8 @@ export default function DashboardListing({ listing }: DashboardListingProps) {
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-[9999] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md relative">
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-[9999] flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md relative my-4">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-gray-900 dark:text-white">
                 🗑️ Delete Listing

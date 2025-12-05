@@ -78,9 +78,9 @@ export default function Home() {
     <div className="min-h-screen bg-white" suppressHydrationWarning={true}>
       {/* Modern Navigation */}
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100">
-        <nav className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <nav className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 overflow-x-hidden">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
+            <div className="flex items-center flex-shrink-0">
               <Image 
                 src="/LogoinBLUEONEword.png" 
                 alt="Accorria" 
@@ -91,23 +91,23 @@ export default function Home() {
               />
             </div>
             
-            <div className="hidden md:flex items-center space-x-8">
-              <Link href="/about" className="text-gray-600 hover:text-gray-900 text-sm font-medium">About</Link>
-              <Link href="/how-it-works" className="text-gray-600 hover:text-gray-900 text-sm font-medium">How it works</Link>
-              <Link href="/demo" className="text-gray-600 hover:text-gray-900 text-sm font-medium">Demo</Link>
+            <div className="hidden md:flex items-center space-x-8 flex-shrink-0">
+              <Link href="/about" className="text-gray-600 hover:text-gray-900 text-sm font-medium whitespace-nowrap">About</Link>
+              <Link href="/how-it-works" className="text-gray-600 hover:text-gray-900 text-sm font-medium whitespace-nowrap">How it works</Link>
+              <Link href="/demo" className="text-gray-600 hover:text-gray-900 text-sm font-medium whitespace-nowrap">Demo</Link>
             </div>
             
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0">
               {user ? (
-                <Link href="/dashboard" className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
+                <Link href="/dashboard" className="bg-blue-600 text-white px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium hover:bg-blue-700 transition-colors whitespace-nowrap">
                   Dashboard
                 </Link>
               ) : (
                 <>
-                  <Link href="/login" className="text-gray-600 hover:text-gray-900 text-sm font-medium">
+                  <Link href="/login" className="text-gray-600 hover:text-gray-900 text-xs sm:text-sm font-medium whitespace-nowrap hidden sm:block">
                     Sign in
                   </Link>
-                  <Link href="/register" className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
+                  <Link href="/register" className="bg-blue-600 text-white px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium hover:bg-blue-700 transition-colors whitespace-nowrap">
                     Get started
                   </Link>
                 </>
@@ -144,32 +144,32 @@ export default function Home() {
             </p>
             
             {/* CTA Buttons */}
-            <div className="mt-10 flex items-center justify-center gap-x-6">
+            <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-x-6 px-4">
               <Link 
                 href="/register" 
-                className="rounded-md bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 transition-colors"
+                className="w-full sm:w-auto rounded-md bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 transition-colors text-center"
               >
                 Get started free
               </Link>
               <Link 
                 href="/demo" 
-                className="text-sm font-semibold leading-6 text-gray-900 hover:text-blue-600 transition-colors flex items-center gap-2"
+                className="w-full sm:w-auto text-sm font-semibold leading-6 text-gray-900 hover:text-blue-600 transition-colors flex items-center justify-center gap-2"
               >
                 Watch demo <ArrowRight />
               </Link>
             </div>
             
             {/* Trust Indicators */}
-            <div className="mt-16 flex items-center justify-center gap-x-8 text-sm text-gray-500">
-              <div className="flex items-center gap-2">
+            <div className="mt-16 flex flex-wrap items-center justify-center gap-4 sm:gap-x-8 text-sm text-gray-500 px-4">
+              <div className="flex items-center gap-2 whitespace-nowrap">
                 <CheckIcon />
                 <span>No credit card required</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 whitespace-nowrap">
                 <CheckIcon />
                 <span>Setup in 2 minutes</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 whitespace-nowrap">
                 <CheckIcon />
                 <span>Cancel anytime</span>
               </div>
@@ -385,16 +385,16 @@ export default function Home() {
             <p className="mt-4 text-lg text-blue-100">
               Join hundreds of sellers who are already using Accorria to get better results
             </p>
-            <div className="mt-8 flex items-center justify-center gap-x-6">
+            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-x-6 px-4">
               <Link 
                 href="/register" 
-                className="rounded-md bg-white px-6 py-3 text-sm font-semibold text-blue-600 shadow-sm hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white transition-colors"
+                className="w-full sm:w-auto rounded-md bg-white px-6 py-3 text-sm font-semibold text-blue-600 shadow-sm hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white transition-colors text-center"
               >
                 Get started free
               </Link>
               <Link 
                 href="/demo" 
-                className="text-sm font-semibold leading-6 text-white hover:text-blue-100 transition-colors"
+                className="w-full sm:w-auto text-sm font-semibold leading-6 text-white hover:text-blue-100 transition-colors flex items-center justify-center gap-2"
               >
                 Watch demo <ArrowRight />
               </Link>
