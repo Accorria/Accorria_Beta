@@ -295,7 +295,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           errorMessage = 'Please confirm your email to log in. Check your inbox for the confirmation link.';
         }
         setError(errorMessage);
-        return { error: { ...error, message: errorMessage } };
+        // Return the error as-is (it's already an AuthError from Supabase)
+        return { error };
       }
 
       return { error: null };
