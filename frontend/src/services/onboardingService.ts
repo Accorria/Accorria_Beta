@@ -42,7 +42,7 @@ export class OnboardingService {
 
       if (error) {
         // Handle 406 (Not Acceptable) - might be RLS or API format issue
-        if (error.code === 'PGRST116' || error.status === 406 || error.message?.includes('406')) {
+        if (error.code === 'PGRST116' || error.message?.includes('406')) {
           console.log('Profile does not exist yet or RLS issue, onboarding not complete');
           return false;
         }
