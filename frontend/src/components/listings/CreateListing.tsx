@@ -482,7 +482,7 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
               // If both city and zip exist in profile, validate they still match
               if (profile.city && profile.zip_code) {
                 try {
-                  const { default: onboardingService } = await import('@/services/onboardingService');
+                  const { onboardingService } = await import('@/services/onboardingService');
                   const zipCity = await onboardingService.getCityFromZip(profile.zip_code);
                   
                   if (zipCity && zipCity.toLowerCase().trim() === profile.city.toLowerCase().trim()) {
@@ -3708,7 +3708,7 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                     // VALIDATION: If zip is already set, validate city matches zip
                     if (value && carDetails.zipCode && carDetails.zipCode.length === 5) {
                       try {
-                        const { default: onboardingService } = await import('@/services/onboardingService');
+                        const { onboardingService } = await import('@/services/onboardingService');
                         const zipCity = await onboardingService.getCityFromZip(carDetails.zipCode);
                         
                         if (zipCity) {
@@ -3763,7 +3763,7 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                     // Final validation when user leaves city field
                     if (carDetails.city && carDetails.zipCode && carDetails.zipCode.length === 5) {
                       try {
-                        const { default: onboardingService } = await import('@/services/onboardingService');
+                        const { onboardingService } = await import('@/services/onboardingService');
                         const zipCity = await onboardingService.getCityFromZip(carDetails.zipCode);
                         
                         if (zipCity) {
@@ -3829,7 +3829,7 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                     // VALIDATION: When zip is entered, lookup city and validate it matches
                     if (value.length === 5 && carDetails.city) {
                       try {
-                        const { default: onboardingService } = await import('@/services/onboardingService');
+                        const { onboardingService } = await import('@/services/onboardingService');
                         const zipCity = await onboardingService.getCityFromZip(value);
                         
                         if (zipCity) {
@@ -3864,7 +3864,7 @@ export default function CreateListing({ onClose, onListingCreated }: CreateListi
                     // Final validation when user leaves zip field
                     if (carDetails.zipCode && carDetails.zipCode.length === 5 && carDetails.city) {
                       try {
-                        const { default: onboardingService } = await import('@/services/onboardingService');
+                        const { onboardingService } = await import('@/services/onboardingService');
                         const zipCity = await onboardingService.getCityFromZip(carDetails.zipCode);
                         
                         if (zipCity) {
