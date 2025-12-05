@@ -229,13 +229,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (!signUpData?.user) {
         console.error('❌ Sign up succeeded but no user object returned');
         setError('User account was not created. Please try again.');
-        const authError: AuthError = {
+        // Create AuthError by casting through unknown (required because __isAuthError is protected)
+        const authError = {
           message: 'User account was not created',
           name: 'AuthError',
           __isAuthError: true,
           code: 'signup_failed',
           status: 400
-        } as AuthError;
+        } as unknown as AuthError;
         return { error: authError };
       }
 
@@ -256,12 +257,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Registration failed';
       setError(errorMessage);
-      // Create a proper AuthError object
-      const authError: AuthError = {
+      // Create a proper AuthError object (cast through unknown because __isAuthError is protected)
+      const authError = {
         message: errorMessage,
         name: 'AuthError',
-        __isAuthError: true
-      } as AuthError;
+        __isAuthError: true,
+        code: 'registration_failed',
+        status: 500
+      } as unknown as AuthError;
       return { error: authError };
     } finally {
       setLoading(false);
@@ -317,14 +320,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Login failed';
       setError(errorMessage);
-      // Create a proper AuthError object
-      const authError: AuthError = {
+      // Create a proper AuthError object (cast through unknown because __isAuthError is protected)
+      const authError = {
         message: errorMessage,
         name: 'AuthError',
         __isAuthError: true,
         code: 'login_failed',
         status: 500
-      } as AuthError;
+      } as unknown as AuthError;
       return { error: authError };
     } finally {
       setLoading(false);
