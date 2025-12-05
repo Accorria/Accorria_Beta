@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
+import { supabase } from '@/utils/supabase';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -26,13 +27,14 @@ export default function LoginPage() {
       if (result.error) {
         setError(result.error.message);
       } else {
-        // Check onboarding status before redirecting
+        // Check onboarding status after successful sign-in
         try {
           const { onboardingService } = await import('@/services/onboardingService');
-          const user = result.user;
-          if (user) {
-            const isComplete = await onboardingService.getOnboardingStatus(user.id);
-            console.log('Login: Onboarding status:', { userId: user.id, isComplete });
+          // Get session directly from Supabase after sign-in
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.user) {
+            const isComplete = await onboardingService.getOnboardingStatus(session.user.id);
+            console.log('Login: Onboarding status:', { userId: session.user.id, isComplete });
             if (!isComplete) {
               console.log('Login: Redirecting to onboarding');
               router.push('/onboarding');
