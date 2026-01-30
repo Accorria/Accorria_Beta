@@ -5,8 +5,8 @@ import { useRouter } from 'next/navigation';
 import CRMSidebar from '@/components/CRM/CRMSidebar';
 import CRMHeader from '@/components/CRM/CRMHeader';
 
-// SECURITY: Admin password should be set via environment variable
-// Never hardcode passwords in production code
+// SECURITY: Admin password from env only; never hardcode.
+// Note: NEXT_PUBLIC_* is in the client bundle—use a strong password and rotate if exposed.
 const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD;
 if (!ADMIN_PASSWORD) {
   console.warn('⚠️ ADMIN_PASSWORD not set in environment variables. Admin access is disabled.');

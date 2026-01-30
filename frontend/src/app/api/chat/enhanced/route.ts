@@ -12,11 +12,7 @@ export async function POST(request: NextRequest) {
     // Call OpenAI directly from frontend (bypassing backend timeout issues)
     const openai = require('openai');
     
-    // Debug: Check if API key is available
     const apiKey = process.env.OPENAI_API_KEY;
-    console.log('DEBUG: API Key available:', !!apiKey);
-    console.log('DEBUG: API Key starts with:', apiKey ? apiKey.substring(0, 10) + '...' : 'NOT_FOUND');
-    
     if (!apiKey) {
       throw new Error('OpenAI API key not found in environment variables');
     }

@@ -145,6 +145,14 @@ BETA_SIGNUP_ERROR_ANALYSIS.md
 *.password
 .audit_*_password.txt
 
+# Local/copy files that might contain real keys (never commit)
+google-forms-integration-local.js
+*-with-keys.js
+*credentials*.json
+*secrets*.json
+*secrets*.yaml
+*secrets*.yml
+
 # Large binary files
 *.tar.gz
 google-cloud-cli-*.tar.gz

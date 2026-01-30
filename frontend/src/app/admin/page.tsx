@@ -238,6 +238,16 @@ export default function AdminDashboard() {
               </div>
             </Link>
             
+            <Link href="/admin/activity" className="block w-full text-left p-3 bg-teal-50 hover:bg-teal-100 rounded-lg transition-colors">
+              <div className="flex items-center">
+                <span className="text-teal-600 mr-3">📋</span>
+                <div>
+                  <p className="text-sm font-medium text-gray-900">Activity / LOI</p>
+                  <p className="text-xs text-gray-500">Logins, vehicle search, export</p>
+                </div>
+              </div>
+            </Link>
+            
             <Link href="/admin/settings" className="block w-full text-left p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors">
               <div className="flex items-center">
                 <span className="text-gray-600 mr-3">⚙️</span>
@@ -312,31 +322,72 @@ export default function AdminDashboard() {
             </div>
           </div>
         </Link>
+
+        <Link href="/admin/activity" className="group">
+          <div className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <div className="w-8 h-8 bg-teal-100 rounded-lg flex items-center justify-center">
+                  <span className="text-teal-600 text-lg">📋</span>
+                </div>
+              </div>
+              <div className="ml-4">
+                <h3 className="text-lg font-medium text-gray-900 group-hover:text-teal-600">
+                  Activity / LOI
+                </h3>
+                <p className="text-sm text-gray-500">
+                  Logins, vehicle searches, letter-of-intent tracking
+                </p>
+              </div>
+            </div>
+          </div>
+        </Link>
       </div>
 
-      {/* System Status */}
+      {/* Admin Status: what's live vs mock */}
       <div className="bg-white shadow rounded-lg p-6">
-        <h3 className="text-lg font-medium text-gray-900 mb-4">System Status</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="flex items-center">
-            <div className="w-3 h-3 bg-green-500 rounded-full mr-3"></div>
+        <h3 className="text-lg font-medium text-gray-900 mb-4">Admin Status</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
+            <span className="text-green-600 text-lg">✓</span>
             <div>
-              <p className="text-sm font-medium text-gray-900">Google Forms Integration</p>
-              <p className="text-xs text-gray-500">Active and capturing leads</p>
+              <p className="text-sm font-medium text-gray-900">Leads</p>
+              <p className="text-xs text-gray-500">Supabase · Full CRUD</p>
             </div>
           </div>
-          <div className="flex items-center">
-            <div className="w-3 h-3 bg-green-500 rounded-full mr-3"></div>
+          <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
+            <span className="text-green-600 text-lg">✓</span>
             <div>
-              <p className="text-sm font-medium text-gray-900">SendGrid Email</p>
-              <p className="text-xs text-gray-500">Sending notifications</p>
+              <p className="text-sm font-medium text-gray-900">Beta Signups</p>
+              <p className="text-xs text-gray-500">Supabase · Export</p>
             </div>
           </div>
-          <div className="flex items-center">
-            <div className="w-3 h-3 bg-green-500 rounded-full mr-3"></div>
+          <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
+            <span className="text-green-600 text-lg">✓</span>
             <div>
-              <p className="text-sm font-medium text-gray-900">Database</p>
-              <p className="text-xs text-gray-500">Storing lead data</p>
+              <p className="text-sm font-medium text-gray-900">Activity / LOI</p>
+              <p className="text-xs text-gray-500">Logins, vehicle search · Export</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
+            <span className="text-green-600 text-lg">✓</span>
+            <div>
+              <p className="text-sm font-medium text-gray-900">Analytics</p>
+              <p className="text-xs text-gray-500">Lead-based metrics</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 p-3 bg-amber-50 rounded-lg">
+            <span className="text-amber-600 text-lg">○</span>
+            <div>
+              <p className="text-sm font-medium text-gray-900">Email Campaigns</p>
+              <p className="text-xs text-gray-500">Mock data · No send</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 p-3 bg-amber-50 rounded-lg">
+            <span className="text-amber-600 text-lg">○</span>
+            <div>
+              <p className="text-sm font-medium text-gray-900">Settings</p>
+              <p className="text-xs text-gray-500">UI only · Not persisted</p>
             </div>
           </div>
         </div>

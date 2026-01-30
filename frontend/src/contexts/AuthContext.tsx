@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/utils/supabase';
 import { User, Session, AuthError } from '@supabase/supabase-js';
 import { getAppUrl, getHomeUrl, getBaseUrl } from '@/utils/urls';
+import { logActivity, getUtmFromUrl } from '@/utils/activityLogger';
 
 interface AuthContextType {
   user: User | null;
@@ -143,6 +144,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setSession(session);
           setUser(session?.user ?? null);
           setIsEmailVerified(session?.user?.email_confirmed_at ? true : false);
+          if (event === 'SIGNED_IN' && session?.user) {
+            const utm = getUtmFromUrl();
+            logActivity({
+              action_type: 'login',
+              user_id: session.user.id,
+              email: session.user.email ?? undefined,
+              ...utm,
+            });
+          }
         } else if (event === 'SIGNED_OUT') {
           setSession(null);
           setUser(null);
@@ -169,8 +179,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setLoading(true);
       setError(null);
 
-      // Simple dev login - use "user" as email and "register" as password
-      if (email === 'user' && password === 'register') {
+      // Dev-only backdoor: never enabled in production
+      if (process.env.NODE_ENV === 'development' && email === 'user' && password === 'register') {
         const mockUser: User = {
           id: '00000000-0000-0000-0000-000000000123',
           email: 'demo@accorria.com',
@@ -185,8 +195,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             phone: phone || ''
           }
         };
-        
-          setUser(mockUser as User);
+        setUser(mockUser as User);
         setIsEmailVerified(true);
         setLoading(false);
         return { error: null };
@@ -276,8 +285,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setLoading(true);
       setError(null);
 
-      // Simple dev login - use "user" as email and "register" as password
-      if (email === 'user' && password === 'register') {
+      // Dev-only backdoor: never enabled in production
+      if (process.env.NODE_ENV === 'development' && email === 'user' && password === 'register') {
         const mockUser: User = {
           id: '00000000-0000-0000-0000-000000000123',
           email: 'demo@accorria.com',
@@ -291,8 +300,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             full_name: 'Demo User'
           }
         };
-        
-          setUser(mockUser as User);
+        setUser(mockUser as User);
         setIsEmailVerified(true);
         setLoading(false);
         return { error: null };

@@ -38,8 +38,8 @@ export const SupabaseTest: React.FC = () => {
         <p className="text-sm text-red-600">Error: {error}</p>
       )}
       <div className="text-xs text-gray-500 mt-2">
-        <p>URL: {process.env.NEXT_PUBLIC_SUPABASE_URL}</p>
-        <p>Key: {process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.substring(0, 20)}...</p>
+        <p>URL: {process.env.NODE_ENV === 'development' ? process.env.NEXT_PUBLIC_SUPABASE_URL : '(hidden in production)'}</p>
+        <p>Anon key: {process.env.NODE_ENV === 'development' ? (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'Set' : 'Not set') : '(never expose in UI)'}</p>
       </div>
     </div>
   );

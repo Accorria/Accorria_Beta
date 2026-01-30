@@ -7,7 +7,7 @@ import path from 'path';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, role, source, focus } = body;
+    const { email, role, source, focus, utm_source: bodyUtmSource, utm_medium: bodyUtmMedium, utm_campaign: bodyUtmCampaign } = body;
 
     // Validate required fields
     if (!email || !role || !source) {
@@ -138,21 +138,21 @@ export async function POST(request: NextRequest) {
     const userAgent = request.headers.get('user-agent') || 'unknown';
     const referrer = request.headers.get('referer') || 'unknown';
 
-    // Extract UTM parameters from referrer if present
-    let utmSource = null;
-    let utmMedium = null;
-    let utmCampaign = null;
-    
-    try {
-      if (referrer && referrer !== 'unknown') {
-        const url = new URL(referrer);
-        utmSource = url.searchParams.get('utm_source') || null;
-        utmMedium = url.searchParams.get('utm_medium') || null;
-        utmCampaign = url.searchParams.get('utm_campaign') || null;
+    // UTM: prefer request body (e.g. from LOI link), then referrer URL
+    let utmSource: string | null = bodyUtmSource ?? null;
+    let utmMedium: string | null = bodyUtmMedium ?? null;
+    let utmCampaign: string | null = bodyUtmCampaign ?? null;
+    if (utmSource == null && utmMedium == null && utmCampaign == null) {
+      try {
+        if (referrer && referrer !== 'unknown') {
+          const url = new URL(referrer);
+          utmSource = url.searchParams.get('utm_source') || null;
+          utmMedium = url.searchParams.get('utm_medium') || null;
+          utmCampaign = url.searchParams.get('utm_campaign') || null;
+        }
+      } catch {
+        // Invalid URL, use null values
       }
-    } catch {
-      // Invalid URL, use null values
-      console.log('Invalid referrer URL:', referrer);
     }
 
     // Insert into database

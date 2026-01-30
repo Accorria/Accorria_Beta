@@ -26,6 +26,18 @@ const CRMSidebar: React.FC<CRMSidebarProps> = ({ isOpen, onToggle }) => {
       current: pathname === '/admin/leads'
     },
     {
+      name: 'Beta Signups',
+      href: '/admin/beta-signups',
+      icon: '📝',
+      current: pathname === '/admin/beta-signups'
+    },
+    {
+      name: 'Activity / LOI',
+      href: '/admin/activity',
+      icon: '📋',
+      current: pathname === '/admin/activity'
+    },
+    {
       name: 'Analytics',
       href: '/admin/analytics',
       icon: '📈',

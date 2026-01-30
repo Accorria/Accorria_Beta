@@ -5,7 +5,15 @@ import Link from 'next/link';
 import Image from 'next/image';
 
 export default function BetaSignup() {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    email: string;
+    role: string;
+    source: string;
+    focus: string;
+    utm_source?: string;
+    utm_medium?: string;
+    utm_campaign?: string;
+  }>({
     email: '',
     role: '',
     source: '',
@@ -14,7 +22,7 @@ export default function BetaSignup() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
 
-  // Parse URL parameters on component mount
+  // Parse URL parameters on component mount (including UTM for LOI / letter of intent tracking)
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search);
@@ -24,6 +32,9 @@ export default function BetaSignup() {
       const focus = urlParams.get('focus');
       const success = urlParams.get('success');
       const duplicate = urlParams.get('duplicate');
+      const utm_source = urlParams.get('utm_source');
+      const utm_medium = urlParams.get('utm_medium');
+      const utm_campaign = urlParams.get('utm_campaign');
       
       // If redirected from homepage with success, show success page
       if (success === 'true') {
@@ -31,13 +42,18 @@ export default function BetaSignup() {
         return;
       }
       
-      if (email || role || source || focus) {
+      const hasPrefill = email || role || source || focus;
+      const hasUtm = utm_source || utm_medium || utm_campaign;
+      if (hasPrefill || hasUtm) {
         setFormData(prev => ({
           ...prev,
-          email: email || prev.email,
-          role: role || prev.role,
-          source: source || prev.source,
-          focus: focus || prev.focus
+          ...(email && { email }),
+          ...(role && { role }),
+          ...(source && { source }),
+          ...(focus && { focus }),
+          ...(utm_source && { utm_source }),
+          ...(utm_medium && { utm_medium }),
+          ...(utm_campaign && { utm_campaign }),
         }));
       }
     }
@@ -50,12 +66,22 @@ export default function BetaSignup() {
     console.log('Submitting form data:', formData);
     
     try {
+      const payload: Record<string, string> = {
+        email: formData.email,
+        role: formData.role,
+        source: formData.source,
+        focus: formData.focus,
+      };
+      if (formData.utm_source) payload.utm_source = formData.utm_source;
+      if (formData.utm_medium) payload.utm_medium = formData.utm_medium;
+      if (formData.utm_campaign) payload.utm_campaign = formData.utm_campaign;
+
       const response = await fetch('/api/beta-signup', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
 
       console.log('Response status:', response.status);

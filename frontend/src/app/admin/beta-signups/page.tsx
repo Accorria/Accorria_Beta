@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { supabase } from '@/utils/supabase';
 import QRCodeGenerator from '@/components/QRCodeGenerator';
 
 interface BetaSignup {
@@ -13,6 +12,9 @@ interface BetaSignup {
   status: string;
   created_at: string;
   updated_at: string;
+  utm_source?: string | null;
+  utm_medium?: string | null;
+  utm_campaign?: string | null;
 }
 
 interface SignupStats {
@@ -57,32 +59,32 @@ export default function BetaSignupsAdmin() {
 
   const updateStatus = async (id: string, newStatus: string) => {
     try {
-      const { error } = await supabase
-        .from('beta_signups')
-        .update({ 
-          status: newStatus,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', id);
-
-      if (error) throw error;
-      
-      // Refresh data
+      const response = await fetch(`/api/admin/beta-signups/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to update');
+      }
       await fetchSignups();
     } catch (err) {
       console.error('Error updating status:', err);
-      alert('Failed to update status');
+      alert(err instanceof Error ? err.message : 'Failed to update status');
     }
   };
 
   const exportCSV = () => {
-    const headers = ['Email', 'Role', 'Source', 'Focus', 'Status', 'Created At'];
+    const headers = ['Email', 'Role', 'Source', 'UTM Source', 'UTM Campaign', 'Focus', 'Status', 'Created At'];
     const csvContent = [
       headers.join(','),
       ...signups.map(signup => [
         signup.email,
         signup.role,
         signup.source,
+        signup.utm_source ?? '',
+        signup.utm_campaign ?? '',
         signup.focus,
         signup.status,
         new Date(signup.created_at).toLocaleDateString()
@@ -231,6 +233,9 @@ export default function BetaSignupsAdmin() {
                     Source
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    UTM
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Focus
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -255,6 +260,14 @@ export default function BetaSignupsAdmin() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {signup.source}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {signup.utm_source ? (
+                        <span className="inline-flex px-2 py-0.5 rounded bg-blue-100 text-blue-800 text-xs">
+                          {signup.utm_source}
+                          {signup.utm_campaign ? ` · ${signup.utm_campaign}` : ''}
+                        </span>
+                      ) : '—'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {signup.focus}

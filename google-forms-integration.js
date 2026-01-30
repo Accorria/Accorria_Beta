@@ -1,14 +1,17 @@
 /**
  * Google Apps Script to integrate Google Forms with Accorria CRM
  * This script automatically sends form submissions to your CRM API
+ *
+ * SECURITY: Never commit this file with real SENDGRID_API_KEY or other secrets.
+ * Use placeholders only in repo; add real keys only in Google Apps Script (Script Properties).
  */
 
 // Configuration - Using your live Vercel deployment
 const CRM_API_URL = 'https://accorria.com/api/leads'; // Your live Vercel deployment
 const LOCAL_CRM_URL = 'http://localhost:3002/api/leads'; // For local testing (not used by Google Apps Script)
 
-// SendGrid Configuration
-const SENDGRID_API_KEY = 'YOUR_SENDGRID_API_KEY_HERE'; // Replace with your actual SendGrid API key
+// SendGrid Configuration - use placeholder in repo; set real key in Apps Script Properties only
+const SENDGRID_API_KEY = 'YOUR_SENDGRID_API_KEY_HERE'; // Replace in Apps Script only, never commit real key
 const SENDGRID_FROM_EMAIL = 'noreply@accorria.com';
 const SENDGRID_TEMPLATE_ID = 'd-REPLACE_WITH_YOUR_TEMPLATE_ID'; // You'll need to create this template
 const SENDGRID_FOLLOWUP_TEMPLATE_ID = 'd-b371da7e588146fcb2d62d08aa28faed'; // Dealer Follow-Up Email template

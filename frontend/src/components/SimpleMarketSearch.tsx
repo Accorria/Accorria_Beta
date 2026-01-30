@@ -2,6 +2,8 @@
 
 import React, { useState } from 'react';
 import carDataRaw from '@/data/carData.json';
+import { logActivity, getUtmFromUrl } from '@/utils/activityLogger';
+import { useAuth } from '@/contexts/AuthContext';
 const carData = carDataRaw as Record<string, string[]>;
 
 interface SimpleMarketSearchProps {
@@ -19,6 +21,7 @@ interface MarketResult {
 }
 
 export default function SimpleMarketSearch({ onClose }: SimpleMarketSearchProps) {
+  const { user } = useAuth();
   const [selectedMake, setSelectedMake] = useState('');
   const [selectedModel, setSelectedModel] = useState('');
   const [year, setYear] = useState('');
@@ -67,7 +70,17 @@ export default function SimpleMarketSearch({ onClose }: SimpleMarketSearchProps)
         setResults(data.results);
         setSummary(data.summary);
         setIsRealData(data.summary?.isRealData || false);
-        
+
+        const searchTerm = `${year ? year + ' ' : ''}${selectedMake} ${selectedModel}`;
+        const utm = getUtmFromUrl();
+        logActivity({
+          action_type: 'search_vehicles',
+          user_id: user?.id,
+          email: user?.email ?? undefined,
+          metadata: { searchTerm, location, radius, resultCount: data.results?.length ?? 0 },
+          ...utm,
+        });
+
         // Auto-save search to history
         try {
           const saveResponse = await fetch('/api/v1/search-history', {
