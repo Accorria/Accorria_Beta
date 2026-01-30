@@ -76,3 +76,9 @@ html, body {
 * {
   box-sizing: border-box;
 }
+
+/* Override Next.js portal positioning (left/top cleared in browser preview) */
+nextjs-portal {
+  left: unset !important;
+  top: unset !important;
+}

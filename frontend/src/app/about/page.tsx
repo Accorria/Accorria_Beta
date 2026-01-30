@@ -135,7 +135,7 @@ export default function AboutPage() {
                     He founded Accorria to solve the trust and efficiency problems he witnessed firsthand in the used car market.
                   </p>
                   <a 
-                    href="https://linkedin.com/in/prestoneaton" 
+                    href="https://www.linkedin.com/in/preston-eaton-a5703432b/" 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"

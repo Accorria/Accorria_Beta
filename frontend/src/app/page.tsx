@@ -361,7 +361,7 @@ export default function Home() {
                     Founded Accorria to solve the trust and efficiency problems in the used car market.
                   </p>
                   <a 
-                    href="https://linkedin.com/in/prestoneaton" 
+                    href="https://www.linkedin.com/in/preston-eaton-a5703432b/" 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
@@ -371,6 +371,23 @@ export default function Home() {
                 </div>
               </div>
             </div>
+          </div>
+          <div className="mt-10 flex justify-center">
+            <a
+              href="https://www.f6s.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block"
+              aria-label="F6S Top Company FinTech Jan 2026"
+            >
+              <Image
+                src="/F6S_Top_Company_FinTech_7.png"
+                alt="F6S #7 Top Company FinTech Jan 2026"
+                width={280}
+                height={80}
+                className="h-14 sm:h-16 w-auto object-contain"
+              />
+            </a>
           </div>
         </div>
       </section>
